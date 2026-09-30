@@ -11,11 +11,13 @@ import {
   HardDrive,
   RefreshCw,
 } from 'lucide-react'
-import { categories, initialState } from '../lib/data'
 import { useApp } from '../lib/state'
 import { APP_NAME } from '../lib/brand'
 import { Eyebrow, Modal, SectionTitle } from './ui'
 import { FoodIcon } from './FoodIcon'
+import { AccountSettings } from './AccountSettings'
+import { AISettings } from './AISettings'
+import { HouseholdSettings } from './HouseholdSettings'
 
 export function Settings() {
   const { state, update } = useApp()
@@ -23,7 +25,6 @@ export function Settings() {
   const [addOpen, setAddOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [newLocation, setNewLocation] = useState('')
-  const [resetOpen, setResetOpen] = useState(false)
   const store =
     state.stores.find((s) => s.id === (storeId ?? state.storeId)) ??
     state.stores[0]
@@ -148,45 +149,16 @@ export function Settings() {
           </section>
         </div>
         <aside>
-          <section className="settings-card assistant-settings">
-            <span className="feature-icon">
-              <Sparkles size={22} />
-            </span>
-            <h2>A helping hand</h2>
-            <span className="coming-label">COMING NEXT</span>
-            <p>Recipe ideas, thoughtful top-ups, and help planning the week.</p>
-            <p>
-              OpenAI-compatible providers will be configured here. The assistant
-              stays hidden until a provider is connected.
-            </p>
-            <span className="quiet-label">
-              Provider configuration arrives with the backend integration.
-            </span>
-          </section>
-          <section className="settings-card device-settings">
-            <span className="feature-icon">
-              <HardDrive size={21} />
-            </span>
-            <h2>Your prototype</h2>
-            <p>
-              This preview saves changes on this device and shares them between
-              tabs in the same browser. Family sync across devices comes next.
-            </p>
-            <button
-              className="secondary-button"
-              onClick={() => setResetOpen(true)}
-            >
-              <RefreshCw size={15} />
-              Reset demo data
-            </button>
-          </section>
+          <HouseholdSettings />
+          <AISettings />
+          <AccountSettings />
           <div className="settings-signoff">
             <span>
               <FoodIcon value="🌿" />
             </span>
             <h3>{APP_NAME}</h3>
             <p>Good food. Less fuss.</p>
-            <small>Prototype · 0.1.0</small>
+            <small>Your shared family kitchen</small>
           </div>
         </aside>
       </div>
@@ -209,7 +181,7 @@ export function Settings() {
                   id,
                   name: newName.trim(),
                   location: newLocation.trim(),
-                  order: [...categories],
+                  order: [...(s.groups ?? [])],
                 },
               ],
             }))
@@ -244,31 +216,6 @@ export function Settings() {
             Add store
           </button>
         </form>
-      </Modal>
-      <Modal
-        open={resetOpen}
-        onOpenChange={setResetOpen}
-        title="A fresh basket?"
-        description="This removes your prototype changes and restores the sample shopping list, recipes, and weekly plan."
-      >
-        <div className="modal-actions">
-          <button
-            className="secondary-button"
-            onClick={() => setResetOpen(false)}
-          >
-            Keep my changes
-          </button>
-          <button
-            className="primary-button"
-            onClick={() => {
-              update(() => initialState())
-              setStoreId('prisma')
-              setResetOpen(false)
-            }}
-          >
-            Reset demo
-          </button>
-        </div>
       </Modal>
     </>
   )

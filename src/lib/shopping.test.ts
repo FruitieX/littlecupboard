@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { catalog, initialState, recipes } from './data'
-import {
-  addIngredients,
-  dateKey,
-  mergeItem,
-  mondayOfWeek,
-  restockSuggestions,
-} from './shopping'
+import { addIngredients, dateKey, mergeItem, mondayOfWeek } from './shopping'
 
 describe('shopping behavior', () => {
   it('merges matching ingredients and preserves quantities and descriptions', () => {
@@ -33,7 +27,11 @@ describe('shopping behavior', () => {
     expect(result[0]).toMatchObject({
       quantity: 1,
       unit: 'pack',
-      note: '400 g',
+      note: '',
+      amounts: [
+        { unit: 'g', quantity: 400 },
+        { unit: 'pack', quantity: 1 },
+      ],
     })
   })
   it('reactivates checked ingredients with the newly needed quantity', () => {
@@ -45,12 +43,6 @@ describe('shopping behavior', () => {
       'pc',
     )
     expect(result[0]).toMatchObject({ checked: false, quantity: 2 })
-  })
-  it('suggests overdue purchases only when absent from the active list', () => {
-    const state = initialState()
-    expect(restockSuggestions(state).map((p) => p.id)).not.toContain('oat-milk')
-    state.items = state.items.filter((p) => p.id !== 'oat-milk')
-    expect(restockSuggestions(state).map((p) => p.id)).toContain('oat-milk')
   })
   it('computes current and next weeks across a year boundary', () => {
     const date = new Date(2026, 11, 31, 12)

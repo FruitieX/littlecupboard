@@ -11,18 +11,23 @@ import {
 } from 'lucide-react'
 import { useApp } from '../lib/state'
 import type { Recipe } from '../lib/data'
-import { dateKey, mondayOfWeek } from '../lib/shopping'
+import { dateKey, mondayOfWeek, householdDate } from '../lib/shopping'
 import { EmptyState, Eyebrow, Modal } from './ui'
 import { FoodIcon } from './FoodIcon'
+import { recipeScore, suggestWeek } from '../lib/learning'
 
 export function Week() {
-  const { state, update, allRecipes, shoppingItems } = useApp()
+  const { state, update, action, allRecipes } = useApp()
   const [offset, setOffset] = useState(0)
   const [pickDay, setPickDay] = useState<Date | null>(null)
   const [suggestOpen, setSuggestOpen] = useState(false)
   const [rotation, setRotation] = useState(0)
+  const [feedbackDay, setFeedbackDay] = useState<string | null>(null)
+  const [consume, setConsume] = useState(true)
+  const [rating, setRating] = useState(4)
   const [message, setMessage] = useState('')
-  const monday = mondayOfWeek(new Date(), offset)
+  const now = householdDate(state.preferences?.timeZone)
+  const monday = mondayOfWeek(now, offset)
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(d.getDate() + i)
@@ -30,15 +35,8 @@ export function Week() {
   })
   const shortDate = (d: Date) =>
     d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-  const ranked = [...allRecipes].sort((a, b) => score(b) - score(a))
-  function score(recipe: Recipe) {
-    return (
-      recipe.ingredients.filter((i) =>
-        shoppingItems.some((item) => !item.checked && item.id === i.productId),
-      ).length / Math.max(1, recipe.ingredients.length)
-    )
-  }
-  const proposed = days.map((_, i) => ranked[(i + rotation) % ranked.length])
+  const proposed = suggestWeek(allRecipes, state, rotation)
+  const ranked = proposed
   function notify(text: string) {
     setMessage(text)
     setTimeout(() => setMessage(''), 4000)
@@ -104,7 +102,7 @@ export function Week() {
         {days.map((day, index) => {
           const key = dateKey(day)
           const recipe = allRecipes.find((r) => r.id === state.plan[key])
-          const isToday = key === dateKey(new Date())
+          const isToday = key === dateKey(now)
           return (
             <motion.section
               layout
@@ -150,7 +148,10 @@ export function Week() {
                     <h3>{recipe.name}</h3>
                     <span className="meal-time">
                       <Clock3 size={14} />
-                      {recipe.minutes} min <span>·</span> {recipe.servings}{' '}
+                      {recipe.minutes} min <span>·</span>{' '}
+                      {state.servings?.[key] ??
+                        state.preferences?.servings ??
+                        recipe.servings}{' '}
                       servings
                     </span>
                   </div>
@@ -167,6 +168,40 @@ export function Week() {
                   <strong>A little room for inspiration</strong>
                   <span>Pick something tasty</span>
                 </button>
+              )}
+              {recipe && (
+                <div className="meal-feedback">
+                  <label>
+                    Servings
+                    <input
+                      aria-label={`Servings for ${day.toLocaleDateString('en-GB', { weekday: 'long' })}`}
+                      type="number"
+                      min={1}
+                      max={100}
+                      value={
+                        state.servings?.[key] ??
+                        state.preferences?.servings ??
+                        recipe.servings
+                      }
+                      disabled={!!state.mealFeedback?.[key]}
+                      onChange={(e) => {
+                        const value = Number(e.target.value)
+                        if (value > 0 && value <= 100)
+                          update((s) => ({
+                            ...s,
+                            servings: { ...s.servings, [key]: value },
+                          }))
+                      }}
+                    />
+                  </label>
+                  <button
+                    className="text-button"
+                    onClick={() => setFeedbackDay(key)}
+                    disabled={!!state.mealFeedback?.[key]}
+                  >
+                    {state.mealFeedback?.[key]?.status ?? 'Cooked / skipped'}
+                  </button>
+                </div>
               )}
             </motion.section>
           )
@@ -193,6 +228,11 @@ export function Week() {
                   update((s) => ({
                     ...s,
                     plan: { ...s.plan, [dateKey(pickDay)]: recipe.id },
+                    mealFeedback: Object.fromEntries(
+                      Object.entries(s.mealFeedback ?? {}).filter(
+                        ([day]) => day !== dateKey(pickDay),
+                      ),
+                    ),
                   }))
                 setPickDay(null)
               }}
@@ -228,7 +268,7 @@ export function Week() {
         open={suggestOpen}
         onOpenChange={setSuggestOpen}
         title="A tasty starting point"
-        description="Suggestions from your saved recipes, favoring ingredients already on your shopping list. Adjust any day afterward."
+        description="Uses your preferences, ratings, meal rotation and likely ingredients. Adjust any day afterward."
       >
         {ranked.length ? (
           <>
@@ -240,7 +280,9 @@ export function Week() {
                   </span>
                   <img src={recipe.image} alt="" />
                   <strong>{recipe.name}</strong>
-                  <small>{recipe.minutes} min</small>
+                  <small>
+                    {recipeScore(recipe, state).reasons.slice(0, 2).join(' · ')}
+                  </small>
                 </div>
               ))}
             </div>
@@ -263,6 +305,11 @@ export function Week() {
                         days.map((day, i) => [dateKey(day), proposed[i].id]),
                       ),
                     },
+                    mealFeedback: Object.fromEntries(
+                      Object.entries(s.mealFeedback ?? {}).filter(
+                        ([day]) => !days.some((date) => dateKey(date) === day),
+                      ),
+                    ),
                   }))
                   setSuggestOpen(false)
                   notify(
@@ -282,6 +329,60 @@ export function Week() {
             text="Add a few recipes to get lunch suggestions."
           />
         )}
+      </Modal>
+      <Modal
+        open={!!feedbackDay}
+        onOpenChange={(v) => {
+          if (!v) setFeedbackDay(null)
+        }}
+        title="How was lunch?"
+        description="Cooking feedback helps future suggestions. Confirm whether to reduce estimated pantry ingredients."
+      >
+        <div className="editor-form">
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={consume}
+              onChange={(e) => setConsume(e.target.checked)}
+            />
+            Used pantry ingredients
+          </label>
+          <label>
+            Family rating
+            <select
+              value={rating}
+              onChange={(e) => setRating(Number(e.target.value))}
+            >
+              {[5, 4, 3, 2, 1].map((n) => (
+                <option key={n} value={n}>
+                  {n} / 5
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="modal-actions">
+            {['cooked', 'skipped'].map((status) => (
+              <button
+                className="secondary-button"
+                key={status}
+                onClick={() => {
+                  if (feedbackDay)
+                    action({
+                      type: 'mealFeedback',
+                      day: feedbackDay,
+                      recipeId: state.plan[feedbackDay],
+                      status,
+                      consume: status === 'cooked' && consume,
+                      rating: status === 'cooked' ? rating : null,
+                    })
+                  setFeedbackDay(null)
+                }}
+              >
+                {status === 'cooked' ? 'We cooked it' : 'Skipped this meal'}
+              </button>
+            ))}
+          </div>
+        </div>
       </Modal>
       <AnimatePresence>
         {message && (

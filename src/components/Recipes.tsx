@@ -15,9 +15,10 @@ import {
 import { catalog, findProduct } from '../lib/data'
 import type { Recipe, Ingredient } from '../lib/data'
 import { useApp } from '../lib/state'
-import { addIngredients } from '../lib/shopping'
 import { EmptyState, Eyebrow, Modal } from './ui'
 import { FoodIcon } from './FoodIcon'
+import { ImageField } from './ImageField'
+import { discovery } from '../lib/learning'
 
 export function Recipes() {
   const { state, update, allRecipes } = useApp()
@@ -25,9 +26,13 @@ export function Recipes() {
   const [filter, setFilter] = useState('All recipes')
   const [selected, setSelected] = useState<Recipe | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [editing, setEditing] = useState<Recipe | null>(null)
+  const newIdea = discovery(allRecipes, state)
   const visible = allRecipes.filter(
     (r) =>
-      r.name.toLowerCase().includes(query.toLowerCase()) &&
+      `${r.name} ${r.subtitle} ${(r.tags ?? []).join(' ')}`
+        .toLowerCase()
+        .includes(query.toLowerCase()) &&
       (filter === 'All recipes' ||
         (filter === 'Favorites' && state.favoriteRecipeIds.includes(r.id)) ||
         (filter === 'Quick & easy' && r.minutes <= 20) ||
@@ -52,21 +57,55 @@ export function Recipes() {
           <span>Add recipe</span>
         </button>
       </div>
-      <div className="recipe-banner">
-        <div>
-          <span className="banner-overline">A FAMILY FAVORITE</span>
-          <h2>
-            A little green.
-            <br />A lot of goodness.
-          </h2>
-          <p>20 minutes to a very happy table.</p>
-          <button onClick={() => setSelected(allRecipes[0])}>
-            Make green goddess pasta <ArrowUpRight size={18} />
-          </button>
+      {allRecipes[0] && (
+        <div className="recipe-banner">
+          <div>
+            <span className="banner-overline">FROM OUR KITCHEN</span>
+            <h2>{allRecipes[0].name}</h2>
+            <p>{allRecipes[0].subtitle}</p>
+            <button onClick={() => setSelected(allRecipes[0])}>
+              Take a look <ArrowUpRight size={18} />
+            </button>
+          </div>
+          <img src={allRecipes[0].image} alt={allRecipes[0].name} />
+          <span className="banner-flower">✳</span>
         </div>
-        <img src="/images/pasta.jpg" alt="Fresh green pasta with tomatoes" />
-        <span className="banner-flower">✳</span>
-      </div>
+      )}
+      {newIdea && (
+        <section className="discovery-card">
+          <span className="eyebrow">A LITTLE SOMETHING NEW</span>
+          <h3>{newIdea.name}</h3>
+          <p>{newIdea.subtitle}</p>
+          <div className="recipe-manage">
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setEditing(newIdea)
+              }}
+            >
+              Review & save variation
+            </button>
+            <button
+              className="text-button"
+              onClick={() =>
+                update((s) => ({
+                  ...s,
+                  suggestionFeedback: {
+                    ...s.suggestionFeedback,
+                    [newIdea.id]: {
+                      status: 'dismissed',
+                      at: new Date().toISOString(),
+                      until: null,
+                    },
+                  },
+                }))
+              }
+            >
+              Dismiss
+            </button>
+          </div>
+        </section>
+      )}
       <div className="recipe-tools">
         <label className="recipe-search">
           <Search size={19} />
@@ -167,9 +206,24 @@ export function Recipes() {
         />
       )}
       {selected && (
-        <RecipeDetail recipe={selected} onClose={() => setSelected(null)} />
+        <RecipeDetail
+          recipe={selected}
+          onClose={() => setSelected(null)}
+          onEdit={() => {
+            setEditing(selected)
+            setSelected(null)
+          }}
+        />
       )}
-      {createOpen && <RecipeEditor onClose={() => setCreateOpen(false)} />}
+      {(createOpen || editing) && (
+        <RecipeEditor
+          recipe={editing ?? undefined}
+          onClose={() => {
+            setCreateOpen(false)
+            setEditing(null)
+          }}
+        />
+      )}
     </>
   )
 }
@@ -177,11 +231,13 @@ export function Recipes() {
 export function RecipeDetail({
   recipe,
   onClose,
+  onEdit,
 }: {
   recipe: Recipe
   onClose: () => void
+  onEdit?: () => void
 }) {
-  const { update } = useApp()
+  const { action, state, update } = useApp()
   const [servings, setServings] = useState(recipe.servings)
   const [include, setInclude] = useState<string[]>(
     recipe.ingredients.map((i) => i.productId),
@@ -246,7 +302,10 @@ export function RecipeDetail({
         </p>
         <div className="ingredient-list">
           {recipe.ingredients.map((ingredient) => {
-            const product = findProduct(ingredient.productId)
+            const product =
+              state.customProducts.find(
+                (product) => product.id === ingredient.productId,
+              ) ?? findProduct(ingredient.productId)
             return (
               <label key={ingredient.productId}>
                 <input
@@ -262,7 +321,10 @@ export function RecipeDetail({
                   }}
                 />
                 <span className="ingredient-emoji">
-                  <FoodIcon value={product.icon} />
+                  <FoodIcon
+                    image={state.productImages?.[product.id] || product.image}
+                    value={product.icon}
+                  />
                 </span>
                 <span>{product.name}</span>
                 <strong>
@@ -277,14 +339,13 @@ export function RecipeDetail({
           className="primary-button ingredient-add"
           disabled={!include.length}
           onClick={() => {
-            update((s) => ({
-              ...s,
-              items: addIngredients(
-                s.items,
-                recipe.ingredients.filter((i) => include.includes(i.productId)),
-                multiplier,
+            action({
+              type: 'addIngredients',
+              ingredients: recipe.ingredients.filter((i) =>
+                include.includes(i.productId),
               ),
-            }))
+              multiplier,
+            })
             setAdded(true)
           }}
         >
@@ -307,55 +368,166 @@ export function RecipeDetail({
             </li>
           ))}
         </ol>
+        <div className="recipe-manage">
+          {onEdit && (
+            <button className="secondary-button" onClick={onEdit}>
+              Edit recipe
+            </button>
+          )}
+          <button
+            className="text-button danger"
+            onClick={() => {
+              if (
+                !confirm(
+                  'Delete this recipe and remove it from planned lunches?',
+                )
+              )
+                return
+              update((s) => ({
+                ...s,
+                recipeBook: s.recipeBook?.filter((r) => r.id !== recipe.id),
+                customRecipes: s.customRecipes.filter(
+                  (r) => r.id !== recipe.id,
+                ),
+                plan: Object.fromEntries(
+                  Object.entries(s.plan).filter(([, id]) => id !== recipe.id),
+                ),
+                favoriteRecipeIds: s.favoriteRecipeIds.filter(
+                  (id) => id !== recipe.id,
+                ),
+              }))
+              onClose()
+            }}
+          >
+            Delete recipe
+          </button>
+        </div>
       </div>
     </Modal>
   )
 }
 
-function RecipeEditor({ onClose }: { onClose: () => void }) {
-  const { update } = useApp()
-  const [name, setName] = useState('')
-  const [minutes, setMinutes] = useState(20)
-  const [servings, setServings] = useState(4)
-  const [steps, setSteps] = useState('')
-  const [ingredients, setIngredients] = useState<Ingredient[]>([])
-  const [product, setProduct] = useState(catalog[0].id)
+function RecipeEditor({
+  onClose,
+  recipe,
+}: {
+  onClose: () => void
+  recipe?: Recipe
+}) {
+  const { state, update, groups } = useApp()
+  const [name, setName] = useState(recipe?.name ?? '')
+  const [subtitle, setSubtitle] = useState(
+    recipe?.subtitle ?? 'From our family kitchen.',
+  )
+  const [minutes, setMinutes] = useState(recipe?.minutes ?? 20)
+  const [servings, setServings] = useState(
+    recipe?.servings ?? state.preferences?.servings ?? 4,
+  )
+  const [steps, setSteps] = useState(recipe?.steps.join('\n') ?? '')
+  const [ingredients, setIngredients] = useState<Ingredient[]>(
+    recipe?.ingredients ?? [],
+  )
+  const [ingredientName, setIngredientName] = useState('')
+  const [group, setGroup] = useState(groups[0])
   const [quantity, setQuantity] = useState(1)
   const [unit, setUnit] = useState('pc')
-  const [image, setImage] = useState('/images/salad.jpg')
+  const [note, setNote] = useState('')
+  const [image, setImage] = useState(recipe?.image ?? '')
+  const [tags, setTags] = useState(
+    recipe?.tags?.join(', ') ?? recipe?.tag ?? '',
+  )
+  const [products, setProducts] = useState(state.customProducts)
+  const [uploadCount, setUploadCount] = useState(0)
+  const pictureBusy = (busy: boolean) =>
+    setUploadCount((count) => Math.max(0, count + (busy ? 1 : -1)))
+  const [pictures, setPictures] = useState(state.productImages ?? {})
   const [error, setError] = useState('')
+  const choices = [...catalog, ...products]
+  function addIngredient() {
+    if (!ingredientName.trim() || quantity <= 0 || !unit.trim()) return
+    let product = choices.find(
+      (p) => p.name.toLowerCase() === ingredientName.trim().toLowerCase(),
+    )
+    if (!product) {
+      product = {
+        id: crypto.randomUUID(),
+        name: ingredientName.trim(),
+        category: group,
+        icon: '🛒',
+        aliases: [],
+      }
+      setProducts((p) => [...p, product!])
+    }
+    const match = ingredients.find((i) => i.productId === product.id)
+    if (match && match.unit !== unit) {
+      setError('Choose the same unit for repeated ingredients.')
+      return
+    }
+    setIngredients((list) =>
+      match
+        ? list.map((i) =>
+            i === match
+              ? { ...i, quantity: i.quantity + quantity, note: note || i.note }
+              : i,
+          )
+        : [...list, { productId: product.id, quantity, unit, note }],
+    )
+    setIngredientName('')
+    setNote('')
+    setError('')
+  }
   return (
     <Modal
       open
       onOpenChange={(v) => {
         if (!v) onClose()
       }}
-      title="Keep a good thing"
-      description="Save a recipe your family loves. A photo makes it even easier to find."
+      title={recipe ? 'Make it even better' : 'Keep a good thing'}
+      description="A family recipe, with all the little details."
     >
       <form
         className="editor-form"
-        onSubmit={(e) => {
-          e.preventDefault()
+        onSubmit={(event) => {
+          event.preventDefault()
           if (!ingredients.length) {
             setError('Add at least one ingredient.')
             return
           }
-          const recipe: Recipe = {
-            id: crypto.randomUUID(),
+          const saved: Recipe = {
+            id: recipe?.id ?? crypto.randomUUID(),
             name: name.trim(),
-            subtitle: 'From our family kitchen.',
-            image,
+            subtitle: subtitle.trim(),
+            image: image || '/images/recipe-placeholder.svg',
             minutes,
             servings,
-            tag: 'Our recipe',
+            tag: tags.split(',')[0]?.trim() || 'Our recipe',
+            tags: tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean),
             ingredients,
             steps: steps
               .split('\n')
-              .map((s) => s.trim())
+              .map((t) => t.trim())
               .filter(Boolean),
           }
-          update((s) => ({ ...s, customRecipes: [...s.customRecipes, recipe] }))
+          update((s) => ({
+            ...s,
+            productImages: pictures,
+            customProducts: [
+              ...s.customProducts,
+              ...products.filter(
+                (p) => !s.customProducts.some((x) => x.id === p.id),
+              ),
+            ],
+            recipeBook: [
+              ...(s.recipeBook ?? []),
+              ...(!recipe || !s.recipeBook?.some((r) => r.id === recipe.id)
+                ? [saved]
+                : []),
+            ].map((r) => (r.id === saved.id ? saved : r)),
+            customRecipes: s.customRecipes.filter((r) => r.id !== saved.id),
+          }))
           onClose()
         }}
       >
@@ -363,11 +535,18 @@ function RecipeEditor({ onClose }: { onClose: () => void }) {
           Recipe name
           <input
             autoFocus
+            required
+            maxLength={120}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            required
-            maxLength={100}
-            placeholder="e.g. Grandma’s vegetable soup"
+          />
+        </label>
+        <label>
+          A little description
+          <input
+            maxLength={300}
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
           />
         </label>
         <div className="form-row">
@@ -375,11 +554,11 @@ function RecipeEditor({ onClose }: { onClose: () => void }) {
             Minutes
             <input
               type="number"
-              value={minutes}
               min={1}
               max={1440}
-              onChange={(e) => setMinutes(Number(e.target.value))}
               required
+              value={minutes}
+              onChange={(e) => setMinutes(Number(e.target.value))}
             />
           </label>
           <label>
@@ -387,66 +566,70 @@ function RecipeEditor({ onClose }: { onClose: () => void }) {
             <input
               type="number"
               min={1}
-              max={20}
+              max={100}
+              required
               value={servings}
               onChange={(e) => setServings(Number(e.target.value))}
-              required
             />
           </label>
         </div>
         <label>
-          Photo{' '}
-          <span className="optional">
-            optional · JPG, PNG, WebP · up to 500 KB
-          </span>
+          Tags
           <input
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              if (
-                !['image/jpeg', 'image/png', 'image/webp'].includes(
-                  file.type,
-                ) ||
-                file.size > 500000
-              ) {
-                setError('Choose a JPG, PNG, or WebP under 500 KB.')
-                e.target.value = ''
-                return
-              }
-              const reader = new FileReader()
-              reader.onload = () => {
-                setImage(String(reader.result))
-                setError('')
-              }
-              reader.readAsDataURL(file)
-            }}
+            value={tags}
+            maxLength={500}
+            onChange={(e) => setTags(e.target.value)}
+            placeholder="Vegetarian, quick, family favorite…"
           />
         </label>
+        <ImageField
+          value={image}
+          onChange={setImage}
+          subject={name}
+          onBusyChange={pictureBusy}
+        />
         <fieldset className="ingredient-editor">
           <legend>Ingredients</legend>
           <label>
             Ingredient
-            <select
-              value={product}
-              onChange={(e) => setProduct(e.target.value)}
-            >
-              {catalog.map((p) => (
-                <option value={p.id} key={p.id}>
-                  {p.name}
-                </option>
+            <input
+              aria-label="Ingredient"
+              list="recipe-products"
+              value={ingredientName}
+              onChange={(e) => setIngredientName(e.target.value)}
+              placeholder="Search or name a new ingredient"
+              maxLength={100}
+            />
+            <datalist id="recipe-products">
+              {choices.map((p) => (
+                <option key={p.id} value={p.name} />
               ))}
-            </select>
+            </datalist>
           </label>
+          {!choices.some(
+            (p) => p.name.toLowerCase() === ingredientName.toLowerCase(),
+          ) &&
+            ingredientName && (
+              <label>
+                New ingredient group
+                <select
+                  value={group}
+                  onChange={(e) => setGroup(e.target.value)}
+                >
+                  {groups.map((g) => (
+                    <option key={g}>{g}</option>
+                  ))}
+                </select>
+              </label>
+            )}
           <div className="form-row">
             <label>
               Quantity
               <input
                 type="number"
-                value={quantity}
                 min="0.01"
                 step="any"
+                value={quantity}
                 onChange={(e) => setQuantity(Number(e.target.value))}
               />
             </label>
@@ -454,70 +637,142 @@ function RecipeEditor({ onClose }: { onClose: () => void }) {
               Unit
               <input
                 value={unit}
+                maxLength={30}
                 onChange={(e) => setUnit(e.target.value)}
-                maxLength={20}
               />
             </label>
           </div>
+          <label>
+            Ingredient details
+            <input
+              value={note}
+              maxLength={500}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="e.g. finely chopped, preferred brand"
+            />
+          </label>
           <button
             type="button"
             className="secondary-button"
-            disabled={quantity <= 0 || !unit.trim()}
-            onClick={() => {
-              setIngredients((current) => {
-                const match = current.find((i) => i.productId === product)
-                if (match && match.unit !== unit) {
-                  setError(
-                    'Use the same unit when adding this ingredient again.',
-                  )
-                  return current
-                }
-                setError('')
-                return match
-                  ? current.map((i) =>
-                      i.productId === product
-                        ? { ...i, quantity: i.quantity + quantity }
-                        : i,
-                    )
-                  : [...current, { productId: product, quantity, unit }]
-              })
-            }}
+            disabled={!ingredientName.trim() || quantity <= 0 || !unit.trim()}
+            onClick={addIngredient}
           >
-            <Plus size={16} />
-            Add ingredient
+            <Plus size={16} /> Add ingredient
           </button>
-          <div className="new-ingredients">
-            {ingredients.map((i) => (
-              <div key={i.productId}>
-                <span>{findProduct(i.productId).name}</span>
-                <strong>
-                  {i.quantity} {i.unit}
-                </strong>
-                <button
-                  type="button"
-                  className="icon-button"
-                  aria-label={`Remove ${findProduct(i.productId).name} ingredient`}
-                  onClick={() =>
-                    setIngredients((list) =>
-                      list.filter((x) => x.productId !== i.productId),
-                    )
-                  }
-                >
-                  <Minus size={14} />
-                </button>
-              </div>
-            ))}
+          <div className="editable-ingredients">
+            {ingredients.map((ingredient) => {
+              const product = choices.find(
+                (p) => p.id === ingredient.productId,
+              )!
+              return (
+                <details key={ingredient.productId}>
+                  <summary>
+                    <FoodIcon
+                      value={product.icon}
+                      image={pictures[product.id] || product.image}
+                    />
+                    <strong>{product.name}</strong>
+                    <span>
+                      {ingredient.quantity} {ingredient.unit}
+                    </span>
+                  </summary>
+                  <div className="editor-form">
+                    <div className="form-row">
+                      <label>
+                        Amount of {product.name}
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="any"
+                          required
+                          value={ingredient.quantity}
+                          onChange={(event) =>
+                            setIngredients((list) =>
+                              list.map((i) =>
+                                i.productId === product.id
+                                  ? {
+                                      ...i,
+                                      quantity: Number(event.target.value),
+                                    }
+                                  : i,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                      <label>
+                        Unit for {product.name}
+                        <input
+                          value={ingredient.unit}
+                          required
+                          maxLength={30}
+                          onChange={(event) =>
+                            setIngredients((list) =>
+                              list.map((i) =>
+                                i.productId === product.id
+                                  ? { ...i, unit: event.target.value }
+                                  : i,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                    </div>
+                    <label>
+                      Details for {product.name}
+                      <input
+                        maxLength={500}
+                        value={ingredient.note ?? ''}
+                        onChange={(event) =>
+                          setIngredients((list) =>
+                            list.map((i) =>
+                              i.productId === product.id
+                                ? { ...i, note: event.target.value }
+                                : i,
+                            ),
+                          )
+                        }
+                      />
+                    </label>
+                    <ImageField
+                      value={pictures[product.id] || product.image || ''}
+                      onChange={(image) =>
+                        setPictures((current) => ({
+                          ...current,
+                          [product.id]: image,
+                        }))
+                      }
+                      subject={product.name}
+                      onBusyChange={pictureBusy}
+                    />
+                    <button
+                      type="button"
+                      className="text-button danger"
+                      aria-label={`Remove ${product.name} ingredient`}
+                      onClick={() =>
+                        setIngredients((list) =>
+                          list.filter((i) => i.productId !== product.id),
+                        )
+                      }
+                    >
+                      <Minus size={14} />
+                      Remove ingredient
+                    </button>
+                  </div>
+                </details>
+              )
+            })}
           </div>
         </fieldset>
         <label>
           How to make it
           <textarea
-            rows={4}
+            rows={5}
             required
             value={steps}
             onChange={(e) => setSteps(e.target.value)}
+            maxLength={10000}
             placeholder="One step per line…"
-            maxLength={5000}
           />
         </label>
         {error && (
@@ -525,7 +780,11 @@ function RecipeEditor({ onClose }: { onClose: () => void }) {
             {error}
           </p>
         )}
-        <button className="primary-button" type="submit">
+        <button
+          className="primary-button"
+          type="submit"
+          disabled={uploadCount > 0}
+        >
           <Check size={18} />
           Save to our recipe book
         </button>

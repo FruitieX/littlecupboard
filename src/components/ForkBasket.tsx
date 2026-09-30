@@ -5,7 +5,6 @@ import {
   BookOpen,
   Settings2,
   Leaf,
-  ArrowUpRight,
 } from 'lucide-react'
 import { Shopping } from './Shopping'
 import { Week } from './Week'
@@ -14,6 +13,9 @@ import { Settings } from './Settings'
 import { Brand } from './ui'
 import { MotionConfig } from 'motion/react'
 import { FoodIcon } from './FoodIcon'
+import { useApp } from '../lib/state'
+import { ConnectionStatus } from './ConnectionStatus'
+import { Assistant } from './Assistant'
 
 export type View = 'shopping' | 'week' | 'recipes' | 'settings'
 const navigation = [
@@ -48,6 +50,7 @@ const navigation = [
 ] as const
 
 export function ForkBasket({ view = 'shopping' }: { view?: View }) {
+  const { session, error, clearError } = useApp()
   return (
     <MotionConfig reducedMotion="user">
       <div
@@ -65,8 +68,9 @@ export function ForkBasket({ view = 'shopping' }: { view?: View }) {
               <FoodIcon value="🏡" />
             </div>
             <div>
-              <strong>Our family</strong>
-              <span>Demo household</span>
+              <strong>{session.householdName}</strong>
+              <span>{session.user.name}</span>
+              <ConnectionStatus />
             </div>
           </div>
           <span className="sidebar-label">A LITTLE MORE TOGETHER</span>
@@ -98,9 +102,7 @@ export function ForkBasket({ view = 'shopping' }: { view?: View }) {
                 A little less planning.
                 <br />A little more living.
               </p>
-              <span className="prototype-label">
-                INTERACTIVE PROTOTYPE <ArrowUpRight size={12} />
-              </span>
+              <span className="prototype-label">YOUR FAMILY KITCHEN</span>
             </div>
           )}
         </aside>
@@ -119,17 +121,31 @@ export function ForkBasket({ view = 'shopping' }: { view?: View }) {
               </span>
             )}
             <div className="topbar-right">
-              <span className="preview-badge">Prototype</span>
+              <ConnectionStatus />
               {view !== 'shopping' && (
-                <div className="avatars" aria-label="Demo family">
-                  <span className="avatar avatar-peach">R</span>
-                  <span className="avatar avatar-green">A</span>
-                  <span className="avatar avatar-yellow">+2</span>
+                <div className="avatars" aria-label="Household members">
+                  {session.members.slice(0, 3).map((member, index) => (
+                    <span
+                      key={member.id}
+                      className={`avatar ${['avatar-peach', 'avatar-green', 'avatar-yellow'][index]}`}
+                      title={member.name}
+                    >
+                      {member.name.slice(0, 1).toUpperCase()}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
           </header>
           <main id="main-content" className={`main-content view-${view}`}>
+            {error && (
+              <div className="form-error app-error" role="alert">
+                {error}
+                <button className="text-button" onClick={clearError}>
+                  Dismiss
+                </button>
+              </div>
+            )}
             {view === 'shopping' && <Shopping />}
             {view === 'week' && <Week />}
             {view === 'recipes' && <Recipes />}
@@ -152,6 +168,7 @@ export function ForkBasket({ view = 'shopping' }: { view?: View }) {
           ))}
         </nav>
       </div>
+      <Assistant />
     </MotionConfig>
   )
 }

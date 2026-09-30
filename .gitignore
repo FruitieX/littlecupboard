@@ -7,3 +7,10 @@ target/
 .env.*
 !.env.example
 test-results/
+data/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+result
+result-*
+deploy/kubernetes/apps/forkbasket/secret.sops.yaml

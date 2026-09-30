@@ -7,11 +7,13 @@
     "format": "prettier --write src scripts docs README.md AGENTS.md vite.config.ts tsconfig.json package.json .prettierrc.json",
     "format:check": "prettier --check src scripts docs README.md AGENTS.md vite.config.ts tsconfig.json package.json .prettierrc.json",
     "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
+    "build": "vite build && node scripts/build-pwa.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:ui": "node scripts/verify-ui.mjs",
-    "mockups": "node scripts/mockups.mjs"
+    "test:ui": "node scripts/verify-production.mjs",
+    "mockups": "node scripts/mockups.mjs",
+    "test:production": "FORKBASKET_TEST_PRODUCTION=1 node scripts/verify-production.mjs",
+    "test:container": "node scripts/verify-container.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",

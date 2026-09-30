@@ -1,75 +1,66 @@
 # ForkBasket
 
-A family shopping list, recipe book, and weekly lunch planner. This repository starts with a working mobile-first prototype and a Rust service scaffold.
+A shared family shopping list, recipe book and weekly lunch planner, ready to self-host. Mobile shopping stays one tap: large tiles, hold to edit, recently checked items below, and a searchable shop selector that orders the list by your usual aisles.
 
-![Shopping, weekly lunches, and recipe book mockups](mockups/overview.png)
+![ForkBasket shopping, weekly lunches and recipes](mockups/overview.png)
 
-## Run the prototype
+Missing meal ingredients automatically join the list with a small source marker. Recipes support editing, favorites, tags, serving scaling, custom ingredients and private photos. Current/next-week lunches have serving counts and cooked/skipped feedback. Confirm pantry amounts or use conservative purchase estimates; the app keeps purchased meal ingredients reserved and releases them when plans change.
 
-On NixOS or another machine with Nix flakes enabled:
+Accounts, expiring invitations, secure cookie sessions, SQLite transactions and SSE keep independent devices together. A persisted offline outbox and installable app shell keep shopping usable through connection loss. Concurrent edits get explicit review rather than overwriting another person’s changes. History supports guarded undo and shopping-trip completion.
+
+Shopping patterns produce explained restock suggestions after repeated purchases, with confidence, preferred descriptions/packages, store/day signals, product associations, snoozing and dismissal. Meal suggestions use favorites, ratings, rotation, dietary/ingredient preferences and likely ingredients. Discovery offers reviewed variations of saved recipes. Inventory is best effort, and estimates are distinguished from confirmed observations.
+
+An optional OpenAI-compatible assistant supports natural-language shopping, reviewed recipe drafts/variations, weekly plans and generated images. Configure the endpoint and models later in Settings. Provider keys are encrypted on the server; the assistant is hidden until enabled.
+
+## Deploy
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete setup, Flux/SOPS manifests matching your homelab, first-owner account, wife/member invitations, HTTPS/PWA behavior, AI compatibility, backups and upgrades. Your live cluster has not been changed.
 
 ```sh
-cd /home/rasse/forkbasket
+nix build .#container
+docker load < result
+```
+
+The image serves frontend and API in one Rust process on port 8080. Keep /data on persistent block/local storage and set FORKBASKET_ORIGIN to the externally visited origin. The supplied Kubernetes deployment uses one replica, Recreate, a block PVC, non-root permissions, a private Envoy HTTPS route and health probes. Generate and SOPS-encrypt the deployment secrets before copying them into your homelab.
+
+## Develop
+
+```sh
 nix develop
 command -v node npm cargo cc
 npm ci
 npm run dev
+# In another Nix shell:
+cargo run --manifest-path backend/Cargo.toml
 ```
 
-Open **http://localhost:3100**. The dev server also listens on your network interfaces, so you can open the machine’s address at port 3100 on a phone when your network and firewall allow it. Changes are stored per browser; opening the prototype on two devices does not share their shopping lists yet.
+Open http://localhost:3100. Vite proxies /api to 127.0.0.1:3001. The server creates a private data/setup-token file on first start; use it to create the owner account and save your recovery code. The list and history start empty, with five editable sample recipes available by choice. Runtime databases, keys and uploaded data are Git-ignored.
 
-In a second terminal, start the API scaffold:
-
-```sh
-nix develop --command cargo run --manifest-path backend/Cargo.toml
-```
-
-The frontend proxies `/api` to `127.0.0.1:3001`. `GET /api/health` returns the typed service health response. The API currently provides this endpoint only.
-
-## Explore the screens
-
-- `/`: grouped food tiles, tap to check/restore, hold to edit, autocomplete across 178 built-in products, custom items, searchable shop selection, store sorting, automatic meal ingredients, and expandable restock suggestions. Right-click or Shift+F10 also opens editing.
-- `/week`: current/next week, lunch selection and replacement, suggestions from saved recipes, and automatic missing ingredients in the shopping list.
-- `/recipes`: recipe search, favorites and filters, ingredient selection and serving scaling, instructions, recipe entry, and optional small image uploads.
-- `/settings`: favorite stores, individual aisle ordering, prototype reset, and the planned location of optional provider configuration.
-
-The prototype saves changes locally and updates other tabs in the same browser. It uses illustrative recipes, sample history, and demo family avatars. Server persistence, invitations, cross-device realtime sync, learned inventory/purchase patterns, and AI are planned next; the assistant is absent from ordinary navigation until an actual provider integration is available.
-
-Meals from today through the end of next week automatically contribute ingredients. Existing quantities on the list cover those requirements; extra amounts get a “Meal plan” marker. Checking remembers the covered meal requirements, restoring reverses the last check, and removing an ingredient skips its current requirements. Changing a meal updates automatic groceries while keeping manual additions. This is best-effort coverage, without an exact pantry count.
-
-The full product scope, pattern-learning design, architecture, and remaining phases are recorded in [docs/PLAN.md](docs/PLAN.md). Project instructions in [AGENTS.md](AGENTS.md) require future work to read and maintain that plan.
-
-## Mockups
-
-Actual browser captures are saved in [mockups/](mockups/): a three-screen mobile overview, individual mobile views and full-page captures, a recipe detail dialog, store settings, and a desktop shopping screen. Open [mockups/overview.html](mockups/overview.html) locally for the presentation board.
-
-With the frontend running, regenerate the screenshots using the Chromium included in the Linux Nix shell:
+## Check the app
 
 ```sh
-nix develop --command npm run mockups
-```
-
-Set `FORKBASKET_URL` to use another server URL. On macOS, the dev shell supplies Node and Rust but not Chromium; install a supported Playwright Chromium or set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing browser executable.
-
-## Validate changes
-
-```sh
-nix develop --command npm run build
 nix develop --command npm run typecheck
-nix develop --command npm run format:check
 nix develop --command npm test
-nix develop --command cargo fmt --manifest-path backend/Cargo.toml --check
+nix develop --command npm run format:check
+nix develop --command cargo fmt --manifest-path backend/Cargo.toml -- --check
 nix develop --command cargo clippy --manifest-path backend/Cargo.toml -- -D warnings
 nix develop --command cargo test --manifest-path backend/Cargo.toml
-# Requires the frontend dev server:
-nix develop --command npm run test:ui
+nix develop --command npm run build
+nix develop --command npm run test:production
+nix build .#container
+docker load -i result
+nix develop --command npm run test:container
 ```
 
-Unit tests cover ingredient merging, compatible/incompatible units, automatic meal requirements and quantity top-ups, purchase/restore coverage, skipped ingredients, plan changes, old-data migration, restock eligibility, and calendar boundaries. Browser checks exercise shopping actions, touch holds and keyboard edits, product and shop autocomplete (including a long shop list), local persistence and tab updates, store sorting, recipe quantity merging, automatic planning, recipe entry, and all four screens at 320, 390, 768, and 1440 pixels. Rust tests also export the ts-rs health type into `src/lib/api/`.
+The browser suite starts isolated servers and temporary databases itself. It uses separate owner/wife sessions and checks live shopping, holds, persistence, offline reload/reconnect, photo uploads, recipe/custom-ingredient editing, pantry observations, serving changes, 80-shop autocomplete, per-device selection, configured AI proposals and responsive layouts. Server tests cover authentication, idempotency, concurrency, guarded undo, automatic ingredients, pantry reservations, backups/recovery, learned intervals and controlled chat/image providers. Live AI configuration remains specific to your chosen endpoint and models.
 
-## Stack
+After building, regenerate real production screenshots with `nix develop --command npm run mockups`. This uses an isolated test household and fixture provider, then removes the temporary data. Captures are in [mockups/](mockups/), with [an overview board](mockups/overview.html). Linux Chromium is supplied by the flake; on macOS supply a Playwright browser through PLAYWRIGHT_CHROMIUM_EXECUTABLE.
 
-TanStack Start and Router, React, TypeScript, Tailwind CSS, Radix Dialog, Motion, and Lucide on the frontend. Tokio, Axum, Serde, and ts-rs on the backend. `flake.lock`, `package-lock.json`, and `backend/Cargo.lock` pin the development environment and dependencies.
+## Architecture
+
+TanStack Start/Router, React, TypeScript, Tailwind, Radix Dialog, Motion and Lucide; Rust, Tokio, Axum, SQLite and ts-rs. Typed mutations operate atomically with idempotency keys and guarded changes; household SSE notices trigger authoritative snapshot refreshes. Uploaded/generated images are decoded, resized and stored privately in SQLite. The locked Nix flake builds backend, frontend and OCI packages without mutable base-image dependencies.
+
+[docs/PLAN.md](docs/PLAN.md) preserves the requirements, accepted design and implementation decisions. [AGENTS.md](AGENTS.md) describes development and maintenance expectations.
 
 ## Asset credits
 

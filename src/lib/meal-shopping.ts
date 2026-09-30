@@ -1,8 +1,8 @@
 import { catalog, recipes } from './data'
 import type { Amount, AppState, PlanCredit, ShoppingItem } from './data'
-import { dateKey, mondayOfWeek } from './shopping'
+import { dateKey, mondayOfWeek, householdDate } from './shopping'
 
-type Requirement = PlanCredit & { mealName: string }
+type Requirement = PlanCredit & { mealName: string; note?: string }
 const unitAliases: Record<string, [string, number]> = {
   g: ['g', 1],
   gram: ['g', 1],
@@ -12,6 +12,10 @@ const unitAliases: Record<string, [string, number]> = {
   l: ['ml', 1000],
   litre: ['ml', 1000],
   litres: ['ml', 1000],
+  liter: ['ml', 1000],
+  liters: ['ml', 1000],
+  clove: ['cloves', 1],
+  cloves: ['cloves', 1],
   pc: ['pc', 1],
   pcs: ['pc', 1],
   piece: ['pc', 1],
@@ -45,18 +49,35 @@ function requirements(state: AppState, now: Date): Requirement[] {
   const today = dateKey(now)
   const end = mondayOfWeek(now, 2)
   const recipeMap = new Map(
-    [...recipes, ...state.customRecipes].map((recipe) => [recipe.id, recipe]),
+    [...(state.recipeBook ?? recipes), ...state.customRecipes].map((recipe) => [
+      recipe.id,
+      recipe,
+    ]),
   )
   return Object.entries(state.plan)
     .sort(([a], [b]) => a.localeCompare(b))
     .flatMap(([day, id]) => {
       const recipe = recipeMap.get(id)
-      if (!recipe || day < today || day >= dateKey(end)) return []
+      if (
+        !recipe ||
+        day < today ||
+        day >= dateKey(end) ||
+        ['cooked', 'skipped'].includes(state.mealFeedback?.[day]?.status ?? '')
+      )
+        return []
+      const multiplier =
+        (state.servings?.[day] ??
+          state.preferences?.servings ??
+          recipe.servings) / recipe.servings
       return recipe.ingredients.map((ingredient) => ({
         day,
         productId: ingredient.productId,
         mealName: recipe.name,
-        ...normalize(ingredient),
+        note: ingredient.note,
+        ...normalize({
+          ...ingredient,
+          quantity: ingredient.quantity * multiplier,
+        }),
       }))
     })
 }
@@ -75,7 +96,7 @@ function outstanding(state: AppState, now: Date): Requirement[] {
       quantity: (previous?.quantity ?? 0) + requirement.quantity,
     })
   }
-  return [...grouped.values()]
+  const remaining = [...grouped.values()]
     .map((requirement) => {
       const covered =
         amounts(
@@ -87,11 +108,30 @@ function outstanding(state: AppState, now: Date): Requirement[] {
       }
     })
     .filter((requirement) => requirement.quantity > 0)
+  const stock = new Map<string, number>()
+  for (const [id, pantry] of Object.entries(state.pantry ?? {})) {
+    if (pantry.expiresAt && pantry.expiresAt < dateKey(now)) continue
+    if (
+      !pantry.confirmed &&
+      (now.getTime() - new Date(pantry.observedAt).getTime()) / 86400000 >= 7
+    )
+      continue
+    for (const amount of amounts(pantry.amounts))
+      stock.set(JSON.stringify([id, amount.unit]), amount.quantity)
+  }
+  for (const requirement of remaining) {
+    const key = JSON.stringify([requirement.productId, requirement.unit])
+    const available = stock.get(key) ?? 0
+    const covered = Math.min(available, requirement.quantity)
+    stock.set(key, available - covered)
+    requirement.quantity = round(requirement.quantity - covered)
+  }
+  return remaining.filter((requirement) => requirement.quantity > 0)
 }
 
 export function preparePlanShopping(
   state: AppState,
-  now = new Date(),
+  now = householdDate(state.preferences?.timeZone),
 ): AppState {
   if (state.planCoverage) return state
   let prepared: AppState = { ...state, planCoverage: {} }
@@ -125,7 +165,7 @@ export function preparePlanShopping(
 
 export function getShoppingItems(
   state: AppState,
-  now = new Date(),
+  now = householdDate(state.preferences?.timeZone),
 ): ShoppingItem[] {
   const prepared = preparePlanShopping(state, now)
   const needed = outstanding(prepared, now)
@@ -151,6 +191,14 @@ export function getShoppingItems(
         manual.unit,
         Math.max(manual.quantity, total.get(manual.unit) ?? 0),
       )
+    if (manual)
+      for (const extra of amounts(existing?.amounts ?? [])) {
+        if (extra.unit !== manual.unit)
+          total.set(
+            extra.unit,
+            Math.max(extra.quantity, total.get(extra.unit) ?? 0),
+          )
+      }
     const combined = [...total].map(([unit, quantity]) => ({ unit, quantity }))
     const product =
       existing ??
@@ -181,8 +229,29 @@ export function getShoppingItems(
     return [
       {
         ...product,
+        category: state.productGroups?.[id] ?? product.category,
         ...primary,
-        note: existing?.note ?? '',
+        note:
+          existing?.note ||
+          [
+            ...new Set(
+              all
+                .filter(
+                  (requirement) =>
+                    requirement.productId === id &&
+                    needed.some(
+                      (credit) =>
+                        credit.productId === id &&
+                        credit.day === requirement.day,
+                    ),
+                )
+                .map((requirement) => requirement.note)
+                .filter(Boolean),
+            ),
+          ]
+            .sort()
+            .join(' · '),
+        image: state.productImages?.[id] || existing?.image || product.image,
         checked: false,
         amounts: displayAmounts,
         autoAdded,
@@ -224,17 +293,86 @@ function applyCredits(
   return { ...state, planCoverage: coverage }
 }
 
+function applyPurchasedCredits(
+  state: AppState,
+  credits: PlanCredit[],
+  direction: -1 | 1,
+): AppState {
+  return {
+    ...state,
+    purchasedCoverage: applyCredits(
+      { ...state, planCoverage: state.purchasedCoverage ?? {} },
+      credits,
+      direction,
+    ).planCoverage,
+  }
+}
+
+export function confirmPantry(
+  state: AppState,
+  observation: {
+    productId: string
+    quantity: number
+    unit: string
+    expiresAt: string | null
+  },
+  now = householdDate(state.preferences?.timeZone),
+): AppState {
+  const observed = normalize(observation)
+  let available = observed.quantity
+  const purchasedCoverage = structuredClone(state.purchasedCoverage ?? {})
+  const removed: PlanCredit[] = []
+  for (const day of Object.keys(purchasedCoverage).sort()) {
+    if (day < dateKey(now)) continue
+    const entries = purchasedCoverage[day][observation.productId]
+    if (!entries) continue
+    for (const amount of entries) {
+      if (amount.unit !== observed.unit) continue
+      const retained = Math.min(available, amount.quantity)
+      available -= retained
+      if (retained < amount.quantity)
+        removed.push({
+          day,
+          productId: observation.productId,
+          unit: observed.unit,
+          quantity: amount.quantity - retained,
+        })
+      amount.quantity = retained
+    }
+    purchasedCoverage[day][observation.productId] = amounts(entries)
+  }
+  const revised = applyCredits({ ...state, purchasedCoverage }, removed, -1)
+  return {
+    ...revised,
+    pantry: {
+      ...state.pantry,
+      [observation.productId]: {
+        amounts:
+          available > 0 ? [{ quantity: available, unit: observed.unit }] : [],
+        confirmed: true,
+        observedAt: new Date().toISOString(),
+        expiresAt: observation.expiresAt,
+        note: '',
+      },
+    },
+  }
+}
+
 export function toggleShoppingItem(
   state: AppState,
   id: string,
-  now = new Date(),
+  now = householdDate(state.preferences?.timeZone),
 ): AppState {
   const prepared = preparePlanShopping(state, now)
   const item = getShoppingItems(prepared, now).find((item) => item.id === id)
   if (!item) return state
   const stored = prepared.items.find((candidate) => candidate.id === id)
   if (item.checked) {
-    const restored = applyCredits(prepared, stored?.planCredits ?? [], -1)
+    const restored = applyPurchasedCredits(
+      applyCredits(prepared, stored?.planCredits ?? [], -1),
+      stored?.planCredits ?? [],
+      -1,
+    )
     const hasDemand = outstanding(restored, now).some(
       (requirement) => requirement.productId === id,
     )
@@ -256,7 +394,11 @@ export function toggleShoppingItem(
   const credits = outstanding(prepared, now).filter(
     (requirement) => requirement.productId === id,
   )
-  const covered = applyCredits(prepared, credits, 1)
+  const covered = applyPurchasedCredits(
+    applyCredits(prepared, credits, 1),
+    credits,
+    1,
+  )
   const snapshot: ShoppingItem = {
     ...(stored ?? item),
     checked: true,
@@ -278,7 +420,7 @@ export function toggleShoppingItem(
 export function removeShoppingItem(
   state: AppState,
   id: string,
-  now = new Date(),
+  now = householdDate(state.preferences?.timeZone),
 ): AppState {
   const prepared = preparePlanShopping(state, now)
   const skipped = applyCredits(
@@ -295,7 +437,7 @@ export function editShoppingItem(
   state: AppState,
   item: ShoppingItem,
   edits: Pick<ShoppingItem, 'category' | 'quantity' | 'unit' | 'note'>,
-  now = new Date(),
+  now = householdDate(state.preferences?.timeZone),
 ): AppState {
   const changedQuantity =
     item.quantity !== edits.quantity || item.unit !== edits.unit

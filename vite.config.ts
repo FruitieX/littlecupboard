@@ -4,11 +4,13 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
-  plugins: [tailwindcss(), tanstackStart(), react()],
+  plugins: [tailwindcss(), tanstackStart({ spa: { enabled: true } }), react()],
   server: {
     watch: { ignored: ['**/mockups/**'] },
-    port: 3100,
+    port: Number(process.env.FORKBASKET_PORT ?? 3100),
     strictPort: true,
-    proxy: { '/api': 'http://127.0.0.1:3001' },
+    proxy: {
+      '/api': process.env.FORKBASKET_API_URL ?? 'http://127.0.0.1:3001',
+    },
   },
 })

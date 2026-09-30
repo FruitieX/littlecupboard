@@ -1,0 +1,195 @@
+import assert from 'node:assert/strict'
+import { randomBytes, randomUUID } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
+
+const image =
+  process.env.FORKBASKET_TEST_IMAGE ?? 'ghcr.io/fruitiex/forkbasket:main'
+const suffix = randomUUID().slice(0, 8)
+const volume = `forkbasket-check-${suffix}`
+const primary = `forkbasket-check-${suffix}`
+const restored = `${primary}-restored`
+const containers = []
+const setupToken = randomBytes(32).toString('hex')
+const secretKey = randomBytes(32).toString('hex')
+function docker(...args) {
+  return execFileSync('docker', args, {
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  }).trim()
+}
+function start(name, dataDir = '/data') {
+  containers.push(name)
+  docker(
+    'run',
+    '-d',
+    '--name',
+    name,
+    '--read-only',
+    '--cap-drop=ALL',
+    '--security-opt=no-new-privileges',
+    '--tmpfs',
+    '/tmp:rw,noexec,nosuid,size=128m',
+    '-p',
+    '127.0.0.1::8080',
+    '-v',
+    `${volume}:/data`,
+    '-e',
+    'FORKBASKET_SETUP_TOKEN',
+    '-e',
+    'FORKBASKET_SECRET_KEY',
+    '-e',
+    `FORKBASKET_DATA_DIR=${dataDir}`,
+    '-e',
+    'FORKBASKET_ORIGIN=http://localhost:8080',
+    image,
+  )
+  const port = JSON.parse(docker('inspect', name))[0].NetworkSettings.Ports[
+    '8080/tcp'
+  ][0].HostPort
+  return `http://127.0.0.1:${port}`
+}
+async function ready(origin) {
+  for (let attempt = 0; attempt < 100; attempt++) {
+    try {
+      if ((await fetch(origin + '/api/ready')).ok) return
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 200))
+  }
+  throw new Error('Container did not become ready')
+}
+async function api(origin, path, body, cookie) {
+  const response = await fetch(origin + '/api' + path, {
+    method: body ? 'POST' : 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-ForkBasket-Request': '1',
+      Origin: 'http://localhost:8080',
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  })
+  assert.ok(response.ok, `${path} failed (${response.status})`)
+  return {
+    body: await response.json(),
+    cookie: response.headers.get('set-cookie')?.split(';')[0],
+  }
+}
+process.env.FORKBASKET_SETUP_TOKEN = setupToken
+process.env.FORKBASKET_SECRET_KEY = secretKey
+try {
+  docker('volume', 'create', volume)
+  let origin = start(primary)
+  await ready(origin)
+  assert.equal(docker('exec', primary, 'id', '-u'), '10001')
+  for (const path of [
+    '/',
+    '/week',
+    '/recipes',
+    '/settings',
+    '/manifest.webmanifest',
+    '/sw.js',
+  ])
+    assert.equal((await fetch(origin + path)).status, 200, path)
+  assert.equal((await fetch(origin + '/api/unknown')).status, 404)
+  assert.equal((await fetch(origin + '/api/state')).status, 401)
+  const { cookie } = await api(origin, '/auth/setup', {
+    setupToken,
+    email: 'container@example.test',
+    name: 'Container test',
+    password: 'a temporary container test password',
+    householdName: 'Container test',
+    timeZone: 'Europe/Helsinki',
+    samples: true,
+  })
+  await api(
+    origin,
+    '/operations',
+    {
+      id: randomUUID(),
+      operation: {
+        type: 'addItem',
+        productId: 'apples',
+        quantity: 3,
+        unit: 'pc',
+        note: 'Crisp',
+        accumulate: true,
+      },
+    },
+    cookie,
+  )
+  docker(
+    'exec',
+    primary,
+    'forkbasket-api',
+    '--backup',
+    '/data/smoke-backup.sqlite3',
+  )
+  assert.equal(
+    docker('exec', primary, 'stat', '-c', '%a', '/data/smoke-backup.sqlite3'),
+    '600',
+  )
+  assert.throws(
+    () =>
+      docker(
+        'exec',
+        primary,
+        'forkbasket-api',
+        '--backup',
+        '/data/smoke-backup.sqlite3',
+      ),
+    'backup must refuse overwrites',
+  )
+  docker('exec', primary, 'mkdir', '/data/restore')
+  docker(
+    'exec',
+    primary,
+    'cp',
+    '/data/smoke-backup.sqlite3',
+    '/data/restore/forkbasket.sqlite3',
+  )
+  await api(
+    origin,
+    '/operations',
+    {
+      id: randomUUID(),
+      operation: {
+        type: 'addItem',
+        productId: 'apples',
+        quantity: 2,
+        unit: 'pc',
+        note: '',
+        accumulate: true,
+      },
+    },
+    cookie,
+  )
+  docker('restart', primary)
+  origin = `http://127.0.0.1:${JSON.parse(docker('inspect', primary))[0].NetworkSettings.Ports['8080/tcp'][0].HostPort}`
+  await ready(origin)
+  assert.equal(
+    (await api(origin, '/state', undefined, cookie)).body.state.items.find(
+      (item) => item.id === 'apples',
+    ).quantity,
+    5,
+  )
+  const restoredOrigin = start(restored, '/data/restore')
+  await ready(restoredOrigin)
+  assert.equal(
+    (
+      await api(restoredOrigin, '/state', undefined, cookie)
+    ).body.state.items.find((item) => item.id === 'apples').quantity,
+    3,
+  )
+  console.log(
+    'Container passed: non-root/read-only runtime, SPA routes, persistent accounts/shopping, restart, private online backup and point-in-time restoration.',
+  )
+} finally {
+  for (const name of containers.reverse()) {
+    try {
+      docker('rm', '-f', name)
+    } catch {}
+  }
+  try {
+    docker('volume', 'rm', volume)
+  } catch {}
+}

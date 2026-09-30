@@ -2,7 +2,7 @@
 
 ForkBasket is a mobile-first app for a family to share a shopping list, store recipes, and plan lunch for every day of the current and next week. The main shopping experience must be fast enough to use one-handed in the store. More detailed setup belongs in settings.
 
-This document records the user’s requirements, the chosen direction, and the implementation boundaries. Keep it current as work proceeds. The current task is to bootstrap the project and deliver a few usable visual mockups, not to declare the entire production application complete.
+This document records the user’s requirements, the chosen direction, and implementation progress. Keep it current as work proceeds. The user has now authorized completing the full polished homelab application in one sustained goal, including accounts for both adults, AI, and every discussed feature. The original prototype milestones below are historical; they do not limit the current scope or authorize deferring features.
 
 ## Decisions and context
 
@@ -66,7 +66,7 @@ Hide the assistant in ordinary navigation until the household has a configured p
 
 ## Production architecture
 
-The current scaffold uses TanStack Start and a Rust Axum health endpoint. Proposed production persistence is SQLite for a first self-hosted household deployment, with migrations and a clear path to PostgreSQL if broader usage warrants it.
+Production uses a TanStack Start SPA shell served by Rust/Axum, with household snapshots, accounts, operations, history, private images and encrypted provider configuration persisted in SQLite. Migrations and transactional writes support the first self-hosted family deployment.
 
 Core records: household, member, invitation, product, product alias and variant, group, store, store group order, shopping list and item, purchase event, pantry observation, recipe, recipe ingredient, image attachment, daily meal plan, cooked meal, suggestion, suggestion feedback, and server-side provider configuration.
 
@@ -109,7 +109,7 @@ These do not block the bootstrap. Defaults can be chosen for the first family de
 - Desired offline behavior, shared-device support for kids, and history retention.
 - Provider/base URL, model, and image-generation capability, if any.
 
-## Current progress
+## Prototype progress (historical)
 
 The bootstrap and interactive screens are complete. The repository contains TanStack Start routes for shopping, weekly lunches, recipes, and settings; 178 catalog products; sample recipes; local persistence and tab updates; a Rust health endpoint; generated API types; and a locked Nix environment. Food artwork is bundled as Twemoji SVGs so mockups render consistently on NixOS and mobile browsers.
 
@@ -119,4 +119,39 @@ The private repository is [FruitieX/forkbasket](https://github.com/FruitieX/fork
 
 The accepted prototype refinements are implemented: a quieter shopping page, automatic upcoming meal ingredients and quantity top-ups, a small “Meal plan” source marker, long-press editing for active and checked entries, and searchable shop selection by name/location. Compatible units are normalized, incompatible amounts remain visible, checked requirements survive reloads, and changes to meals preserve manual groceries. All 15 unit tests pass, including purchase/restore, skipped ingredients, explicit quantity overrides, custom recipes, migration from existing local data, and plan changes. Mobile browser checks include actual touch holds, keyboard editing, automatic additions across tabs, and autocomplete with more than 80 configured shops. Screenshots are refreshed for this direction.
 
-The next implementation milestone is **Shared household core**. Pattern learning and optional AI remain planned features. Read the production boundaries above before claiming the prototype is ready for real shared household use.
+## Full application delivery
+
+Complete all phases in this goal; do not stop at the household core or postpone AI. Ship reproducible deployment and validated behavior, not just UI placeholders. Defaults: SQLite, account/password login with first-owner setup and expiring invitations, same-origin secure cookies, a Kubernetes/FluxCD/SOPS deployment matching ~/homelab, with a private Envoy HTTPS route and block-storage SQLite PVC, and configurable OpenAI-compatible chat/image providers. Ask about hosting/provider preferences without blocking independent work. Provider credentials and a live homelab are external configuration; test against controlled provider fixtures and the local production package when they are unavailable.
+
+Acceptance checklist:
+
+- [x] Durable household persistence, migrations, atomic operations, revision checks, idempotency and backup/restore.
+- [x] First-owner setup, login/logout, wife/member invitations, account/profile management, password changes/recovery, household isolation and server validation.
+- [x] Authenticated SSE across independent devices, reconnect recovery, optimistic shopping, offline operation queue and installable PWA.
+- [x] Quiet mobile shopping, tap/check/restore and long-press editing, meaningful undo/trip history, quantities/variants/notes, product/item images, large searchable catalog, complete and custom groups.
+- [x] Favorite stores, autocomplete, per-store group ordering and local current-store preference.
+- [x] Recipe create/read/update/delete, favorites, search/tags, ingredients including custom products, quantity scaling, image uploads and generated images.
+- [x] Current/next-week daily lunches, serving counts, replacements, automatic missing ingredients, pantry coverage, cooked/skipped feedback and explained weekly suggestions.
+- [x] Best-effort pantry with confirmed observations, purchase/cooking adjustments, history correction and estimates visibly distinguished from confirmations.
+- [x] Learned replenishment intervals/confidence, brands/pack sizes/stores/shopping days/product associations, meal rotation/preferences and discovery, dismissal/snooze/feedback/reset.
+- [x] Server-side OpenAI-compatible setup/test/models, hidden-until-configured assistant, natural-language shopping, reviewed typed proposals, new/variant recipes, weekly plans and optional image generation.
+- [x] Polished responsive views, errors/loading/offline states, accessibility/reduced motion and real browser screenshots.
+- [x] Production build/deployment, health/readiness, reverse-proxy guidance, persisted volumes, secure bootstrap/secrets, upgrades/backups, meaningful API/browser/concurrency/offline/AI tests, committed and pushed changes.
+
+The full implementation is complete. Local release checks cover the production browser app, isolated provider fixtures, the actual Nix-built container and compiled Kubernetes templates. Delivery includes commit/push and CI image publishing; the user's live homelab remains unchanged.
+
+### Full application implementation checkpoint
+
+The household API and production frontend are implemented. This is now a real shared application, replacing local prototype storage with SQLite transactions, hashed cookie sessions, expiring member invitations, SSE notifications, optimistic idempotent operations, guarded edits and history undo. First-owner setup is protected by a server token. Recovery codes, password changes, owner/member access, private image uploads, household backups and atomic restoration are implemented. Rust exports API types.
+
+Shopping uses the accepted quiet tile layout and gestures, a catalog of 333 items in all 22 requested groups, custom groups and products, per-device searchable shop selection, and per-store ordering. Product pictures and group overrides persist. Recipes can be created, edited, deleted, favorited, searched, scaled, and photographed; ingredient entry accepts custom products. Meals have serving counts and cooked/skipped feedback. Missing current/next-week requirements follow pantry observations and purchase credits; stale offline quantities require review, and removed/skipped meals release purchased reservations into estimated pantry. Offline pantry confirmations reserve purchased meal ingredients before applying the remainder elsewhere.
+
+Purchase events drive robust replenishment intervals, confidence labels, package/description preferences, store and shopping-day signals, and product associations. Suggestions support acceptance, snooze, dismissal and reset. Recipe ranking uses rotation, favorites, ratings, preferences and ingredient overlap; a reviewed variation provides deterministic discovery alongside AI recipe suggestions. Inventory remains visibly estimated unless manually confirmed.
+
+AI keys are encrypted on the backend with a persisted application key. Configurable compatible Chat Completions providers support schema, JSON and prompted-JSON modes, model discovery/testing, typed reviewed shopping/recipe/week proposals, and optional compatible image generation. Unconfigured assistants are hidden. Provider fixtures validate chat and image behavior; no live provider key was supplied.
+
+Production uses TanStack Start SPA prerendering, an installable service worker and persisted per-tab offline outboxes. Abandoned outboxes can be recovered using browser locks. Axum serves the compiled frontend and API in one process. The locked Nix OCI image runs as UID 10001 with a read-only root filesystem. CI validates the app and publishes the image to GHCR. Flux manifests match the homelab's private Envoy gateway, SOPS configuration and `syno-storage` block PVC, with one replica and Recreate deployment. No homelab files or live resources have been changed.
+
+Release validation: TypeScript, formatting, Clippy, 18 frontend tests and 37 Rust tests pass (15 behavior tests plus 22 typed-binding exports). The production browser suite passes separate owner/wife sessions, live check/restore/hold-edit, automatic ingredients across reload, offline addition/reload/reconnect, private photo persistence, recipe/custom-ingredient editing, pantry confirmation, serving changes, skipped-meal stock release, 80-shop autocomplete/device-local selection, provider configuration/testing and reviewed AI additions. All views fit 320/390/768/1440 px. Mobile group wrapping and meal controls were corrected after visual review; actual screenshots are refreshed in `mockups/`.
+
+The Nix container builds successfully. Runtime checks verify non-root/read-only operation, SPA deep routes, authentication, persistent list/account data after restart, private consistent online database backups, refusal to overwrite backups and point-in-time restoration into a separate data directory. Kustomize compiles the deployment, service, private HTTPS route, block PVC and secret template. Deployment documentation covers bootstrap/invitations, provider compatibility, offline behavior, backups, restoration and upgrades. Live provider configuration and applying the reviewed templates to the user's cluster are installation steps, not missing app features.

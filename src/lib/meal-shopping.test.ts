@@ -8,6 +8,7 @@ import {
   removeShoppingItem,
   shoppingQuantity,
   toggleShoppingItem,
+  confirmPantry,
 } from './meal-shopping'
 
 const now = new Date(2026, 8, 30, 12)
@@ -36,6 +37,36 @@ function find(state: AppState, id = 'pasta') {
 }
 
 describe('automatic meal shopping', () => {
+  it('allocates confirmed pantry totals to purchased reservations before using the remainder', () => {
+    const purchased = toggleShoppingItem(fixture(), 'pasta', now)
+    const planned = {
+      ...purchased,
+      plan: { ...purchased.plan, [tomorrow]: 'green-pasta' },
+    }
+    const enough = confirmPantry(
+      planned,
+      { productId: 'pasta', quantity: 0.6, unit: 'kg', expiresAt: null },
+      now,
+    )
+    expect(enough.pantry?.pasta.amounts).toEqual([{ quantity: 200, unit: 'g' }])
+    expect(find(enough)).toMatchObject({ quantity: 200, checked: false })
+    const shortage = confirmPantry(
+      planned,
+      { productId: 'pasta', quantity: 100, unit: 'g', expiresAt: null },
+      now,
+    )
+    expect(shortage.planCoverage?.[today].pasta).toEqual([
+      { quantity: 100, unit: 'g' },
+    ])
+    expect(shortage.pantry?.pasta.amounts).toEqual([])
+    expect(find(shortage)).toMatchObject({ quantity: 700, checked: false })
+    const empty = confirmPantry(
+      planned,
+      { productId: 'pasta', quantity: 0, unit: 'g', expiresAt: null },
+      now,
+    )
+    expect(find(empty)).toMatchObject({ quantity: 800, checked: false })
+  })
   it('adds upcoming ingredients once, sums repeated meals, and ignores past/out-of-range days', () => {
     const state = fixture({
       plan: {
