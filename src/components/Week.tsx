@@ -6,19 +6,17 @@ import {
   Clock3,
   Plus,
   RefreshCw,
-  ShoppingBasket,
   Check,
-  CalendarDays,
   ArrowUpRight,
 } from 'lucide-react'
 import { useApp } from '../lib/state'
-import { addRecipes, dateKey, mondayOfWeek } from '../lib/shopping'
-import { EmptyState, Eyebrow, Modal } from './ui'
 import type { Recipe } from '../lib/data'
+import { dateKey, mondayOfWeek } from '../lib/shopping'
+import { EmptyState, Eyebrow, Modal } from './ui'
 import { FoodIcon } from './FoodIcon'
 
 export function Week() {
-  const { state, update, allRecipes } = useApp()
+  const { state, update, allRecipes, shoppingItems } = useApp()
   const [offset, setOffset] = useState(0)
   const [pickDay, setPickDay] = useState<Date | null>(null)
   const [suggestOpen, setSuggestOpen] = useState(false)
@@ -30,16 +28,13 @@ export function Week() {
     d.setDate(d.getDate() + i)
     return d
   })
-  const scheduled = days
-    .map((d) => allRecipes.find((r) => r.id === state.plan[dateKey(d)]))
-    .filter((r): r is Recipe => !!r)
   const shortDate = (d: Date) =>
     d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const ranked = [...allRecipes].sort((a, b) => score(b) - score(a))
   function score(recipe: Recipe) {
     return (
       recipe.ingredients.filter((i) =>
-        state.items.some((item) => !item.checked && item.id === i.productId),
+        shoppingItems.some((item) => !item.checked && item.id === i.productId),
       ).length / Math.max(1, recipe.ingredients.length)
     )
   }
@@ -177,36 +172,9 @@ export function Week() {
           )
         })}
       </div>
-      <div className="week-bottom">
-        <div>
-          <span className="week-basket">
-            <FoodIcon value="🧺" />
-          </span>
-          <div>
-            <h3>From our week to our basket.</h3>
-            <p>
-              {scheduled.length
-                ? `${scheduled.length} lunches planned. Add the ingredients together.`
-                : 'Choose a few lunches, then gather everything in one tap.'}
-            </p>
-          </div>
-        </div>
-        <button
-          className="primary-button"
-          disabled={!scheduled.length}
-          onClick={() => {
-            update((s) => ({ ...s, items: addRecipes(s.items, scheduled) }))
-            notify(
-              'The week’s ingredients are on your list. Duplicates merged.',
-            )
-          }}
-        >
-          <ShoppingBasket size={18} />
-          Shop this week
-        </button>
-      </div>
-      <p className="gentle-note">
-        <CalendarDays size={14} /> Plans change. Tap any meal to swap it.
+      <p className="meal-plan-sync-note">
+        <Check size={15} />
+        Missing ingredients go straight to your shopping list.
       </p>
       <Modal
         open={!!pickDay}
@@ -297,7 +265,9 @@ export function Week() {
                     },
                   }))
                   setSuggestOpen(false)
-                  notify('Your week is planned. Make it your own!')
+                  notify(
+                    'Plan saved. Missing ingredients are on your shopping list.',
+                  )
                 }}
               >
                 <Check size={17} />

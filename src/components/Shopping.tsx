@@ -1,25 +1,20 @@
 import { useRef, useState } from 'react'
-import { Link } from '@tanstack/react-router'
 import { AnimatePresence, motion } from 'motion/react'
-import {
-  Check,
-  Plus,
-  Search,
-  MapPin,
-  ChevronDown,
-  Pencil,
-  ArrowRight,
-  Clock3,
-  ShoppingBasket,
-  RotateCcw,
-  Lightbulb,
-} from 'lucide-react'
-import { catalog, categories, productId, recipes } from '../lib/data'
+import { Check, Plus, Search, CalendarDays } from 'lucide-react'
+import { catalog, categories, productId } from '../lib/data'
 import type { Category, Product, ShoppingItem } from '../lib/data'
 import { useApp } from '../lib/state'
-import { dateKey, mergeItem, restockSuggestions } from '../lib/shopping'
-import { Eyebrow, EmptyState, Modal, SectionTitle } from './ui'
+import { mergeItem, restockSuggestions } from '../lib/shopping'
+import { EmptyState, Modal, SectionTitle } from './ui'
 import { FoodIcon } from './FoodIcon'
+import { HoldButton } from './HoldButton'
+import { StoreCombobox } from './StoreCombobox'
+import {
+  editShoppingItem,
+  removeShoppingItem,
+  shoppingQuantity,
+  toggleShoppingItem,
+} from '../lib/meal-shopping'
 
 const categoryColors: Partial<Record<Category, string>> = {
   'Fruit & vegetables': 'produce',
@@ -29,19 +24,20 @@ const categoryColors: Partial<Record<Category, string>> = {
   'Meat & fish': 'fish',
 }
 export function Shopping() {
-  const { state, update } = useApp()
+  const { state, update, shoppingItems } = useApp()
   const [query, setQuery] = useState('')
   const [isFocused, setFocused] = useState(false)
   const [suggestionIndex, setSuggestionIndex] = useState(-1)
   const [addOpen, setAddOpen] = useState(false)
   const [edit, setEdit] = useState<ShoppingItem | null>(null)
   const [message, setMessage] = useState('')
+  const [showToast, setShowToast] = useState(false)
   const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const input = useRef<HTMLInputElement>(null)
   const store =
     state.stores.find((s) => s.id === state.storeId) ?? state.stores[0]
-  const active = state.items.filter((i) => !i.checked)
-  const checked = state.items.filter((i) => i.checked)
+  const active = shoppingItems.filter((i) => !i.checked)
+  const checked = shoppingItems.filter((i) => i.checked)
   const products = [...catalog, ...state.customProducts]
   const suggestions = products
     .filter((p) => p.name.toLowerCase().includes(query.trim().toLowerCase()))
@@ -49,11 +45,10 @@ export function Shopping() {
   const canCreate = !products.some(
     (p) => p.name.toLowerCase() === query.trim().toLowerCase(),
   )
-  const restock = restockSuggestions(state)
-  const today =
-    recipes.find((r) => r.id === state.plan[dateKey(new Date())]) ?? recipes[0]
-  function announce(text: string) {
+  const restock = restockSuggestions({ ...state, items: shoppingItems })
+  function announce(text: string, visible = true) {
     setMessage(text)
+    setShowToast(visible)
     if (messageTimer.current) clearTimeout(messageTimer.current)
     messageTimer.current = setTimeout(() => setMessage(''), 3200)
   }
@@ -65,72 +60,27 @@ export function Shopping() {
     announce(`${product.name} added to your list`)
   }
   function toggle(item: ShoppingItem) {
-    update((s) => ({
-      ...s,
-      items: s.items.map((i) =>
-        i.id === item.id ? { ...i, checked: !i.checked } : i,
-      ),
-      purchases: item.checked
-        ? s.purchases
-        : { ...s.purchases, [item.id]: new Date().toISOString() },
-    }))
+    update((s) => toggleShoppingItem(s, item.id))
     announce(
       item.checked
         ? `${item.name} moved back to your list`
-        : `${item.name} checked. Looking good!`,
+        : `${item.name} checked`,
+      false,
     )
     if (!item.checked && typeof navigator !== 'undefined' && navigator.vibrate)
       navigator.vibrate(18)
   }
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <Eyebrow>THE EVERYDAY, MADE EASIER</Eyebrow>
-          <h1>
-            Our shopping list<span className="heading-dot">.</span>
-          </h1>
-          <p>A happy kitchen starts with a good basket.</p>
-        </div>
-        <span className="list-count">
-          <ShoppingBasket size={16} />
-          {active.length} to pick up
-        </span>
+      <div className="shopping-heading">
+        <h1>Shopping list</h1>
+        <StoreCombobox />
       </div>
+      <p id="entry-gesture-help" className="sr-only">
+        Tap to check or restore. Hold to edit, or use right-click or Shift+F10.
+      </p>
       <div className="shopping-layout">
         <div className="shopping-main">
-          <div className="store-bar">
-            <div className="store-picker">
-              <MapPin size={18} />
-              <label className="sr-only" htmlFor="store">
-                Shopping at
-              </label>
-              <select
-                id="store"
-                value={store.id}
-                onChange={(e) =>
-                  update((s) => ({ ...s, storeId: e.target.value }))
-                }
-              >
-                {state.stores.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={15} />
-            </div>
-            <span className="store-order-label">
-              In your store’s aisle order
-            </span>
-            <Link
-              to="/settings"
-              className="icon-button"
-              aria-label="Configure stores"
-            >
-              <SettingsIcon />
-            </Link>
-          </div>
           <div
             className="add-item-wrap"
             onBlur={(e) => {
@@ -252,12 +202,6 @@ export function Shopping() {
               </div>
             )}
           </div>
-          <div className="shopping-caption">
-            <span>
-              <span className="green-dot" /> One tap to check. One less thing to
-              remember.
-            </span>
-          </div>
           {active.length === 0 && (
             <EmptyState
               icon="🧺"
@@ -286,34 +230,32 @@ export function Shopping() {
                               stiffness: 400,
                               damping: 30,
                             }}
-                            className={`item-tile ${categoryColors[category] ?? 'other'}`}
+                            className={`item-tile ${categoryColors[category] ?? 'other'} ${item.autoAdded ? 'auto-added' : ''}`}
                           >
-                            <button
+                            <HoldButton
                               className="tile-check"
                               aria-label={`Check ${item.name}`}
-                              onClick={() => toggle(item)}
+                              onPress={() => toggle(item)}
+                              onHold={() => setEdit(item)}
+                              aria-describedby="entry-gesture-help"
                             >
                               <span className="tile-emoji" aria-hidden="true">
                                 <FoodIcon value={item.icon} />
                               </span>
                               <strong>{item.name}</strong>
                               <span className="tile-quantity">
-                                {item.quantity} {item.unit}
+                                {shoppingQuantity(item)}
                               </span>
                               <span className="tile-note">
                                 {item.note || ' '}
                               </span>
-                              <span className="tile-check-indicator">
-                                <Check size={15} />
-                              </span>
-                            </button>
-                            <button
-                              className="tile-edit"
-                              aria-label={`Edit ${item.name}`}
-                              onClick={() => setEdit(item)}
-                            >
-                              <Pencil size={12} />
-                            </button>
+                              {item.autoAdded && (
+                                <span className="meal-plan-badge">
+                                  <CalendarDays size={10} />
+                                  Meal plan
+                                </span>
+                              )}
+                            </HoldButton>
                           </motion.div>
                         ))}
                       </AnimatePresence>
@@ -331,92 +273,67 @@ export function Shopping() {
               <div className="checked-items">
                 <AnimatePresence initial={false}>
                   {checked.map((item) => (
-                    <motion.button
+                    <motion.div
                       layout
                       key={item.id}
                       initial={{ opacity: 0, y: -12 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0 }}
-                      className="checked-item"
-                      aria-label={`Restore ${item.name}`}
-                      onClick={() => toggle(item)}
                     >
-                      <span>
-                        <FoodIcon value={item.icon} />
-                      </span>
-                      <span>{item.name}</span>
-                      <Check size={14} />
-                    </motion.button>
+                      <HoldButton
+                        className="checked-item"
+                        aria-label={`Restore ${item.name}`}
+                        onPress={() => toggle(item)}
+                        onHold={() => setEdit(item)}
+                        aria-describedby="entry-gesture-help"
+                      >
+                        <span>
+                          <FoodIcon value={item.icon} />
+                        </span>
+                        <span>{item.name}</span>
+                        <Check size={14} />
+                      </HoldButton>
+                    </motion.div>
                   ))}
                 </AnimatePresence>
               </div>
             </section>
           )}
-          <div className="list-footer">
-            <span>Made for the little things that keep us going.</span>
-            <span>
-              <FoodIcon value="🌿" />
-            </span>
-          </div>
+          {restock.length > 0 && (
+            <details className="restock-disclosure">
+              <summary>
+                Restock suggestions{' '}
+                <span className="count">{restock.length}</span>
+              </summary>
+              <div>
+                {restock.map((product) => (
+                  <button
+                    className="restock-item"
+                    key={product.id}
+                    onClick={() => add(product)}
+                  >
+                    <span>
+                      <FoodIcon value={product.icon} />
+                    </span>
+                    <span>
+                      <strong>{product.name}</strong>
+                      <small>Usually every {product.interval} days</small>
+                    </span>
+                    <Plus size={16} />
+                  </button>
+                ))}
+              </div>
+            </details>
+          )}
         </div>
-        <aside className="shopping-aside">
-          <div className="today-card">
-            <Eyebrow>ON THE MENU TODAY</Eyebrow>
-            <img src={today.image} alt={today.name} />
-            <div>
-              <h3>{today.name}</h3>
-              <span>
-                <Clock3 size={14} />
-                {today.minutes} min <span className="separator">·</span>{' '}
-                {today.servings} happy plates
-              </span>
-              <Link to="/week">
-                See our week <ArrowRight size={16} />
-              </Link>
-            </div>
-          </div>
-          <div className="restock-card">
-            <span className="restock-icon">
-              <RotateCcw size={20} />
-            </span>
-            <h3>A little top-up?</h3>
-            <p>Based on when you last picked up your everyday favorites.</p>
-            {restock.length ? (
-              restock.map((p) => (
-                <button
-                  className="restock-item"
-                  key={p.id}
-                  onClick={() => add(p)}
-                >
-                  <span>
-                    <FoodIcon value={p.icon} />
-                  </span>
-                  <span>
-                    <strong>{p.name}</strong>
-                    <small>Usually every {p.interval} days</small>
-                  </span>
-                  <Plus size={16} />
-                </button>
-              ))
-            ) : (
-              <span className="restock-clear">
-                <Check size={15} /> Your usuals are on the list.
-              </span>
-            )}
-          </div>
-          <div className="small-tip">
-            <Lightbulb size={18} />
-            <p>
-              Planning lunch? Add a recipe’s ingredients in one tap. We’ll merge
-              the duplicates.
-            </p>
-          </div>
-        </aside>
       </div>
+      <span className="sr-only" role="status">
+        {message}
+      </span>
       <AnimatePresence>
-        {message && (
+        {message && showToast && (
           <motion.div
-            role="status"
+            aria-hidden="true"
             className="toast"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -441,14 +358,6 @@ export function Shopping() {
     </>
   )
 }
-function SettingsIcon() {
-  return (
-    <span className="store-edit">
-      <Pencil size={14} />
-    </span>
-  )
-}
-
 function ItemEditor({
   open,
   onClose,
@@ -491,20 +400,24 @@ function ItemEditor({
               category,
               icon: '🛒',
             }
-          update((s) => ({
-            ...s,
-            customProducts:
-              item || existing
-                ? s.customProducts
-                : [...s.customProducts, product],
-            items: item
-              ? s.items.map((i) =>
-                  i.id === item.id
-                    ? { ...i, category, quantity, unit, note }
-                    : i,
-                )
-              : mergeItem(s.items, product, quantity, unit, note, true),
-          }))
+          update((s) =>
+            item
+              ? editShoppingItem(s, item, { category, quantity, unit, note })
+              : {
+                  ...s,
+                  customProducts: existing
+                    ? s.customProducts
+                    : [...s.customProducts, product],
+                  items: mergeItem(
+                    s.items,
+                    product,
+                    quantity,
+                    unit,
+                    note,
+                    true,
+                  ),
+                },
+          )
           onClose()
         }}
       >
@@ -565,6 +478,16 @@ function ItemEditor({
             maxLength={300}
           />
         </label>
+        {item?.mealNames?.length ? (
+          <p className="planned-item-info">
+            <CalendarDays size={15} />
+            <span>
+              Needed for {item.mealNames.join(', ')}. Quantities follow your
+              plan. Changing the amount overrides it for these meals; removing
+              this item skips it.
+            </span>
+          </p>
+        ) : null}
         <button className="primary-button" type="submit">
           <Check size={18} />
           {item ? 'Save details' : 'Add to shopping list'}
@@ -574,10 +497,7 @@ function ItemEditor({
             type="button"
             className="text-button danger"
             onClick={() => {
-              update((s) => ({
-                ...s,
-                items: s.items.filter((i) => i.id !== item.id),
-              }))
+              update((s) => removeShoppingItem(s, item.id))
               onClose()
             }}
           >

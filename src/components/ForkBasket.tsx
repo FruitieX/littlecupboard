@@ -50,7 +50,9 @@ const navigation = [
 export function ForkBasket({ view = 'shopping' }: { view?: View }) {
   return (
     <MotionConfig reducedMotion="user">
-      <div className="app-shell">
+      <div
+        className={`app-shell ${view === 'shopping' ? 'shopping-screen' : ''}`}
+      >
         <a href="#main-content" className="skip-link">
           Skip to content
         </a>
@@ -82,23 +84,25 @@ export function ForkBasket({ view = 'shopping' }: { view?: View }) {
               </Link>
             ))}
           </nav>
-          <div className="sidebar-bottom">
-            <span className="little-plant">
-              <FoodIcon value="🌱" />
-            </span>
-            <h3>
-              Good food.
-              <br />
-              Less fuss.
-            </h3>
-            <p>
-              A little less planning.
-              <br />A little more living.
-            </p>
-            <span className="prototype-label">
-              INTERACTIVE PROTOTYPE <ArrowUpRight size={12} />
-            </span>
-          </div>
+          {view !== 'shopping' && (
+            <div className="sidebar-bottom">
+              <span className="little-plant">
+                <FoodIcon value="🌱" />
+              </span>
+              <h3>
+                Good food.
+                <br />
+                Less fuss.
+              </h3>
+              <p>
+                A little less planning.
+                <br />A little more living.
+              </p>
+              <span className="prototype-label">
+                INTERACTIVE PROTOTYPE <ArrowUpRight size={12} />
+              </span>
+            </div>
+          )}
         </aside>
         <div className="main-shell">
           <header className="topbar">
@@ -109,16 +113,20 @@ export function ForkBasket({ view = 'shopping' }: { view?: View }) {
             >
               <Brand />
             </Link>
-            <span className="topbar-greeting">
-              <Leaf size={15} /> A little more room for family time
-            </span>
+            {view !== 'shopping' && (
+              <span className="topbar-greeting">
+                <Leaf size={15} /> A little more room for family time
+              </span>
+            )}
             <div className="topbar-right">
               <span className="preview-badge">Prototype</span>
-              <div className="avatars" aria-label="Demo family">
-                <span className="avatar avatar-peach">R</span>
-                <span className="avatar avatar-green">A</span>
-                <span className="avatar avatar-yellow">+2</span>
-              </div>
+              {view !== 'shopping' && (
+                <div className="avatars" aria-label="Demo family">
+                  <span className="avatar avatar-peach">R</span>
+                  <span className="avatar avatar-green">A</span>
+                  <span className="avatar avatar-yellow">+2</span>
+                </div>
+              )}
             </div>
           </header>
           <main id="main-content" className={`main-content view-${view}`}>

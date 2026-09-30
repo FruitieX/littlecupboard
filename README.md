@@ -28,12 +28,14 @@ The frontend proxies `/api` to `127.0.0.1:3001`. `GET /api/health` returns the t
 
 ## Explore the screens
 
-- `/`: grouped food tiles, check/restore, autocomplete across 178 built-in products, custom items, quantity and note editing, store sorting, and sample restock reminders.
-- `/week`: current/next week, lunch selection and replacement, suggestions from saved recipes, and merged shopping ingredients for the week.
+- `/`: grouped food tiles, tap to check/restore, hold to edit, autocomplete across 178 built-in products, custom items, searchable shop selection, store sorting, automatic meal ingredients, and expandable restock suggestions. Right-click or Shift+F10 also opens editing.
+- `/week`: current/next week, lunch selection and replacement, suggestions from saved recipes, and automatic missing ingredients in the shopping list.
 - `/recipes`: recipe search, favorites and filters, ingredient selection and serving scaling, instructions, recipe entry, and optional small image uploads.
 - `/settings`: favorite stores, individual aisle ordering, prototype reset, and the planned location of optional provider configuration.
 
 The prototype saves changes locally and updates other tabs in the same browser. It uses illustrative recipes, sample history, and demo family avatars. Server persistence, invitations, cross-device realtime sync, learned inventory/purchase patterns, and AI are planned next; the assistant is absent from ordinary navigation until an actual provider integration is available.
+
+Meals from today through the end of next week automatically contribute ingredients. Existing quantities on the list cover those requirements; extra amounts get a “Meal plan” marker. Checking remembers the covered meal requirements, restoring reverses the last check, and removing an ingredient skips its current requirements. Changing a meal updates automatic groceries while keeping manual additions. This is best-effort coverage, without an exact pantry count.
 
 The full product scope, pattern-learning design, architecture, and remaining phases are recorded in [docs/PLAN.md](docs/PLAN.md). Project instructions in [AGENTS.md](AGENTS.md) require future work to read and maintain that plan.
 
@@ -63,7 +65,7 @@ nix develop --command cargo test --manifest-path backend/Cargo.toml
 nix develop --command npm run test:ui
 ```
 
-Unit tests cover ingredient merging, incompatible units, checked-item reactivation, restock eligibility, and calendar boundaries. Browser checks exercise shopping actions, edits, autocomplete, local persistence and tab updates, store sorting, recipe quantity merging, planning, recipe entry, and all four screens at 320, 390, 768, and 1440 pixels. Rust tests also export the ts-rs health type into `src/lib/api/`.
+Unit tests cover ingredient merging, compatible/incompatible units, automatic meal requirements and quantity top-ups, purchase/restore coverage, skipped ingredients, plan changes, old-data migration, restock eligibility, and calendar boundaries. Browser checks exercise shopping actions, touch holds and keyboard edits, product and shop autocomplete (including a long shop list), local persistence and tab updates, store sorting, recipe quantity merging, automatic planning, recipe entry, and all four screens at 320, 390, 768, and 1440 pixels. Rust tests also export the ts-rs health type into `src/lib/api/`.
 
 ## Stack
 

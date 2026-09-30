@@ -17,7 +17,9 @@ This document records the user’s requirements, the chosen direction, and the i
 
 ## Shopping list requirements
 
-The main screen uses large, easy-to-press tiles inspired by Bring. Pressing an item checks it and moves it to a recently checked section below the active list. Pressing a recently checked item brings it back. Keep a distinct edit control for notes and quantities so ordinary shopping remains one tap.
+The main screen uses large, easy-to-press tiles inspired by Bring. Pressing an item checks it and moves it to a recently checked section below the active list. Pressing a recently checked item brings it back. Holding an active or checked entry opens its edit dialog. Right-click and Shift+F10 provide desktop and keyboard equivalents. Cancel a pending hold when the user scrolls or moves away. Keep ordinary shopping one tap and remove separate pencil buttons from tiles.
+
+The user accepted the initial visual direction but requested less clutter, especially on the shopping page. Prioritize the shop picker, item addition, grouped tiles, and recently checked entries. Hide secondary restock suggestions in an expandable section. Avoid promotional copy, sidebar cards, and repeated visual confirmations during ordinary checking.
 
 Adding an item should provide autocomplete from a substantial built-in catalog. Support creating custom items and assigning them to groups. Each item may have a photo or illustration, a quantity, and additional free text for an exact brand, color, size, variant, or instruction.
 
@@ -25,13 +27,15 @@ Adding ingredients from a recipe or weekly plan must avoid duplicate tiles and p
 
 Required group coverage includes fruits, vegetables, milk, cheese, meat, fish, ingredients, spices, grain products, snacks, sweets, beverages, household, care, health, pet supplies, home, garden, bread, pastries, frozen, and convenience foods. The first mockup combines some adjacent groups for readability. Production catalog and store settings should support the full set, custom groups, and fine-grained ordering.
 
-Settings should maintain a few favorite stores and a separate group order for each. The main screen includes a dropdown or autocomplete for the current store; switching stores immediately sorts the list to match that store’s aisles. Ingredient images and item images are optional attachments in the eventual data model.
+Settings should maintain favorite stores and a separate group order for each. The main screen must include a searchable autocomplete for the current store because the configured list may be long. Search names and locations, support touch and keyboard selection, and preserve the chosen shop if the search is canceled. Switching stores immediately sorts the list to match that store’s aisles. Ingredient images and item images are optional attachments in the eventual data model.
 
 ## Recipes and weekly lunches
 
 Store family recipes with a name, ingredients and amounts, instructions, servings, preparation time, optional tags, favorites, and an optional attached image. Support uploaded images and, when configured, AI-generated images through the appropriate provider capability.
 
-Plan lunch for each day of the current and next week. A family member can select or replace a recipe, leave a day open, and add one recipe’s or the whole week’s ingredients to the shopping list. Scale quantities with servings. Allow users to omit ingredients they already have.
+Plan lunch for each day of the current and next week. A family member can select or replace a recipe or leave a day open. Missing planned ingredients must automatically appear in the shopping list with a subtle “Meal plan” marker; there is no “Shop this week” button. Explicitly adding one recipe’s ingredients remains available from recipe detail. Scale quantities with servings. Allow users to omit ingredients they already have.
+
+The prototype derives requirements for today through the end of next week. Sum each product’s compatible amounts across planned meals, then treat manually listed quantities as coverage rather than adding the same requirement twice. Keep unlike units as distinct amounts on one tile. Checking credits the specific current meal requirements so groceries do not repeatedly return after reloads or unrelated edits; restoring undoes the last check’s credits. A later meal or increased requirement can add more. Removing a planned ingredient skips the current requirements while allowing future additions. Changing/removing a meal removes obsolete automatic entries while preserving manually added groceries and notes. Note-only edits continue following the plan; explicitly changing a quantity overrides current requirements and adopts the chosen amount as a manual grocery, including when the amount is smaller. These credits are best-effort meal coverage, not exact pantry inventory. Production should reconcile them with confirmed pantry observations and durable purchase events.
 
 Suggest a weekly schedule from saved recipes. Initial deterministic suggestions can favor overlapping ingredients, reasonable preparation times, varied meals, and favorite recipes. Production suggestions should also use household preferences, cooking history, likely inventory, and feedback. A recipe suggested by an AI assistant is a draft until the family chooses to save it.
 
@@ -112,5 +116,7 @@ The bootstrap and interactive screens are complete. The repository contains TanS
 Five shopping/calendar logic tests, the ts-rs export test, TypeScript checking, production compilation, Rust formatting and Clippy, Prettier checking, and the browser interaction suite have passed after a clean dependency install. Browser checks cover check/restore, descriptions, autocomplete, custom items, local persistence, same-browser tab updates, store sorting, ingredient quantity merging, next-week suggestions, store entry, recipe entry, and all four screens at 320, 390, 768, and 1440 pixels. Actual screenshots and the overview board are in `mockups/`; they have been visually reviewed. The API health endpoint was also verified through the frontend proxy.
 
 The private repository is [FruitieX/forkbasket](https://github.com/FruitieX/forkbasket). The development preview runs at `http://localhost:3100`; the Rust scaffold listens at `127.0.0.1:3001`.
+
+The accepted prototype refinements are implemented: a quieter shopping page, automatic upcoming meal ingredients and quantity top-ups, a small “Meal plan” source marker, long-press editing for active and checked entries, and searchable shop selection by name/location. Compatible units are normalized, incompatible amounts remain visible, checked requirements survive reloads, and changes to meals preserve manual groceries. All 15 unit tests pass, including purchase/restore, skipped ingredients, explicit quantity overrides, custom recipes, migration from existing local data, and plan changes. Mobile browser checks include actual touch holds, keyboard editing, automatic additions across tabs, and autocomplete with more than 80 configured shops. Screenshots are refreshed for this direction.
 
 The next implementation milestone is **Shared household core**. Pattern learning and optional AI remain planned features. Read the production boundaries above before claiming the prototype is ready for real shared household use.

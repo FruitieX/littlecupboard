@@ -8,6 +8,7 @@ import {
 import type { Dispatch, ReactNode, SetStateAction } from 'react'
 import { initialState, recipes } from './data'
 import type { AppState } from './data'
+import { getShoppingItems, preparePlanShopping } from './meal-shopping'
 
 const STORAGE_KEY = 'family-shopping-prototype-v1'
 const Context = createContext<{
@@ -27,21 +28,21 @@ function parseState(value: string | null): AppState | null {
       parsed.purchases &&
       Array.isArray(parsed.customProducts)
     )
-      return {
+      return preparePlanShopping({
         ...parsed,
         customRecipes: parsed.customRecipes ?? [],
         favoriteRecipeIds: parsed.favoriteRecipeIds ?? [
           'green-pasta',
           'salmon-bowl',
         ],
-      }
+      })
   } catch {
     /* Start with the demo when storage is unavailable or corrupt. */
   }
   return null
 }
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState(initialState)
+  const [state, setState] = useState(() => preparePlanShopping(initialState()))
   const [ready, setReady] = useState(false)
   useEffect(() => {
     try {
@@ -80,12 +81,14 @@ export function useApp() {
   const context = useContext(Context)
   if (!context) throw new Error('AppProvider is required')
   const update = useCallback(
-    (fn: (state: AppState) => AppState) => context.setState(fn),
+    (fn: (state: AppState) => AppState) =>
+      context.setState((state) => preparePlanShopping(fn(state))),
     [context.setState],
   )
   return {
     ...context,
     update,
     allRecipes: [...recipes, ...context.state.customRecipes],
+    shoppingItems: getShoppingItems(context.state),
   }
 }

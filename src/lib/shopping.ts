@@ -26,6 +26,7 @@ export function mergeItem(
       notes.push(`${quantity} ${unit}`)
     return {
       ...item,
+      origin: undefined,
       checked: false,
       quantity: item.checked
         ? quantity

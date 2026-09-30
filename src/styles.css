@@ -2746,3 +2746,261 @@ svg {
     scroll-behavior: auto !important;
   }
 }
+
+/* A quieter shopping surface: the list, its store, and the next quick action. */
+.shopping-screen .topbar {
+  display: none;
+}
+.view-shopping {
+  max-width: 1080px;
+}
+.shopping-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.shopping-heading h1 {
+  font:
+    500 38px/1.2 'Fraunces',
+    Georgia,
+    serif;
+  letter-spacing: -1.3px;
+}
+.shopping-layout {
+  display: block;
+}
+.view-shopping .item-grid {
+  grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
+}
+.view-shopping .add-item-wrap {
+  margin-bottom: 25px;
+}
+.view-shopping .tile-check {
+  padding-top: 15px;
+  height: 162px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: pan-y;
+}
+.meal-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 8px;
+  font-weight: 500;
+  color: #57704a;
+  background: #e1ebd1;
+  border-radius: 4px;
+  padding: 3px 5px;
+  margin-top: auto;
+  line-height: 1;
+}
+.item-tile.auto-added {
+  border-color: #adbf92;
+}
+.view-shopping .tile-note {
+  margin-top: 4px;
+}
+.store-combobox {
+  position: relative;
+  z-index: 10;
+  flex-shrink: 0;
+}
+.store-combobox .store-picker {
+  border: 1px solid #e0e5d7;
+  background: #f3f5ec;
+  border-radius: 9px;
+  padding: 0 9px;
+  gap: 5px;
+  min-height: 40px;
+}
+.store-picker input {
+  width: 140px;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--forest);
+  font-weight: 500;
+  font-size: 16px;
+  outline: none;
+  text-overflow: ellipsis;
+  padding: 8px 0;
+}
+.store-picker input::placeholder {
+  color: var(--forest);
+}
+.store-combobox:focus-within .store-picker {
+  border-color: #9daf82;
+}
+.store-toggle {
+  background: transparent;
+  display: grid;
+  place-items: center;
+  color: #829674;
+  width: 22px;
+  height: 34px;
+  flex-shrink: 0;
+}
+.store-suggestions {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  width: 280px;
+  max-width: calc(100vw - 42px);
+  max-height: 350px;
+  overflow-y: auto;
+  background: var(--cream);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 12px 30px #293b3020;
+}
+.store-suggestions button {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  border-radius: 7px;
+  text-align: left;
+  background: transparent;
+}
+.store-suggestions button:hover,
+.store-suggestions button[aria-selected='true'] {
+  background: #eaf0df;
+}
+.store-suggestions strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+}
+.store-suggestions small {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.store-suggestions svg {
+  color: #789161;
+}
+.store-suggestions p {
+  padding: 10px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.restock-disclosure {
+  border-top: 1px solid var(--line);
+  padding-top: 18px;
+  margin-top: 24px;
+}
+.restock-disclosure summary {
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 11px;
+}
+.restock-disclosure summary .count {
+  margin-left: 7px;
+}
+.restock-disclosure > div {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.restock-disclosure .restock-item {
+  width: 210px;
+}
+.meal-plan-sync-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 11px;
+  color: #7c916c;
+  margin-top: 25px;
+}
+.planned-item-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #83956e;
+  font-size: 11px;
+  line-height: 1.7;
+}
+.planned-item-info svg {
+  margin-top: 2px;
+}
+@media (max-width: 760px) {
+  .shopping-screen .topbar {
+    display: flex;
+    height: 63px;
+  }
+  .view-shopping {
+    padding-top: 12px;
+  }
+  .shopping-heading {
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .shopping-heading h1 {
+    font-size: 30px;
+    letter-spacing: -1.1px;
+  }
+  .store-combobox .store-picker {
+    padding: 0 7px;
+    gap: 4px;
+    min-height: 38px;
+  }
+  .store-picker input {
+    width: 76px;
+    font-size: 16px;
+  }
+  .store-toggle {
+    width: 16px;
+  }
+  .view-shopping .item-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .view-shopping .tile-check {
+    height: 154px;
+    padding: 13px 7px 10px;
+  }
+  .view-shopping .tile-emoji {
+    font-size: 35px;
+    margin-bottom: 6px;
+  }
+  .view-shopping .tile-note {
+    font-size: 8.5px;
+  }
+  .meal-plan-badge {
+    font-size: 7px;
+    padding: 3px 4px;
+    gap: 3px;
+  }
+  .meal-plan-badge svg {
+    width: 9px;
+    height: 9px;
+  }
+  .meal-plan-sync-note {
+    align-items: flex-start;
+    text-align: center;
+    font-size: 10px;
+    line-height: 1.7;
+  }
+}
+@media (max-width: 365px) {
+  .shopping-heading h1 {
+    font-size: 26px;
+  }
+  .store-picker input {
+    width: 62px;
+  }
+  .store-combobox .store-picker > svg {
+    width: 14px;
+  }
+}

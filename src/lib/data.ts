@@ -27,7 +27,16 @@ export type ShoppingItem = Product & {
   unit: string
   note: string
   checked: boolean
+  origin?: 'meal-plan'
+  planCredits?: PlanCredit[]
+  checkedBefore?: boolean
+  amounts?: Amount[]
+  autoAdded?: boolean
+  mealNames?: string[]
 }
+export type Amount = { quantity: number; unit: string }
+export type PlanCredit = Amount & { day: string; productId: string }
+export type PlanCoverage = Record<string, Record<string, Amount[]>>
 export type Ingredient = {
   productId: string
   quantity: number
@@ -62,6 +71,7 @@ export type AppState = {
   customProducts: Product[]
   customRecipes: Recipe[]
   favoriteRecipeIds: string[]
+  planCoverage?: PlanCoverage
 }
 
 const productGroups: [Category, string, string[]][] = [
