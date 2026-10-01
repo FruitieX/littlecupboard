@@ -1,14 +1,24 @@
 import { getProducts } from '../lib/catalog'
 import { useState } from 'react'
-import { Archive, History, Plus, X, Check, RefreshCw } from 'lucide-react'
+import {
+  Archive,
+  History,
+  Plus,
+  X,
+  Check,
+  RefreshCw,
+  Pencil,
+} from 'lucide-react'
 import { useApp } from '../lib/state'
 import { useLearning } from '../lib/learning'
 import { Modal, SectionTitle } from './ui'
 import { FoodIcon } from './FoodIcon'
+import { PantryEditor, pantryEdit, type PantryEdit } from './PantryEditor'
 export function KitchenTools() {
   const { state, update, action, session } = useApp()
   const { insights, history, error } = useLearning()
   const [open, setOpen] = useState<'pantry' | 'history' | null>(null)
+  const [editing, setEditing] = useState<PantryEdit | null>(null)
   const [name, setName] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [unit, setUnit] = useState('pc')
@@ -30,138 +40,160 @@ export function KitchenTools() {
       <Modal
         open={open === 'pantry'}
         onOpenChange={(v) => {
-          if (!v) setOpen(null)
+          if (!v) {
+            setOpen(null)
+            setEditing(null)
+          }
         }}
         title="What’s already at home?"
         description="Confirm the total you actually have. We reserve planned ingredients first, then use the remainder for other meals."
       >
-        <form
-          className="editor-form"
-          onSubmit={(e) => {
-            e.preventDefault()
-            if (!product) return
-            action({
-              type: 'observePantry',
-              productId: product.id,
-              quantity,
-              unit,
-              expiresAt: expiry || null,
-            })
-            setName('')
-          }}
-        >
-          <label>
-            Pantry item
-            <input
-              list="pantry-products"
-              value={name}
-              required
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Search your ingredients"
-            />
-            <datalist id="pantry-products">
-              {products.map((p) => (
-                <option key={p.id} value={p.name} />
-              ))}
-            </datalist>
-          </label>
-          <div className="form-row">
-            <label>
-              Quantity
-              <input
-                type="number"
-                required
-                min="0"
-                step="any"
-                value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
-              />
-            </label>
-            <label>
-              Unit
-              <input
-                required
-                maxLength={30}
-                value={unit}
-                onChange={(e) => setUnit(e.target.value)}
-              />
-            </label>
-          </div>
-          <label>
-            Use by <span className="optional">optional</span>
-            <input
-              aria-label="Use by"
-              type="date"
-              value={expiry}
-              onChange={(e) => setExpiry(e.target.value)}
-            />
-          </label>
-          <button className="secondary-button" disabled={!product}>
-            <Check size={16} /> Confirm amount
-          </button>
-        </form>
-        <div className="pantry-list">
-          {Object.entries(state.pantry ?? {}).map(([id, entry]) => {
-            const product = products.find((p) => p.id === id)
-            const reserved = Object.values(state.purchasedCoverage ?? {})
-              .flatMap((day) => day[id] ?? [])
-              .reduce(
-                (sum, amount) => ({
-                  ...sum,
-                  [amount.unit]: (sum[amount.unit] ?? 0) + amount.quantity,
-                }),
-                {} as Record<string, number>,
-              )
-            return (
-              <div key={id}>
-                <FoodIcon
-                  value={product?.icon ?? '🛒'}
-                  image={state.productImages?.[id]}
-                />
-                <span>
-                  <strong>{product?.name ?? id}</strong>
-                  <small>
-                    {entry.amounts
-                      .map((a) => `${a.quantity} ${a.unit}`)
-                      .join(' + ') || 'No remaining amount'}{' '}
-                    ·{' '}
-                    {entry.confirmed
-                      ? 'Confirmed'
-                      : 'Estimated — worth checking'}
-                    {Object.keys(reserved).length
-                      ? ' · reserved for meals: ' +
-                        Object.entries(reserved)
-                          .map(([unit, quantity]) => quantity + ' ' + unit)
-                          .join(' + ')
-                      : ''}
-                    {entry.expiresAt ? ` · use by ${entry.expiresAt}` : ''}
-                  </small>
-                </span>
-                <button
-                  className="icon-button"
-                  aria-label={`Remove ${product?.name} from pantry`}
-                  onClick={() =>
-                    update(
-                      (s) => {
-                        const pantry = { ...s.pantry }
-                        delete pantry[id]
-                        return { ...s, pantry }
-                      },
-                      `Remove ${product?.name ?? id} from pantry`,
-                    )
-                  }
-                >
-                  <X size={16} />
-                </button>
-              </div>
-            )
-          })}
-        </div>
-        {!Object.keys(state.pantry ?? {}).length && (
-          <p className="quiet-label">
-            Confirm a few staples to avoid buying them twice.
-          </p>
+        {editing && (
+          <PantryEditor
+            key={editing.id}
+            entry={editing}
+            onClose={() => setEditing(null)}
+          />
         )}
+        <div hidden={!!editing}>
+          <form
+            className="editor-form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (!product) return
+              action({
+                type: 'observePantry',
+                productId: product.id,
+                quantity,
+                unit,
+                expiresAt: expiry || null,
+              })
+              setName('')
+            }}
+          >
+            <label>
+              Pantry item
+              <input
+                list="pantry-products"
+                value={name}
+                required
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Search your ingredients"
+              />
+              <datalist id="pantry-products">
+                {products.map((p) => (
+                  <option key={p.id} value={p.name} />
+                ))}
+              </datalist>
+            </label>
+            <div className="form-row">
+              <label>
+                Quantity
+                <input
+                  type="number"
+                  required
+                  min="0"
+                  step="any"
+                  value={quantity}
+                  onChange={(e) => setQuantity(Number(e.target.value))}
+                />
+              </label>
+              <label>
+                Unit
+                <input
+                  required
+                  maxLength={30}
+                  value={unit}
+                  onChange={(e) => setUnit(e.target.value)}
+                />
+              </label>
+            </div>
+            <label>
+              Use by <span className="optional">optional</span>
+              <input
+                aria-label="Use by"
+                type="date"
+                value={expiry}
+                onChange={(e) => setExpiry(e.target.value)}
+              />
+            </label>
+            <button className="secondary-button" disabled={!product}>
+              <Check size={16} /> Confirm amount
+            </button>
+          </form>
+          <div className="pantry-list">
+            {Object.entries(state.pantry ?? {}).map(([id, entry]) => {
+              const product = products.find((p) => p.id === id)
+              const reserved = Object.values(state.purchasedCoverage ?? {})
+                .flatMap((day) => day[id] ?? [])
+                .reduce(
+                  (sum, amount) => ({
+                    ...sum,
+                    [amount.unit]: (sum[amount.unit] ?? 0) + amount.quantity,
+                  }),
+                  {} as Record<string, number>,
+                )
+              return (
+                <div key={id}>
+                  <FoodIcon
+                    value={product?.icon ?? '🛒'}
+                    image={state.productImages?.[id]}
+                  />
+                  <span>
+                    <strong>{product?.name ?? id}</strong>
+                    <small>
+                      {entry.amounts
+                        .map((a) => `${a.quantity} ${a.unit}`)
+                        .join(' + ') || 'No remaining amount'}{' '}
+                      ·{' '}
+                      {entry.confirmed
+                        ? 'Confirmed'
+                        : 'Estimated — worth checking'}
+                      {Object.keys(reserved).length
+                        ? ' · reserved for meals: ' +
+                          Object.entries(reserved)
+                            .map(([unit, quantity]) => quantity + ' ' + unit)
+                            .join(' + ')
+                        : ''}
+                      {entry.expiresAt ? ` · use by ${entry.expiresAt}` : ''}
+                      {entry.note ? ` · ${entry.note}` : ''}
+                    </small>
+                  </span>
+                  <button
+                    className="icon-button"
+                    aria-label={`Edit ${product?.name ?? id} in pantry`}
+                    onClick={() =>
+                      setEditing(pantryEdit(state, id, product?.name ?? id))
+                    }
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    className="icon-button"
+                    aria-label={`Remove ${product?.name} from pantry`}
+                    onClick={() =>
+                      update(
+                        (s) => {
+                          const pantry = { ...s.pantry }
+                          delete pantry[id]
+                          return { ...s, pantry }
+                        },
+                        `Remove ${product?.name ?? id} from pantry`,
+                      )
+                    }
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          {!Object.keys(state.pantry ?? {}).length && (
+            <p className="quiet-label">
+              Confirm a few staples to avoid buying them twice.
+            </p>
+          )}
+        </div>
       </Modal>
       <Modal
         open={open === 'history'}

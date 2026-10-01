@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { api } from './http'
 import { useApp } from './state'
 import type { AppState, Product, Recipe } from './data'
+import type { ConsumptionRate } from './api/ConsumptionRate'
 import type { HistoryEvent } from './api/HistoryEvent'
 export type Restock = {
   product: Product
@@ -21,6 +22,9 @@ export type Insights = {
     name: string
     purchases: number
     intervalDays: number | null
+    estimatedConsumption: ConsumptionRate | null
+    consumptionRate: ConsumptionRate | null
+    consumptionSource: string
     confidence: string
     preferredNote: string
     quantity: number

@@ -13,6 +13,15 @@ pub struct Amount {
 #[derive(Clone, Debug, Deserialize, Serialize, TS, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[ts(export, export_to = "../../src/lib/api/")]
+pub struct ConsumptionRate {
+    pub quantity: f64,
+    pub unit: String,
+    pub days: f64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export, export_to = "../../src/lib/api/")]
 pub struct Product {
     pub id: String,
     pub name: String,
@@ -208,6 +217,8 @@ pub struct HouseholdState {
     pub product_details: BTreeMap<String, Product>,
     #[serde(default)]
     pub archived_product_ids: Vec<String>,
+    #[serde(default)]
+    pub consumption_rates: BTreeMap<String, ConsumptionRate>,
 }
 
 #[derive(Clone, Deserialize, Serialize, TS)]
@@ -306,6 +317,15 @@ pub enum Operation {
         quantity: f64,
         unit: String,
         expires_at: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        amounts: Option<Vec<Amount>>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        note: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        expected: Option<Box<PantryItem>>,
     },
     Undo {
         event_id: String,
@@ -385,5 +405,6 @@ pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
         product_groups: BTreeMap::new(),
         product_details: BTreeMap::new(),
         archived_product_ids: vec![],
+        consumption_rates: BTreeMap::new(),
     }
 }

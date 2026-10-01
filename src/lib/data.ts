@@ -100,6 +100,10 @@ export type AppState = {
   productDetails?: Record<string, Product>
   archivedProductIds?: string[]
   purchasedCoverage?: PlanCoverage
+  consumptionRates?: Record<
+    string,
+    import('./api/ConsumptionRate').ConsumptionRate
+  >
 }
 
 const productGroups: [Category, string, string[]][] = [

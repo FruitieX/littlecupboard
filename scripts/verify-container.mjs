@@ -86,6 +86,10 @@ try {
     '/week',
     '/recipes',
     '/settings',
+    '/settings/stores',
+    '/settings/groups',
+    '/settings/items',
+    '/settings/recipes',
     '/manifest.webmanifest',
     '/sw.js',
   ])
@@ -113,6 +117,45 @@ try {
         unit: 'pc',
         note: 'Crisp',
         accumulate: true,
+      },
+    },
+    cookie,
+  )
+  const initialRate = { quantity: 3, unit: 'pc', days: 7 }
+  await api(
+    origin,
+    '/operations',
+    {
+      id: randomUUID(),
+      operation: {
+        type: 'patch',
+        label: 'Set consumption',
+        changes: [
+          {
+            collection: 'consumptionRates',
+            key: 'apples',
+            field: null,
+            before: null,
+            after: initialRate,
+          },
+        ],
+      },
+    },
+    cookie,
+  )
+  await api(
+    origin,
+    '/operations',
+    {
+      id: randomUUID(),
+      operation: {
+        type: 'observePantry',
+        productId: 'rice',
+        quantity: 1,
+        unit: 'kg',
+        amounts: [{ quantity: 1, unit: 'kg' }],
+        expiresAt: null,
+        note: 'Backed up pantry',
       },
     },
     cookie,
@@ -163,6 +206,43 @@ try {
     },
     cookie,
   )
+  await api(
+    origin,
+    '/operations',
+    {
+      id: randomUUID(),
+      operation: {
+        type: 'patch',
+        label: 'Change consumption',
+        changes: [
+          {
+            collection: 'consumptionRates',
+            key: 'apples',
+            field: null,
+            before: initialRate,
+            after: { quantity: 6, unit: 'pc', days: 3 },
+          },
+        ],
+      },
+    },
+    cookie,
+  )
+  await api(
+    origin,
+    '/operations',
+    {
+      id: randomUUID(),
+      operation: {
+        type: 'observePantry',
+        productId: 'rice',
+        quantity: 500,
+        unit: 'g',
+        expiresAt: null,
+        note: 'After backup',
+      },
+    },
+    cookie,
+  )
   docker('restart', primary)
   origin = `http://127.0.0.1:${JSON.parse(docker('inspect', primary))[0].NetworkSettings.Ports['8080/tcp'][0].HostPort}`
   await ready(origin)
@@ -172,6 +252,13 @@ try {
     ).quantity,
     5,
   )
+  const restarted = (await api(origin, '/state', undefined, cookie)).body.state
+  assert.deepEqual(restarted.consumptionRates.apples, {
+    quantity: 6,
+    unit: 'pc',
+    days: 3,
+  })
+  assert.equal(restarted.pantry.rice.amounts[0].quantity, 500)
   const restoredOrigin = start(restored, '/data/restore')
   await ready(restoredOrigin)
   assert.equal(
@@ -180,6 +267,11 @@ try {
     ).body.state.items.find((item) => item.id === 'apples').quantity,
     3,
   )
+  const recovered = (await api(restoredOrigin, '/state', undefined, cookie))
+    .body.state
+  assert.deepEqual(recovered.consumptionRates.apples, initialRate)
+  assert.equal(recovered.pantry.rice.amounts[0].quantity, 1000)
+  assert.equal(recovered.pantry.rice.note, 'Backed up pantry')
   console.log(
     'Container passed: non-root/read-only runtime, SPA routes, persistent accounts/shopping, restart, private online backup and point-in-time restoration.',
   )

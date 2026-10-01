@@ -1,13 +1,10 @@
 import { useState } from 'react'
-import { Plus, Check } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useApp } from '../lib/state'
 import { SectionTitle } from './ui'
 import { FamilySettings } from './FamilySettings'
-import { GroupEditor } from './GroupEditor'
 export function HouseholdSettings() {
-  const { state, update, groups } = useApp()
-  const [group, setGroup] = useState('')
-  const [editingGroup, setEditingGroup] = useState<string | null>(null)
+  const { state, update } = useApp()
   const [saved, setSaved] = useState(false)
   const preferences = state.preferences!
   return (
@@ -111,66 +108,6 @@ export function HouseholdSettings() {
           </button>
         </form>
       </section>
-      <section className="settings-card">
-        <SectionTitle title="Item groups" />
-        <p className="settings-description">
-          Every shop has its own order. New groups are added to the end of each
-          shop’s route.
-        </p>
-        <div className="group-list">
-          {groups.map((g) => (
-            <button
-              className="group-chip"
-              key={g}
-              aria-label={`Edit group ${g}`}
-              onClick={() => setEditingGroup(g)}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
-        <form
-          className="editor-form"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const name = group.trim()
-            if (
-              !name ||
-              groups.some((g) => g.toLowerCase() === name.toLowerCase())
-            )
-              return
-            update((s) => ({
-              ...s,
-              groups: [...(s.groups ?? []), name],
-              stores: s.stores.map((store) => ({
-                ...store,
-                order: [...store.order, name],
-              })),
-            }))
-            setGroup('')
-          }}
-        >
-          <label>
-            New group
-            <input
-              value={group}
-              maxLength={60}
-              required
-              onChange={(e) => setGroup(e.target.value)}
-            />
-          </label>
-          <button className="secondary-button">
-            <Plus size={15} /> Add group
-          </button>
-        </form>
-      </section>
-      {editingGroup && (
-        <GroupEditor
-          key={editingGroup}
-          group={editingGroup}
-          onClose={() => setEditingGroup(null)}
-        />
-      )}
     </>
   )
 }

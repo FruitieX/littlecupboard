@@ -1,4 +1,7 @@
 import { useState } from 'react'
+import { useLearning } from '../lib/learning'
+import type { ConsumptionRate } from '../lib/api/ConsumptionRate'
+import { ConsumptionFields, rateLabel } from './ConsumptionFields'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../lib/state'
 import { catalog, type Product, type Recipe } from '../lib/data'
@@ -14,8 +17,9 @@ import { FoodIcon } from './FoodIcon'
 import { ImageField } from './ImageField'
 import { RecipeEditor } from './Recipes'
 
-export function LibrarySettings() {
+export function LibrarySettings({ section }: { section: 'items' | 'recipes' }) {
   const { state, allRecipes, update } = useApp()
+  const { insights } = useLearning()
   const [query, setQuery] = useState('')
   const [recipeQuery, setRecipeQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
@@ -39,138 +43,149 @@ export function LibrarySettings() {
   )
   return (
     <>
-      <section className="settings-card">
-        <SectionTitle title="Items" count={getProducts(state, false).length} />
-        <details className="settings-disclosure">
-          <summary>Manage items</summary>
-          <p className="settings-description">
-            Edit names, groups, search aliases and pictures. Archive items to
-            hide them from suggestions while keeping existing lists and recipe
-            ingredients.
-          </p>
-          <div className="editor-form">
-            <label>
-              Search items
-              <input
-                aria-label="Search managed items"
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value)
-                  setLimit(30)
-                }}
-              />
-            </label>
-            <label className="checkbox-label">
-              <input
-                type="checkbox"
-                checked={showArchived}
-                onChange={(event) => {
-                  setShowArchived(event.target.checked)
-                  setLimit(30)
-                }}
-              />
-              Show archived items
-            </label>
-            <button
-              className="secondary-button"
-              onClick={() => setProduct('new')}
-            >
-              <Plus size={16} />
-              Create item
-            </button>
-          </div>
-          <div className="settings-managed-list">
-            {products.slice(0, limit).map((entry) => (
-              <button
-                key={entry.id}
-                className="settings-managed-entry"
-                aria-label={`Edit catalog item ${entry.name}`}
-                onClick={() => setProduct(entry)}
-              >
-                <span className="settings-managed-image">
-                  <FoodIcon value={entry.icon} image={entry.image} />
-                </span>
-                <span>
-                  <strong>{entry.name}</strong>
-                  <small>
-                    {entry.category}
-                    {showArchived ? ' · archived' : ''}
-                  </small>
-                </span>
-                <Pencil size={16} />
-              </button>
-            ))}
-          </div>
-          {!products.length && (
-            <p className="quiet-label">No matching items.</p>
-          )}
-          {products.length > limit && (
-            <button
-              className="text-button"
-              onClick={() => setLimit((current) => current + 30)}
-            >
-              Show more items ({products.length - limit})
-            </button>
-          )}
-        </details>
-      </section>
-      <section className="settings-card">
-        <SectionTitle title="Recipe book" count={allRecipes.length} />
-        <details className="settings-disclosure">
-          <summary>Manage recipes</summary>
-          <div className="editor-form">
-            <label>
-              Search recipes
-              <input
-                aria-label="Search managed recipes"
-                value={recipeQuery}
-                onChange={(event) => setRecipeQuery(event.target.value)}
-              />
-            </label>
-            <button
-              className="secondary-button"
-              onClick={() => setRecipe('new')}
-            >
-              <Plus size={16} />
-              Create recipe
-            </button>
-          </div>
-          <div className="settings-managed-list">
-            {recipes.map((entry) => (
-              <div key={entry.id} className="settings-managed-entry">
-                <img
-                  className="settings-managed-image"
-                  src={entry.image}
-                  alt=""
+      {section === 'items' && (
+        <section className="settings-card">
+          <SectionTitle
+            title={showArchived ? 'Archived items' : 'Item catalog'}
+            count={getProducts(state, false).length}
+          />
+          <div className="settings-management">
+            <p className="settings-description">
+              Edit names, groups, search aliases and pictures. Archive items to
+              hide them from suggestions while keeping existing lists and recipe
+              ingredients.
+            </p>
+            <div className="editor-form">
+              <label>
+                Search items
+                <input
+                  aria-label="Search managed items"
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value)
+                    setLimit(30)
+                  }}
                 />
-                <span>
-                  <strong>{entry.name}</strong>
-                  <small>
-                    {entry.minutes} minutes · {entry.servings} servings
-                  </small>
-                </span>
+              </label>
+              <label className="checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={showArchived}
+                  onChange={(event) => {
+                    setShowArchived(event.target.checked)
+                    setLimit(30)
+                  }}
+                />
+                Show archived items
+              </label>
+              <button
+                className="secondary-button"
+                onClick={() => setProduct('new')}
+              >
+                <Plus size={16} />
+                Create item
+              </button>
+            </div>
+            <div className="settings-managed-list">
+              {products.slice(0, limit).map((entry) => (
                 <button
-                  className="icon-button"
-                  aria-label={`Edit saved recipe ${entry.name}`}
-                  onClick={() => setRecipe(entry)}
+                  key={entry.id}
+                  className="settings-managed-entry"
+                  aria-label={`Edit catalog item ${entry.name}`}
+                  onClick={() => setProduct(entry)}
                 >
-                  <Pencil size={17} />
+                  <span className="settings-managed-image">
+                    <FoodIcon value={entry.icon} image={entry.image} />
+                  </span>
+                  <span>
+                    <strong>{entry.name}</strong>
+                    <small>
+                      {entry.category}
+                      {state.consumptionRates?.[entry.id]
+                        ? ` · ${rateLabel(state.consumptionRates[entry.id])}`
+                        : insights.habits.find((h) => h.productId === entry.id)
+                              ?.estimatedConsumption
+                          ? ` · estimated: ${rateLabel(insights.habits.find((h) => h.productId === entry.id)!.estimatedConsumption!)}`
+                          : ''}
+                      {showArchived ? ' · archived' : ''}
+                    </small>
+                  </span>
+                  <Pencil size={16} />
                 </button>
-                <button
-                  className="icon-button danger"
-                  aria-label={`Delete saved recipe ${entry.name}`}
-                  onClick={() => setRemoveRecipe(entry)}
-                >
-                  <Trash2 size={17} />
-                </button>
-              </div>
-            ))}
+              ))}
+            </div>
+            {!products.length && (
+              <p className="quiet-label">No matching items.</p>
+            )}
+            {products.length > limit && (
+              <button
+                className="text-button"
+                onClick={() => setLimit((current) => current + 30)}
+              >
+                Show more items ({products.length - limit})
+              </button>
+            )}
           </div>
-          {!recipes.length && (
-            <p className="quiet-label">No matching recipes.</p>
-          )}
-        </details>
-      </section>
+        </section>
+      )}
+      {section === 'recipes' && (
+        <section className="settings-card">
+          <SectionTitle title="Recipe book" count={allRecipes.length} />
+          <div className="settings-management">
+            <div className="editor-form">
+              <label>
+                Search recipes
+                <input
+                  aria-label="Search managed recipes"
+                  value={recipeQuery}
+                  onChange={(event) => setRecipeQuery(event.target.value)}
+                />
+              </label>
+              <button
+                className="secondary-button"
+                onClick={() => setRecipe('new')}
+              >
+                <Plus size={16} />
+                Create recipe
+              </button>
+            </div>
+            <div className="settings-managed-list">
+              {recipes.map((entry) => (
+                <div key={entry.id} className="settings-managed-entry">
+                  <img
+                    className="settings-managed-image"
+                    src={entry.image}
+                    alt=""
+                  />
+                  <span>
+                    <strong>{entry.name}</strong>
+                    <small>
+                      {entry.minutes} minutes · {entry.servings} servings
+                    </small>
+                  </span>
+                  <button
+                    className="icon-button"
+                    aria-label={`Edit saved recipe ${entry.name}`}
+                    onClick={() => setRecipe(entry)}
+                  >
+                    <Pencil size={17} />
+                  </button>
+                  <button
+                    className="icon-button danger"
+                    aria-label={`Delete saved recipe ${entry.name}`}
+                    onClick={() => setRemoveRecipe(entry)}
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            {!recipes.length && (
+              <p className="quiet-label">No matching recipes.</p>
+            )}
+          </div>
+        </section>
+      )}
       {product && (
         <ProductEditor
           key={product === 'new' ? 'new' : product.id}
@@ -225,6 +240,14 @@ function ProductEditor({
   onClose: () => void
 }) {
   const { state, groups, update } = useApp()
+  const { insights } = useLearning()
+  const [originalRate] = useState(
+    product ? state.consumptionRates?.[product.id] : undefined,
+  )
+  const [consumptionRate, setConsumptionRate] = useState<
+    ConsumptionRate | undefined
+  >(originalRate)
+  const habit = insights.habits.find((entry) => entry.productId === product?.id)
   const [name, setName] = useState(product?.name ?? '')
   const [group, setGroup] = useState(product?.category ?? groups[0])
   const [aliases, setAliases] = useState(product?.aliases?.join(', ') ?? '')
@@ -292,7 +315,22 @@ function ProductEditor({
               aliases: searchAliases,
               image: image || undefined,
             }
-            update((current) => saveProduct(current, saved))
+            if (
+              product &&
+              JSON.stringify(originalRate ?? null) !==
+                JSON.stringify(state.consumptionRates?.[product.id] ?? null)
+            ) {
+              setError(
+                'The consumption rate changed on another device. Reopen this item to review it.',
+              )
+              return
+            }
+            update((current) => {
+              const rates = { ...current.consumptionRates }
+              if (consumptionRate) rates[saved.id] = consumptionRate
+              else delete rates[saved.id]
+              return { ...saveProduct(current, saved), consumptionRates: rates }
+            }, `Edit ${saved.name}`)
             onClose()
           }}
         >
@@ -326,6 +364,12 @@ function ProductEditor({
               placeholder="Alternate names, separated by commas"
             />
           </label>
+          <ConsumptionFields
+            value={consumptionRate}
+            onChange={setConsumptionRate}
+            suggested={habit?.estimatedConsumption ?? undefined}
+            purchases={habit?.purchases}
+          />
           <ImageField
             kind="item"
             subject={name}

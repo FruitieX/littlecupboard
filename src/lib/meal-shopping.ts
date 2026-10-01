@@ -308,6 +308,19 @@ function applyPurchasedCredits(
   }
 }
 
+export function pantryTotal(
+  state: AppState,
+  id: string,
+  now = householdDate(state.preferences?.timeZone),
+): Amount[] {
+  return amounts([
+    ...(state.pantry?.[id]?.amounts ?? []),
+    ...Object.entries(state.purchasedCoverage ?? {})
+      .filter(([day]) => day >= dateKey(now))
+      .flatMap(([, entries]) => entries[id] ?? []),
+  ])
+}
+
 export function confirmPantry(
   state: AppState,
   observation: {
@@ -315,11 +328,19 @@ export function confirmPantry(
     quantity: number
     unit: string
     expiresAt: string | null
+    amounts?: Amount[]
+    note?: string
   },
   now = householdDate(state.preferences?.timeZone),
 ): AppState {
-  const observed = normalize(observation)
-  let available = observed.quantity
+  const available = new Map<string, number>()
+  for (const original of observation.amounts ?? [observation]) {
+    const amount = normalize(original)
+    available.set(
+      amount.unit,
+      round((available.get(amount.unit) ?? 0) + amount.quantity),
+    )
+  }
   const purchasedCoverage = structuredClone(state.purchasedCoverage ?? {})
   const removed: PlanCredit[] = []
   for (const day of Object.keys(purchasedCoverage).sort()) {
@@ -327,14 +348,15 @@ export function confirmPantry(
     const entries = purchasedCoverage[day][observation.productId]
     if (!entries) continue
     for (const amount of entries) {
-      if (amount.unit !== observed.unit) continue
-      const retained = Math.min(available, amount.quantity)
-      available -= retained
+      if (!observation.amounts && !available.has(amount.unit)) continue
+      const remaining = available.get(amount.unit) ?? 0
+      const retained = Math.min(remaining, amount.quantity)
+      available.set(amount.unit, remaining - retained)
       if (retained < amount.quantity)
         removed.push({
           day,
           productId: observation.productId,
-          unit: observed.unit,
+          unit: amount.unit,
           quantity: amount.quantity - retained,
         })
       amount.quantity = retained
@@ -347,12 +369,15 @@ export function confirmPantry(
     pantry: {
       ...state.pantry,
       [observation.productId]: {
-        amounts:
-          available > 0 ? [{ quantity: available, unit: observed.unit }] : [],
+        amounts: [...available]
+          .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+          .filter(([, quantity]) => quantity > 0)
+          .map(([unit, quantity]) => ({ unit, quantity: round(quantity) })),
         confirmed: true,
         observedAt: new Date().toISOString(),
         expiresAt: observation.expiresAt,
-        note: '',
+        note:
+          observation.note ?? state.pantry?.[observation.productId]?.note ?? '',
       },
     },
   }

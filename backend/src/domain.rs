@@ -651,63 +651,97 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
             quantity,
             unit,
             expires_at,
+            amounts,
+            note,
+            expected,
         } => {
             product(state, product_id)?;
-            if *quantity != 0.0 {
-                valid_amount(*quantity, unit)?;
-            } else if unit.trim().is_empty() || !text(unit, 30) {
-                return Err(ApiError::bad("Choose a unit."));
+            if let Some(expected) = expected {
+                // Client/server observation clocks differ for queued offline
+                // edits. Guard the actual entry values rather than timestamps.
+                let unchanged = state.pantry.get(product_id).is_some_and(|current| {
+                    totals(&current.amounts) == totals(&expected.amounts)
+                        && current.confirmed == expected.confirmed
+                        && current.note == expected.note
+                        && current.expires_at == expected.expires_at
+                });
+                if !unchanged {
+                    return Err(ApiError::conflict());
+                }
             }
-            let observed = normalize(&Amount {
-                quantity: *quantity,
-                unit: unit.clone(),
+            let observations = amounts.clone().unwrap_or_else(|| {
+                vec![Amount {
+                    quantity: *quantity,
+                    unit: unit.clone(),
+                }]
             });
-            let mut available = observed.quantity;
+            if observations.is_empty() || observations.len() > 20 {
+                return Err(ApiError::bad("Specify between 1 and 20 pantry amounts."));
+            }
+            for amount in &observations {
+                if amount.quantity != 0.0 {
+                    valid_amount(amount.quantity, &amount.unit)?;
+                } else if amount.unit.trim().is_empty() || !text(&amount.unit, 30) {
+                    return Err(ApiError::bad("Choose a unit."));
+                }
+            }
+            let mut available = observations.iter().map(normalize).fold(
+                BTreeMap::<String, f64>::new(),
+                |mut values, amount| {
+                    *values.entry(amount.unit).or_default() += amount.quantity;
+                    values
+                },
+            );
             let mut removed = vec![];
             for (day, entries) in &mut state.purchased_coverage {
                 if day.as_str() < today {
                     continue;
                 }
-                if let Some(amounts) = entries.get_mut(product_id) {
-                    for amount in amounts
-                        .iter_mut()
-                        .filter(|amount| amount.unit == observed.unit)
-                    {
-                        let retained = available.min(amount.quantity);
-                        available -= retained;
+                if let Some(credits) = entries.get_mut(product_id) {
+                    for amount in credits.iter_mut() {
+                        // Legacy single-unit observations leave other units' reservations alone.
+                        if amounts.is_none() && !available.contains_key(&amount.unit) {
+                            continue;
+                        }
+                        let remaining = available.entry(amount.unit.clone()).or_default();
+                        let retained = remaining.min(amount.quantity);
+                        *remaining -= retained;
                         let excess = amount.quantity - retained;
                         if excess > 0.0 {
                             removed.push(PlanCredit {
                                 day: day.clone(),
                                 product_id: product_id.clone(),
-                                unit: observed.unit.clone(),
+                                unit: amount.unit.clone(),
                                 quantity: excess,
                             });
                         }
                         amount.quantity = retained;
                     }
-                    *amounts = totals(amounts);
+                    *credits = totals(credits);
                 }
             }
             coverage(state, &removed, -1.0);
+            let previous_note = state
+                .pantry
+                .get(product_id)
+                .map(|p| p.note.clone())
+                .unwrap_or_default();
             state.pantry.insert(
                 product_id.clone(),
                 PantryItem {
-                    amounts: if available > 0.0 {
-                        vec![Amount {
-                            quantity: available,
-                            unit: observed.unit,
-                        }]
-                    } else {
-                        vec![]
-                    },
+                    amounts: totals(
+                        &available
+                            .into_iter()
+                            .map(|(unit, quantity)| Amount { quantity, unit })
+                            .collect::<Vec<_>>(),
+                    ),
                     confirmed: true,
                     observed_at: Utc::now().to_rfc3339(),
                     expires_at: expires_at.clone(),
-                    note: String::new(),
+                    note: note.clone().unwrap_or(previous_note),
                 },
             );
-            json!({"productId":product_id,"quantity":quantity,"unit":unit,"confirmed":true})
+            json!({"productId":product_id,"quantity":quantity,"unit":unit,"amounts":observations,"confirmed":true})
         }
         Operation::Undo { .. } | Operation::ResetHistory | Operation::ApplyProposal { .. } => {
             return Err(ApiError::bad(
@@ -850,6 +884,7 @@ fn patch(state: &mut Value, change: &Change) -> Result<()> {
         "productImages",
         "productGroups",
         "productDetails",
+        "consumptionRates",
     ];
     let scalars = [
         "groups",
@@ -1033,6 +1068,7 @@ pub fn changes(before: &HouseholdState, after: &HouseholdState) -> Result<Vec<Ch
         "productImages",
         "productGroups",
         "productDetails",
+        "consumptionRates",
         "purchases",
     ] {
         let old = a[collection].as_object().expect("model map");
@@ -1309,6 +1345,18 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
                 .is_some_and(|until| chrono::DateTime::parse_from_rfc3339(until).is_err())
         {
             return Err(ApiError::bad("Invalid suggestion feedback."));
+        }
+    }
+    if state.consumption_rates.len() > products.len() {
+        return Err(ApiError::bad("Invalid consumption rates."));
+    }
+    for (id, rate) in &state.consumption_rates {
+        valid_amount(rate.quantity, &rate.unit)?;
+        if !products.contains(id) || !rate.days.is_finite() || rate.days < 0.1 || rate.days > 3650.0
+        {
+            return Err(ApiError::bad(
+                "Choose a consumption period between 0.1 and 3650 days.",
+            ));
         }
     }
     for (id, pantry) in &state.pantry {

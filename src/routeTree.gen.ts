@@ -13,6 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as RecipesRouteImport } from './routes/recipes'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as WeekRouteImport } from './routes/week'
+import { Route as SettingsIndexRouteImport } from './routes/settings.index'
+import { Route as SettingsGroupsRouteImport } from './routes/settings.groups'
+import { Route as SettingsItemsRouteImport } from './routes/settings.items'
+import { Route as SettingsRecipesRouteImport } from './routes/settings.recipes'
+import { Route as SettingsStoresRouteImport } from './routes/settings.stores'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,38 +39,104 @@ const WeekRoute = WeekRouteImport.update({
   path: '/week',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsGroupsRoute = SettingsGroupsRouteImport.update({
+  id: '/groups',
+  path: '/groups',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsItemsRoute = SettingsItemsRouteImport.update({
+  id: '/items',
+  path: '/items',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsRecipesRoute = SettingsRecipesRouteImport.update({
+  id: '/recipes',
+  path: '/recipes',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsStoresRoute = SettingsStoresRouteImport.update({
+  id: '/stores',
+  path: '/stores',
+  getParentRoute: () => SettingsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/recipes': typeof RecipesRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/week': typeof WeekRoute
+  '/settings/groups': typeof SettingsGroupsRoute
+  '/settings/items': typeof SettingsItemsRoute
+  '/settings/recipes': typeof SettingsRecipesRoute
+  '/settings/stores': typeof SettingsStoresRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/recipes': typeof RecipesRoute
-  '/settings': typeof SettingsRoute
   '/week': typeof WeekRoute
+  '/settings/groups': typeof SettingsGroupsRoute
+  '/settings/items': typeof SettingsItemsRoute
+  '/settings/recipes': typeof SettingsRecipesRoute
+  '/settings/stores': typeof SettingsStoresRoute
+  '/settings': typeof SettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/recipes': typeof RecipesRoute
-  '/settings': typeof SettingsRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/week': typeof WeekRoute
+  '/settings/groups': typeof SettingsGroupsRoute
+  '/settings/items': typeof SettingsItemsRoute
+  '/settings/recipes': typeof SettingsRecipesRoute
+  '/settings/stores': typeof SettingsStoresRoute
+  '/settings/': typeof SettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/recipes' | '/settings' | '/week'
+  fullPaths:
+    | '/'
+    | '/recipes'
+    | '/settings'
+    | '/week'
+    | '/settings/groups'
+    | '/settings/items'
+    | '/settings/recipes'
+    | '/settings/stores'
+    | '/settings/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/recipes' | '/settings' | '/week'
-  id: '__root__' | '/' | '/recipes' | '/settings' | '/week'
+  to:
+    | '/'
+    | '/recipes'
+    | '/week'
+    | '/settings/groups'
+    | '/settings/items'
+    | '/settings/recipes'
+    | '/settings/stores'
+    | '/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/recipes'
+    | '/settings'
+    | '/week'
+    | '/settings/groups'
+    | '/settings/items'
+    | '/settings/recipes'
+    | '/settings/stores'
+    | '/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   RecipesRoute: typeof RecipesRoute
-  SettingsRoute: typeof SettingsRoute
+  SettingsRoute: typeof SettingsRouteWithChildren
   WeekRoute: typeof WeekRoute
 }
 
@@ -99,13 +170,68 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WeekRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/': {
+      id: '/settings/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/groups': {
+      id: '/settings/groups'
+      path: '/groups'
+      fullPath: '/settings/groups'
+      preLoaderRoute: typeof SettingsGroupsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/items': {
+      id: '/settings/items'
+      path: '/items'
+      fullPath: '/settings/items'
+      preLoaderRoute: typeof SettingsItemsRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/recipes': {
+      id: '/settings/recipes'
+      path: '/recipes'
+      fullPath: '/settings/recipes'
+      preLoaderRoute: typeof SettingsRecipesRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/stores': {
+      id: '/settings/stores'
+      path: '/stores'
+      fullPath: '/settings/stores'
+      preLoaderRoute: typeof SettingsStoresRouteImport
+      parentRoute: typeof SettingsRoute
+    }
   }
 }
+
+interface SettingsRouteChildren {
+  SettingsGroupsRoute: typeof SettingsGroupsRoute
+  SettingsItemsRoute: typeof SettingsItemsRoute
+  SettingsRecipesRoute: typeof SettingsRecipesRoute
+  SettingsStoresRoute: typeof SettingsStoresRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsGroupsRoute: SettingsGroupsRoute,
+  SettingsItemsRoute: SettingsItemsRoute,
+  SettingsRecipesRoute: SettingsRecipesRoute,
+  SettingsStoresRoute: SettingsStoresRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
+}
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   RecipesRoute: RecipesRoute,
-  SettingsRoute: SettingsRoute,
+  SettingsRoute: SettingsRouteWithChildren,
   WeekRoute: WeekRoute,
 }
 export const routeTree = rootRouteImport

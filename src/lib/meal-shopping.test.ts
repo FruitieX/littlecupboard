@@ -9,6 +9,7 @@ import {
   shoppingQuantity,
   toggleShoppingItem,
   confirmPantry,
+  pantryTotal,
 } from './meal-shopping'
 
 const now = new Date(2026, 8, 30, 12)
@@ -305,4 +306,73 @@ describe('automatic meal shopping', () => {
       }),
     ).toMatchObject({ quantity: 200, checked: false })
   })
+})
+
+it('edits total pantry amounts in multiple units while keeping reservation credits and notes', () => {
+  const state = fixture({
+    plan: {},
+    pantry: {
+      rice: {
+        amounts: [
+          { quantity: 250, unit: 'g' },
+          { quantity: 1, unit: 'bag' },
+        ],
+        confirmed: true,
+        observedAt: '2026-09-30T09:00:00Z',
+        expiresAt: null,
+        note: 'Cupboard',
+      },
+    },
+    purchasedCoverage: { [today]: { rice: [{ quantity: 500, unit: 'g' }] } },
+    planCoverage: { [today]: { rice: [{ quantity: 500, unit: 'g' }] } },
+  })
+  expect(pantryTotal(state, 'rice', now)).toEqual([
+    { quantity: 750, unit: 'g' },
+    { quantity: 1, unit: 'bag' },
+  ])
+  const saved = confirmPantry(
+    state,
+    {
+      productId: 'rice',
+      quantity: 0.6,
+      unit: 'kg',
+      amounts: [
+        { quantity: 0.6, unit: 'kg' },
+        { quantity: 2, unit: 'bag' },
+      ],
+      note: 'Opened pack',
+      expiresAt: '2026-12-31',
+    },
+    now,
+  )
+  expect(saved.pantry!.rice).toMatchObject({
+    amounts: [
+      { quantity: 2, unit: 'bag' },
+      { quantity: 100, unit: 'g' },
+    ],
+    confirmed: true,
+    note: 'Opened pack',
+    expiresAt: '2026-12-31',
+  })
+  expect(saved.purchasedCoverage![today].rice).toEqual([
+    { quantity: 500, unit: 'g' },
+  ])
+  const short = confirmPantry(
+    saved,
+    {
+      productId: 'rice',
+      quantity: 200,
+      unit: 'g',
+      amounts: [{ quantity: 200, unit: 'g' }],
+      expiresAt: null,
+    },
+    now,
+  )
+  expect(short.pantry!.rice.amounts).toEqual([])
+  expect(short.purchasedCoverage![today].rice).toEqual([
+    { quantity: 200, unit: 'g' },
+  ])
+  expect(short.planCoverage![today].rice).toEqual([
+    { quantity: 200, unit: 'g' },
+  ])
 })

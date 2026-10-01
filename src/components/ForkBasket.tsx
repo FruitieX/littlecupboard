@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Link } from '@tanstack/react-router'
 import { ShoppingBasket, CalendarDays, BookOpen, Settings2 } from 'lucide-react'
 import { Shopping } from './Shopping'
@@ -43,7 +44,13 @@ const navigation = [
   },
 ] as const
 
-export function ForkBasket({ view = 'shopping' }: { view?: View }) {
+export function ForkBasket({
+  view = 'shopping',
+  children,
+}: {
+  view?: View
+  children?: ReactNode
+}) {
   const { session, error, clearError } = useApp()
   return (
     <MotionConfig reducedMotion="user">
@@ -120,7 +127,7 @@ export function ForkBasket({ view = 'shopping' }: { view?: View }) {
             {view === 'shopping' && <Shopping />}
             {view === 'week' && <Week />}
             {view === 'recipes' && <Recipes />}
-            {view === 'settings' && <Settings />}
+            {view === 'settings' && (children ?? <Settings />)}
           </main>
         </div>
         <nav className="bottom-nav" aria-label="Mobile navigation">

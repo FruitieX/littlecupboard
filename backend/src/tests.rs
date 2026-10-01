@@ -1496,6 +1496,11 @@ async fn learned_intervals_ignore_restores_and_undone_purchases() {
     .await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(insights["restock"][0]["intervalDays"], 8);
+    assert_eq!(
+        insights["habits"][0]["estimatedConsumption"],
+        json!({"quantity":2.0,"unit":"L","days":8.0})
+    );
+    assert_eq!(insights["habits"][0]["consumptionSource"], "estimated");
     assert_eq!(insights["restock"][0]["note"], "Barista");
     assert_eq!(insights["restock"][0]["quantity"].as_f64(), Some(2.0));
     assert_eq!(insights["restock"][0]["unit"], "L");
@@ -1516,6 +1521,7 @@ async fn learned_intervals_ignore_restores_and_undone_purchases() {
     .await
     .1;
     assert_eq!(insights["purchaseCount"], 2);
+    assert_eq!(insights["habits"][0]["estimatedConsumption"], Value::Null);
     assert!(insights["restock"].as_array().unwrap().is_empty());
 }
 
@@ -1960,6 +1966,9 @@ fn pantry_confirmation_includes_reserved_purchases_and_reveals_shortages() {
     domain::apply(
         &mut state,
         &model::Operation::ObservePantry {
+            amounts: None,
+            note: None,
+            expected: None,
             product_id: "pasta".into(),
             quantity: 500.0,
             unit: "g".into(),
@@ -1973,6 +1982,9 @@ fn pantry_confirmation_includes_reserved_purchases_and_reveals_shortages() {
     domain::apply(
         &mut state,
         &model::Operation::ObservePantry {
+            amounts: None,
+            note: None,
+            expected: None,
             product_id: "pasta".into(),
             quantity: 200.0,
             unit: "g".into(),
@@ -2106,5 +2118,146 @@ async fn households_cannot_read_each_others_state_history_or_private_images() {
         .await
         .0,
         StatusCode::NOT_FOUND
+    );
+}
+
+#[tokio::test]
+async fn configured_consumption_is_guarded_validated_and_controls_restock_without_learning() {
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let rate = json!({"quantity":2.0,"unit":"L","days":4.0});
+    let patch = |before: Value, after: Value| json!({"type":"patch","label":"Set consumption","changes":[{"collection":"consumptionRates","key":"oat-milk","field":null,"before":before,"after":after}]});
+    assert_eq!(
+        operation(&server, &owner, patch(Value::Null, rate.clone()))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        operation(
+            &server,
+            &owner,
+            patch(Value::Null, json!({"quantity":4,"unit":"L","days":7}))
+        )
+        .await
+        .0,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        operation(
+            &server,
+            &owner,
+            patch(rate.clone(), json!({"quantity":2,"unit":"L","days":0}))
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    operation(&server,&owner,json!({"type":"addItem","productId":"oat-milk","quantity":2,"unit":"L","note":"","accumulate":false})).await;
+    operation(
+        &server,
+        &owner,
+        json!({"type":"checkItem","id":"oat-milk","checked":true}),
+    )
+    .await;
+    {
+        let conn = server.db.lock().unwrap();
+        conn.execute(
+            "UPDATE events SET at=?1 WHERE kind='checkItem'",
+            [(chrono::Utc::now() - chrono::Duration::days(5)).to_rfc3339()],
+        )
+        .unwrap();
+    }
+    let insights = request(
+        &server,
+        Method::GET,
+        "/api/insights",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert_eq!(insights["habits"][0]["estimatedConsumption"], Value::Null);
+    assert_eq!(insights["habits"][0]["consumptionRate"], rate);
+    assert_eq!(insights["habits"][0]["consumptionSource"], "manual");
+    assert_eq!(insights["restock"][0]["intervalDays"], 4);
+    assert!(
+        insights["restock"][0]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("Your rate")
+    );
+    let snapshot = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert_eq!(snapshot["state"]["consumptionRates"]["oat-milk"], rate);
+    assert_eq!(
+        operation(&server, &owner, patch(rate, Value::Null)).await.0,
+        StatusCode::OK
+    );
+    let insights = request(
+        &server,
+        Method::GET,
+        "/api/insights",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert_eq!(insights["habits"][0]["consumptionSource"], "learning");
+    assert_eq!(insights["restock"], json!([]));
+}
+
+#[tokio::test]
+async fn pantry_edits_keep_multiple_units_and_notes_and_reject_stale_observations() {
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let first=operation(&server,&owner,json!({"type":"observePantry","productId":"rice","quantity":500,"unit":"g","expiresAt":null})).await;
+    assert_eq!(first.0, StatusCode::OK);
+    let expected = first.1["state"]["pantry"]["rice"].clone();
+    let edit = json!({"type":"observePantry","productId":"rice","quantity":0.75,"unit":"kg","amounts":[{"quantity":0.75,"unit":"kg"},{"quantity":2,"unit":"bag"}],"note":"Opened cupboard pack","expiresAt":"2026-12-31","expected":expected});
+    let (status, snapshot) = operation(&server, &owner, edit.clone()).await;
+    assert_eq!(status, StatusCode::OK);
+    let pantry = &snapshot["state"]["pantry"]["rice"];
+    assert_eq!(
+        pantry["amounts"],
+        json!([{"quantity":2.0,"unit":"bag"},{"quantity":750.0,"unit":"g"}])
+    );
+    assert_eq!(pantry["note"], "Opened cupboard pack");
+    assert_eq!(pantry["expiresAt"], "2026-12-31");
+    assert_eq!(pantry["confirmed"], true);
+    assert_eq!(
+        operation(&server, &owner, edit).await.0,
+        StatusCode::CONFLICT
+    );
+    let current = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert_eq!(current["state"], snapshot["state"]);
+    assert_eq!(current["revision"], snapshot["revision"]);
+    let invalid = json!({"type":"observePantry","productId":"rice","quantity":1,"unit":"g","amounts":[{"quantity":-1,"unit":"g"}],"expiresAt":null});
+    assert_eq!(
+        operation(&server, &owner, invalid).await.0,
+        StatusCode::BAD_REQUEST
+    );
+    let mut expected = pantry.clone();
+    expected["observedAt"] = json!("2026-01-01T00:00:00Z");
+    let queued = json!({"type":"observePantry","productId":"rice","quantity":800,"unit":"g","amounts":[{"quantity":800,"unit":"g"},{"quantity":2,"unit":"bag"}],"expiresAt":"2026-12-31","note":"Opened cupboard pack","expected":expected});
+    assert_eq!(
+        operation(&server, &owner, queued).await.0,
+        StatusCode::OK,
+        "Equivalent queued amounts must not conflict because of device/server clock differences"
     );
 }

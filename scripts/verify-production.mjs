@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
-import { spawn } from 'node:child_process'
+import { spawn, execFileSync } from 'node:child_process'
 import { mkdtemp, rm, mkdir, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -324,6 +324,54 @@ try {
     async () =>
       (await (await fetch('/api/state')).json()).state.pantry.rice?.amounts[0]
         ?.quantity === 500,
+  )
+  await owner
+    .getByRole('button', { name: 'Edit Rice in pantry', exact: true })
+    .click()
+  await owner.getByLabel('Pantry quantity 1', { exact: true }).fill('750')
+  await owner
+    .getByLabel('Pantry notes', { exact: true })
+    .fill('Opened cupboard pack')
+  await owner.getByLabel('Pantry use by', { exact: true }).fill('2026-12-31')
+  await owner
+    .getByRole('button', { name: 'Add another amount', exact: true })
+    .click()
+  await owner.getByLabel('Pantry quantity 2', { exact: true }).fill('2')
+  await owner.getByLabel('Pantry unit 2', { exact: true }).fill('bag')
+  await owner
+    .getByRole('dialog')
+    .screenshot({ path: 'test-results/pantry-edit-mobile.png' })
+  await ownerContext.setOffline(true)
+  await owner
+    .getByRole('button', { name: 'Save pantry entry', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Edit Rice in pantry', exact: true })
+    .click()
+  await owner.getByLabel('Pantry quantity 2', { exact: true }).fill('800')
+  await owner
+    .getByRole('button', { name: 'Save pantry entry', exact: true })
+    .click()
+  await ownerContext.setOffline(false)
+  await eventually(async () => {
+    const pantry = (await request(wife, '/state', undefined, 'GET')).state
+      .pantry.rice
+    return (
+      pantry.note === 'Opened cupboard pack' &&
+      pantry.amounts.some((a) => a.unit === 'g' && a.quantity === 800)
+    )
+  })
+  const editedPantry = (await request(wife, '/state', undefined, 'GET')).state
+    .pantry.rice
+  assert.deepEqual(editedPantry.amounts, [
+    { quantity: 2, unit: 'bag' },
+    { quantity: 800, unit: 'g' },
+  ])
+  assert.equal(editedPantry.expiresAt, '2026-12-31')
+  assert.equal(editedPantry.confirmed, true)
+  assert.equal(await owner.getByText(/Review changes/).count(), 0)
+  console.log(
+    'Multiple queued pantry edits preserve quantities, units, notes and expiry across devices without timestamp conflicts.',
   )
   const rejectPantryOnce = async (route) => {
     const operation = route.request().postDataJSON()?.operation
@@ -668,7 +716,7 @@ try {
         changes: placeholderArtwork,
       },
     })
-  await owner.getByText('Manage items', { exact: true }).click()
+  await owner.getByRole('link', { name: 'Manage items', exact: true }).click()
   await owner.getByRole('button', { name: 'Create item', exact: true }).click()
   await owner
     .getByLabel('Item name', { exact: true })
@@ -685,6 +733,9 @@ try {
     (await request(owner, '/ai/item-icons', undefined, 'GET')).queued,
     0,
   )
+  await owner.goto(`${frontendUrl}/settings`)
+  await settle(owner)
+  await owner.getByText('Configure AI assistant', { exact: true }).click()
   await owner
     .getByText('Compatibility & image generation', { exact: true })
     .click()
@@ -695,6 +746,7 @@ try {
   await owner
     .getByRole('button', { name: 'Save provider', exact: true })
     .click()
+  await owner.getByRole('link', { name: 'Manage items', exact: true }).click()
   await owner.getByRole('button', { name: 'Create item', exact: true }).click()
   await owner
     .getByLabel('Item name', { exact: true })
@@ -708,6 +760,12 @@ try {
     )
     return product && !!snapshot.state.productImages[product.id]
   })
+  await owner.goto(`${frontendUrl}/settings`)
+  await settle(owner)
+  await owner.getByText('Configure AI assistant', { exact: true }).click()
+  await owner
+    .getByText('Compatibility & image generation', { exact: true })
+    .click()
   await owner
     .getByLabel('Automatically generate icons for new items', { exact: true })
     .uncheck()
@@ -856,6 +914,7 @@ try {
   await owner
     .getByRole('button', { name: 'Save provider', exact: true })
     .click()
+  await owner.getByRole('link', { name: 'Manage stores', exact: true }).click()
   await owner
     .locator('.store-option')
     .filter({ hasText: 'Neighborhood Market 079' })
@@ -892,6 +951,9 @@ try {
   assert.equal(editedShop.name, 'Renamed Neighborhood Market')
   assert.deepEqual(editedShop.order, selectedShop.order)
   assert.ok(editedShop.image.startsWith('/api/images/'))
+  await owner
+    .getByRole('link', { name: 'Manage item groups', exact: true })
+    .click()
   const sourceGroup = (
     await request(owner, '/state', undefined, 'GET')
   ).state.items.find((item) => item.id === 'apples').category
@@ -1332,7 +1394,7 @@ try {
   )
   await owner.goto(`${frontendUrl}/settings`)
   await settle(owner)
-  await owner.getByText('Manage items', { exact: true }).click()
+  await owner.getByRole('link', { name: 'Manage items', exact: true }).click()
   await owner.getByLabel('Search managed items', { exact: true }).fill('apples')
   await owner
     .getByRole('button', { name: 'Edit catalog item Apples', exact: true })
@@ -1413,7 +1475,7 @@ try {
       exact: true,
     })
     .waitFor({ state: 'hidden' })
-  await owner.getByText('Manage recipes', { exact: true }).click()
+  await owner.getByRole('link', { name: 'Manage recipes', exact: true }).click()
   await owner
     .getByLabel('Search managed recipes', { exact: true })
     .fill('Imported recipe')
@@ -1489,6 +1551,7 @@ try {
       (entry) => entry.name === 'Settings test item',
     ),
   )
+  await owner.getByRole('link', { name: 'Manage stores', exact: true }).click()
   await owner.getByRole('button', { name: 'Add store', exact: true }).click()
   await owner.getByLabel('Store name', { exact: true }).fill('Temporary shop')
   await owner
@@ -1516,17 +1579,164 @@ try {
       ),
   )
   assert.equal(await owner.getByText(/Review changes/).count(), 0)
+  await owner.getByRole('link', { name: 'Manage items', exact: true }).click()
   await owner.getByLabel('Search managed items', { exact: true }).fill('apples')
   await owner
     .locator('.settings-card')
-    .filter({ hasText: 'Manage items' })
+    .filter({ hasText: 'Search items' })
     .screenshot({ path: 'test-results/settings-management-mobile.png' })
   console.log(
     'Settings item edits/archive/restore/delete, recipe editing and planned deletion, and confirmed shop removal passed without sync conflicts.',
   )
+  await owner
+    .getByRole('button', {
+      name: 'Edit catalog item Eating apples',
+      exact: true,
+    })
+    .click()
+  await owner
+    .getByRole('checkbox', { name: 'Set consumption rate', exact: true })
+    .check()
+  await owner.getByLabel('Consumption quantity', { exact: true }).fill('6')
+  await owner.getByLabel('Consumption unit', { exact: true }).fill('pc')
+  await owner.getByLabel('Consumption period (days)', { exact: true }).fill('7')
+  for (const width of [320, 390, 1440]) {
+    await owner.setViewportSize({ width, height: 900 })
+    const bounds = await owner
+      .locator('.consumption-fields')
+      .evaluate((field) => {
+        const rect = field.getBoundingClientRect()
+        return [...field.querySelectorAll('input')]
+          .filter((input) => input.getClientRects().length)
+          .every((input) => {
+            const control = input.getBoundingClientRect()
+            return control.left >= rect.left && control.right <= rect.right
+          })
+      })
+    assert.ok(bounds, `Consumption controls fit at ${width}px`)
+    await owner
+      .getByRole('dialog')
+      .screenshot({ path: `test-results/consumption-${width}.png` })
+  }
+  await owner.getByRole('button', { name: 'Save item', exact: true }).click()
+  await eventually(
+    async () =>
+      !!(await request(wife, '/state', undefined, 'GET')).state.consumptionRates
+        .apples,
+  )
+  assert.deepEqual(
+    (await request(wife, '/state', undefined, 'GET')).state.consumptionRates
+      .apples,
+    { quantity: 6, unit: 'pc', days: 7 },
+  )
+  await owner.reload()
+  await settle(owner)
+  await owner
+    .getByLabel('Search managed items', { exact: true })
+    .fill('Eating apples')
+  await owner
+    .getByRole('button', {
+      name: 'Edit catalog item Eating apples',
+      exact: true,
+    })
+    .click()
+  assert.equal(
+    await owner
+      .getByLabel('Consumption quantity', { exact: true })
+      .inputValue(),
+    '6',
+  )
+  await owner
+    .getByRole('checkbox', { name: 'Set consumption rate', exact: true })
+    .uncheck()
+  await owner.getByRole('button', { name: 'Save item', exact: true }).click()
+  // Start a fresh purchase quantity; a non-accumulating add preserves an existing active tile.
+  await request(owner, '/operations', {
+    id: crypto.randomUUID(),
+    operation: { type: 'removeItem', id: 'apples' },
+  })
+  const dated = []
+  for (const days of [21, 14, 7]) {
+    await request(owner, '/operations', {
+      id: crypto.randomUUID(),
+      operation: {
+        type: 'addItem',
+        productId: 'apples',
+        quantity: 6,
+        unit: 'pc',
+        note: '',
+        accumulate: false,
+      },
+    })
+    const bought = await request(owner, '/operations', {
+      id: crypto.randomUUID(),
+      operation: { type: 'checkItem', id: 'apples', checked: true },
+    })
+    dated.push([
+      new Date(Date.now() - days * 86400000).toISOString(),
+      bought.eventId,
+    ])
+  }
+  // Only this disposable test database is changed; production history is untouched.
+  execFileSync('python3', [
+    '-c',
+    'import sqlite3,json,sys; conn=sqlite3.connect(sys.argv[1]); conn.executemany("UPDATE events SET at=? WHERE id=?",json.loads(sys.argv[2])); conn.commit()',
+    join(data, 'forkbasket.sqlite3'),
+    JSON.stringify(dated),
+  ])
+  await owner.reload()
+  await settle(owner)
+  await owner
+    .getByLabel('Search managed items', { exact: true })
+    .fill('Eating apples')
+  await owner
+    .getByRole('button', {
+      name: 'Edit catalog item Eating apples',
+      exact: true,
+    })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Use estimated rate', exact: true })
+    .waitFor()
+  assert.equal(
+    await owner
+      .getByRole('checkbox', { name: 'Set consumption rate', exact: true })
+      .isChecked(),
+    false,
+  )
+  assert.ok(
+    !(await request(owner, '/state', undefined, 'GET')).state.consumptionRates
+      .apples,
+  )
+  await owner
+    .getByRole('button', { name: 'Use estimated rate', exact: true })
+    .click()
+  await owner.getByRole('button', { name: 'Save item', exact: true }).click()
+  await eventually(
+    async () =>
+      (await request(wife, '/state', undefined, 'GET')).state.consumptionRates
+        .apples?.days === 7,
+  )
+  assert.deepEqual(
+    (await request(wife, '/state', undefined, 'GET')).state.consumptionRates
+      .apples,
+    { quantity: 6, unit: 'pc', days: 7 },
+  )
+  console.log(
+    'Consumption settings persist across reload/devices; learned quantities stay estimates until explicitly accepted.',
+  )
   for (const width of [320, 390, 768, 1440]) {
     await owner.setViewportSize({ width, height: 900 })
-    for (const path of ['/', '/week', '/recipes', '/settings']) {
+    for (const path of [
+      '/',
+      '/week',
+      '/recipes',
+      '/settings',
+      '/settings/stores',
+      '/settings/groups',
+      '/settings/items',
+      '/settings/recipes',
+    ]) {
       await owner.goto(`${frontendUrl}${path}`)
       await settle(owner)
       const size = await owner.evaluate(() => ({

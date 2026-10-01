@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
 import { initialState, catalog } from './data'
 import {
   archiveProduct,
@@ -9,6 +10,20 @@ import {
 } from './catalog'
 import { diffState, optimistic } from './sync'
 import { changeGroup } from './groups'
+
+it('ships artwork for every distinct built-in catalog icon', () => {
+  for (const icon of new Set(catalog.map((product) => product.icon))) {
+    const code = [...icon]
+      .map((character) => character.codePointAt(0)!.toString(16))
+      .filter((part) => part !== 'fe0f')
+      .join('-')
+    const svg = readFileSync(
+      new URL(`../../public/images/food/${code}.svg`, import.meta.url),
+      'utf8',
+    )
+    expect(svg).toContain('<svg')
+  }
+})
 
 describe('settings catalog management', () => {
   it('keeps product identity and shopping details while overriding a bundled product', () => {
@@ -121,4 +136,37 @@ describe('settings catalog management', () => {
     expect(removed.pantry).toEqual({})
     expect(removed.productGroups?.[custom.id]).toBeUndefined()
   })
+})
+
+it('syncs per-product consumption rates and deletes them with a custom item', () => {
+  let state = initialState()
+  const product = {
+    id: 'test-rate',
+    name: 'Rate test',
+    category: state.stores[0].order[0],
+    icon: '🛒',
+    aliases: [],
+  }
+  state = saveProduct(state, product)
+  const changed = {
+    ...state,
+    consumptionRates: { [product.id]: { quantity: 4, unit: 'L', days: 7 } },
+  }
+  const changes = diffState(state, changed)
+  expect(changes).toEqual([
+    {
+      collection: 'consumptionRates',
+      key: product.id,
+      field: null,
+      before: null,
+      after: { quantity: 4, unit: 'L', days: 7 },
+    },
+  ])
+  const replayed = optimistic(state, {
+    type: 'patch',
+    changes,
+    label: 'Set rate',
+  })
+  expect(replayed.consumptionRates).toEqual(changed.consumptionRates)
+  expect(deleteProduct(replayed, product.id).consumptionRates).toEqual({})
 })
