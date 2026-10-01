@@ -51,13 +51,30 @@ The user plans a 24/7 personal Hermes agent on a machine outside the homelab. He
 The standalone `scripts/probe-hermes.mjs` runs a small Python probe using Hermes's published runtime command and its existing pinned dependency bootstrap. It invokes only the native image provider, without changing the configured image provider, enabling plugins, starting an agent conversation or exporting credentials. Diagnostics are filtered; only safe capability/results metadata and synthetic image artifacts are retained under ignored `test-results/hermes-probe`. There is no fallback to another provider. Default mode checks availability; `--images` attempts a shopping icon, recipe photograph and reference-guided icon, stopping on the first failure and decoding any returned image before counting success.
 
 ```sh
-nix develop --command node scripts/probe-hermes.mjs
-nix develop --command node scripts/probe-hermes.mjs --images
+nix develop --command node scripts/probe-hermes.mjs --profile forkbasket
+nix develop --command node scripts/probe-hermes.mjs --profile forkbasket --images
 ```
 
 On 2026-10-01, the local Hermes CLI reported `openai-codex: logged in`; the probe confirmed a native Codex route and available image provider. Its actual first image request returned HTTP 401 (`api_error`) in 0.1 seconds. No image was returned, and the other two requests were skipped. This does not establish whether the credential is stale or the native route rejects that session. A fresh Hermes-owned OAuth sign-in is the next diagnostic step, followed by rerunning the same bounded probe. The existing successful native Codex-client trial used a different runtime/session.
 
-For local testing, no credentials need to be sent to the coding agent: run Hermes's OAuth login in the user's own terminal and leave authentication in Hermes. A fresh, explicitly prioritized test entry can be created with `hermes auth add openai-codex --type oauth --priority 0 --label forkbasket-image-test`. For a different machine, provide an SSH destination reachable from Pear and the selected Hermes profile; authenticate Hermes on that machine. Do not transfer auth files, bearer tokens or passwords through chat, and do not expose a raw agent server publicly.
+The user subsequently clarified that their company Codex account is temporarily in use for the current coding session, with permission, while all ForkBasket AI runtime tests and services must use their personal account. Do not change or log out the company Codex session. Hermes keeps OAuth sessions independently of Codex CLI. Its [credential pools](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/credential-pools.md) support several accounts but may rotate between them; an explicit [profile](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/profiles.md) with its own personal login is preferable. A profile without local OAuth can borrow the root login, so merely creating the profile is insufficient.
+
+The dedicated `forkbasket` profile has been created on Pear without cloning credentials, adding shell aliases or changing the default profile. Authenticate with the personal account in your own terminal:
+
+```sh
+hermes -p forkbasket auth add openai-codex --type oauth --label personal
+hermes -p forkbasket auth list openai-codex
+```
+
+Use a browser session signed into the personal account. Do not clone the existing profile, change the sticky default, copy Codex auth files, or add the company credential to this profile. These commands supersede the earlier unscoped/priority-based sign-in instruction. The probe now requires an explicit named profile and exactly one profile-owned OAuth credential labeled `personal`. It pins the Hermes image provider's credential reader to that local entry, validates the native HTTPS route and expiry, and refuses root-profile borrowing, rotation, missing logins and expired tokens. It never reads or changes the Codex CLI auth store. An absent-profile dry check failed before any image request. If the profile's token expires, refresh it through `hermes -p forkbasket auth refresh openai-codex personal` before testing.
+
+The personal sign-in subsequently completed. Hermes warned that it matched the pre-existing `device_code` account: its login command compares against the pool loaded before adding the new credential, which can include root-profile credentials. The guarded probe confirmed exactly one locally owned `personal` entry afterward. Do not follow the warning's unscoped removal command: credential numbers refer to the current profile, and the dedicated profile's sole entry is now the new personal login. No default-profile or Codex CLI credential was removed.
+
+All three native image trials then succeeded: apple shopping artwork in 27.2 seconds (1254 × 1254 PNG), salmon-pasta recipe photography in 25.9 seconds (1374 × 1145 PNG), and a pear using the apple as its visual reference in 33.1 seconds (1254 × 1254 PNG). The files were decoded and visually inspected; the fruit images share framing, ivory backgrounds and realistic surface detail. The initial illustration prompt produced a more photographic style, so application styling needs a stronger style prompt/reference. Returned sizes differ from requested presets. Artifacts remain ignored under `test-results/hermes-probe/forkbasket/`; no credential or generated image was committed or uploaded to the household.
+
+The personal profile now selects `image_gen.provider: openai-codex` and `image_gen.model: gpt-image-2-medium`, verified through the Hermes CLI. This configures the local image backend; the production application still needs the companion queue/upload integration. No agent gateway or public service was started.
+
+For a different machine, provide an SSH destination reachable from Pear and the selected Hermes profile; authenticate Hermes on that machine. Do not transfer auth files, bearer tokens or passwords through chat, and do not expose a raw agent server publicly.
 
 The proposed production bridge remains a scoped image-job queue: ForkBasket queues user-owned jobs, a worker on the personal agent machine claims them through private HTTPS/VPN access, invokes a selected local image provider and uploads validated artifacts. Credentials stay on the personal machine. Use stored style prompts/references, bounded concurrency, explicit job failures and deduplication. Sharing household artifacts is separate from sharing a person's subscription credentials; moving the worker outside Kubernetes does not establish a hosted-service authentication exception.
 

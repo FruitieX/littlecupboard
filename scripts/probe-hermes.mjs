@@ -1,22 +1,36 @@
 // Exercises the installed Hermes image provider; never imports its credentials.
 import assert from 'node:assert/strict'
 import { execFileSync, spawn } from 'node:child_process'
-import { resolve } from 'node:path'
+import { join, resolve } from 'node:path'
+import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import { createInterface } from 'node:readline'
 
-const args = process.argv.slice(2)
+const options = process.argv.slice(2)
+const profileIndex = options.indexOf('--profile')
+const profile = profileIndex >= 0 ? options[profileIndex + 1] : undefined
+assert.ok(
+  profile && /^[a-z0-9][a-z0-9-]*$/.test(profile) && profile !== 'default',
+  'Select a dedicated personal profile: node scripts/probe-hermes.mjs --profile forkbasket [--images]',
+)
+options.splice(profileIndex, 2)
+const args = options
 assert.ok(
   args.every((arg) => arg === '--images'),
-  'Usage: node scripts/probe-hermes.mjs [--images]',
+  'Usage: node scripts/probe-hermes.mjs --profile forkbasket [--images]',
 )
 const binary = process.env.FORKBASKET_HERMES_BINARY || 'hermes'
+const environment = {
+  ...process.env,
+  HERMES_HOME: join(homedir(), '.hermes/profiles', profile),
+}
 // Preserve Hermes's own pinned Python and dependency bootstrap. Do not create a
 // second environment or modify the installed Hermes checkout or provider settings.
 const command = JSON.parse(
   execFileSync(binary, ['--print-runtime-command', '--module', 'runpy'], {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'ignore'],
+    env: environment,
   }),
 )
 const entry = "runpy.run_module('runpy', run_name='__main__', alter_sys=True)"
@@ -29,11 +43,12 @@ command[3] =
   "runpy.run_path(sys.argv.pop(1), run_name='__main__')"
 command.push(
   fileURLToPath(new URL('./probe-hermes.py', import.meta.url)),
-  resolve('test-results/hermes-probe'),
+  resolve('test-results/hermes-probe', profile),
   ...args,
 )
 const child = spawn(command[0], command.slice(1), {
   stdio: ['ignore', 'pipe', 'pipe'],
+  env: environment,
 })
 // Provider diagnostics can contain account details or provider response bodies.
 child.stderr.resume()

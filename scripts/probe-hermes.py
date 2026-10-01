@@ -34,21 +34,41 @@ def image_file(value, name):
     return target, dimensions
 
 try:
-    from hermes_cli.auth import get_codex_auth_status
-    status = get_codex_auth_status()
-    report['loggedIn'] = bool(status.get('logged_in'))
-    route = urlsplit(status.get('base_url') or '')
-    report['nativeCodexRoute'] = route.scheme == 'https' and route.hostname == 'chatgpt.com' and route.path.rstrip('/') == '/backend-api/codex'
-    # The status object may contain runtime credentials: never serialize it.
-    del status
-    if not report['loggedIn'] or not report['nativeCodexRoute']:
-        raise RuntimeError('Hermes needs a native Codex connection')
+    from hermes_constants import get_hermes_home, get_default_hermes_root
+    from hermes_cli.auth import _load_auth_store
+    from hermes_cli.auth_codex import _codex_access_token_is_expiring
+    home = get_hermes_home().resolve()
+    if home == get_default_hermes_root().resolve() or not home.is_dir():
+        raise RuntimeError('A dedicated existing personal profile is required')
+    report['profile'] = home.name
+
+    def personal_credential():
+        # Hermes profiles can borrow root OAuth credentials. Do not call its
+        # fallback/rotation resolver: read only this profile's own labeled login.
+        store = _load_auth_store()
+        entries = store.get('credential_pool', {}).get('openai-codex', [])
+        if len(entries) != 1 or entries[0].get('label') != 'personal' or entries[0].get('source') not in ('manual:device_code', 'manual:loopback_pkce'):
+            raise RuntimeError('Profile must own exactly one Codex login labeled personal')
+        token = entries[0].get('access_token')
+        base = entries[0].get('base_url') or 'https://chatgpt.com/backend-api/codex'
+        route = urlsplit(base)
+        if route.scheme != 'https' or route.hostname != 'chatgpt.com' or route.port not in (None, 443) or route.username or route.password or route.path.rstrip('/') != '/backend-api/codex':
+            raise RuntimeError('Personal login must use the native Codex route')
+        if not isinstance(token, str) or not token or _codex_access_token_is_expiring(token, 60):
+            raise RuntimeError('Refresh the personal Hermes login before testing')
+        return token, base
+
+    personal_credential()
+    report.update({'loggedIn': True, 'nativeCodexRoute': True, 'personalCredentialOnly': True})
     import hermes_cli
     root = Path(hermes_cli.__file__).resolve().parent.parent
     plugin = root / 'plugins/image_gen/openai-codex/__init__.py'
     spec = importlib.util.spec_from_file_location('forkbasket_hermes_image_probe', plugin)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    # Keep the actual Hermes image provider, but pin credential selection to the
+    # explicitly paired personal login. Never fail over into the company account.
+    module._read_codex_credential = personal_credential
     provider = module.OpenAICodexImageGenProvider()
     report['available'] = provider.is_available()
     emit({'phase': 'capabilities', **report})

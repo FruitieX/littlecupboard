@@ -590,6 +590,57 @@ try {
         `${path} overflows at ${width}px: ${JSON.stringify(size)}`,
       )
       assert.equal(await owner.locator('h1').count(), 1)
+      if (path === '/week') {
+        await owner.getByRole('button', { name: 'Suggest lunches' }).click()
+        const dialog = owner.getByRole('dialog')
+        await dialog.locator('.plan-suggestions strong').first().waitFor()
+        const meals = await dialog
+          .locator('.plan-suggestions > div')
+          .evaluateAll((rows) =>
+            rows.map((row) => {
+              const title = row.querySelector('strong')
+              const reason = row.querySelector('small')
+              const bounds = (element) => {
+                const rect = element.getBoundingClientRect()
+                return {
+                  x: rect.x,
+                  y: rect.y,
+                  width: rect.width,
+                  bottom: rect.bottom,
+                }
+              }
+              return {
+                row: bounds(row),
+                title: bounds(title),
+                reason: bounds(reason),
+                fontSize: parseFloat(getComputedStyle(title).fontSize),
+                fits: title.scrollWidth <= title.clientWidth,
+              }
+            }),
+          )
+        assert.equal(meals.length, 7)
+        for (const meal of meals) {
+          assert.ok(
+            meal.title.width >= meal.row.width - 104,
+            `Meal title squeezed at ${width}px`,
+          )
+          assert.ok(
+            meal.reason.y >= meal.title.bottom,
+            `Meal explanation crowds title at ${width}px`,
+          )
+          assert.ok(
+            meal.fontSize >= 14 && meal.fits,
+            `Meal title unreadable at ${width}px`,
+          )
+        }
+        await mkdir('test-results', { recursive: true })
+        await owner.screenshot({
+          path: `test-results/suggest-lunches-${width}.png`,
+        })
+        await dialog
+          .getByRole('button', { name: 'Close dialog', exact: true })
+          .click()
+      }
     }
   }
   assert.deepEqual(errors, [], 'Browser runtime errors')

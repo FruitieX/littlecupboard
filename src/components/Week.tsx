@@ -279,10 +279,14 @@ export function Week() {
                     {days[i].toLocaleDateString('en-GB', { weekday: 'short' })}
                   </span>
                   <img src={recipe.image} alt="" />
-                  <strong>{recipe.name}</strong>
-                  <small>
-                    {recipeScore(recipe, state).reasons.slice(0, 2).join(' · ')}
-                  </small>
+                  <div className="plan-suggestion-details">
+                    <strong>{recipe.name}</strong>
+                    <small>
+                      {recipeScore(recipe, state)
+                        .reasons.slice(0, 2)
+                        .join(' · ')}
+                    </small>
+                  </div>
                 </div>
               ))}
             </div>

@@ -1361,7 +1361,8 @@ svg {
   gap: 9px;
 }
 .plan-suggestions > div {
-  display: flex;
+  display: grid;
+  grid-template-columns: 26px 40px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   background: #f1f3e7;
@@ -1374,18 +1375,24 @@ svg {
   color: #899679;
 }
 .plan-suggestions img {
-  height: 34px;
-  width: 34px;
+  height: 40px;
+  width: 40px;
   object-fit: cover;
   border-radius: 5px;
 }
+.plan-suggestion-details {
+  display: grid;
+  gap: 3px;
+  overflow-wrap: anywhere;
+}
 .plan-suggestions strong {
-  font-size: 11px;
+  font-size: 14px;
+  line-height: 1.4;
   font-weight: 500;
-  flex: 1;
 }
 .plan-suggestions small {
-  font-size: 9px;
+  font-size: 11px;
+  line-height: 1.4;
   color: #98a089;
 }
 .recipe-banner {
@@ -2493,9 +2500,6 @@ svg {
   }
   .gentle-note {
     font-size: 9px;
-  }
-  .plan-suggestions strong {
-    font-size: 10px;
   }
   .add-recipe-button {
     width: 35px;
