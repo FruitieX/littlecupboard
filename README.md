@@ -21,7 +21,7 @@ nix build .#container
 docker load < result
 ```
 
-The image serves frontend and API in one Rust process on port 8080. Keep /data on persistent block/local storage and set FORKBASKET_ORIGIN to the externally visited origin. The supplied Kubernetes deployment uses one replica, Recreate, a block PVC, non-root permissions, a private Envoy HTTPS route and health probes. Generate and SOPS-encrypt the deployment secrets before copying them into your homelab.
+The image serves frontend and API in one Rust process on port 8080. Keep /data on persistent storage and set FORKBASKET_ORIGIN to the externally visited origin. WAL is the default for local/block storage; NFS requires FORKBASKET_SQLITE_JOURNAL_MODE=DELETE and reliable NFSv4 locking/sync. The supplied Kubernetes template uses one replica, Recreate, a block PVC, non-root permissions, a private Envoy HTTPS route and health probes. The live homelab instead uses the migrated NFS claim; see [the deployment guide](docs/DEPLOYMENT.md). Generate and SOPS-encrypt the deployment secrets before copying them into your homelab.
 
 ## Develop
 
