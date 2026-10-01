@@ -475,6 +475,30 @@ pub async fn profile(
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct HouseholdProfile {
+    pub name: String,
+    pub expected_name: String,
+}
+pub async fn household_profile(
+    State(server): State<Server>,
+    headers: HeaderMap,
+    Json(input): Json<HouseholdProfile>,
+) -> Result<Json<Value>> {
+    let actor = authenticate(&server, &headers)?;
+    actor.owner()?;
+    let name = name(&input.name)?;
+    let changed = server.db.lock()?.execute(
+        "UPDATE households SET name=?1 WHERE id=?2 AND name=?3",
+        params![name, actor.household_id, input.expected_name],
+    )?;
+    if changed == 0 {
+        return Err(ApiError::conflict());
+    }
+    server.notify(&actor.household_id);
+    Ok(Json(json!({"ok":true})))
+}
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Recover {
     pub email: String,
     pub recovery_code: String,

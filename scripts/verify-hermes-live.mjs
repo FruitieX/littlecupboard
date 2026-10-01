@@ -168,7 +168,7 @@ try {
     const outsider = await fetch(origin + picture.url)
     assert.equal(outsider.status, 401)
     await writeFile(
-      'test-results/hermes-live-private-image.webp',
+      'test-results/hermes-live-private-image.jpg',
       Buffer.from(await image.arrayBuffer()),
     )
     console.log('Live native image persisted as a private app attachment.')
@@ -185,6 +185,7 @@ try {
     await page.setViewportSize({ width, height: 1000 })
     await page.goto(origin + '/settings')
     await settle(page)
+    await page.getByText('Configure AI assistant', { exact: true }).click()
     assert.equal(
       await page.getByLabel('Connection', { exact: true }).inputValue(),
       'companion',

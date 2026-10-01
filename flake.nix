@@ -13,7 +13,7 @@
       frontend = pkgs.buildNpmPackage {
         pname = "forkbasket-ui"; version = "0.1.0"; src = source;
         nodejs = pkgs.nodejs_22;
-        npmDepsHash = "sha256-2qRjsNxWGlA/Bm7T9HPRt1IRaYFSgGMsuG3fMQabKeA=";
+        npmDepsHash = "sha256-l8A1l5n65wKUDPaK2VyTUes3/+2f2Yl2xCNBrf10K8E=";
         installPhase = ''mkdir -p $out/share/forkbasket; cp -r dist/client/. $out/share/forkbasket/'';
       };
       backend = pkgs.rustPlatform.buildRustPackage {

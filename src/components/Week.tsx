@@ -12,7 +12,7 @@ import {
 import { useApp } from '../lib/state'
 import type { Recipe } from '../lib/data'
 import { dateKey, mondayOfWeek, householdDate } from '../lib/shopping'
-import { EmptyState, Eyebrow, Modal } from './ui'
+import { EmptyState, Modal } from './ui'
 import { FoodIcon } from './FoodIcon'
 import { recipeScore, suggestWeek } from '../lib/learning'
 
@@ -45,11 +45,9 @@ export function Week() {
     <>
       <div className="page-heading">
         <div>
-          <Eyebrow>A WEEK OF GOOD THINGS</Eyebrow>
           <h1>
             What’s for lunch<span className="heading-dot">?</span>
           </h1>
-          <p>Less “what should we make?” More time together.</p>
         </div>
         <span className="week-heading-art">
           <FoodIcon value="🍋" />
@@ -87,16 +85,6 @@ export function Week() {
           <RefreshCw size={17} />
           Suggest lunches
         </button>
-      </div>
-      <div className="week-note">
-        <span>
-          <FoodIcon value="🌿" />
-        </span>
-        <p>
-          <strong>A little plan goes a long way.</strong> Your recipes, your
-          family, one delicious week.
-        </p>
-        <span className="week-note-decoration">✳</span>
       </div>
       <div className="week-grid">
         {days.map((day, index) => {
@@ -165,7 +153,7 @@ export function Week() {
                   <span className="unplanned-icon">
                     <Plus size={23} />
                   </span>
-                  <strong>A little room for inspiration</strong>
+                  <strong>No lunch planned</strong>
                   <span>Pick something tasty</span>
                 </button>
               )}

@@ -7,11 +7,13 @@ export function ImageField({
   value,
   onChange,
   subject,
+  kind = 'recipe',
   onBusyChange,
 }: {
   value: string
   onChange: (value: string) => void
   subject: string
+  kind?: 'item' | 'recipe' | 'store'
   onBusyChange?: (busy: boolean) => void
 }) {
   const { session, status } = useApp()
@@ -44,7 +46,7 @@ export function ImageField({
       )}
       <div className="image-field-actions">
         <label className="secondary-button">
-          <ImagePlus size={16} /> Choose photo
+          <ImagePlus size={16} /> Choose picture
           <input
             aria-label="Upload picture"
             type="file"
@@ -67,13 +69,18 @@ export function ImageField({
                 async () =>
                   (
                     await post<{ url: string }>('/ai/image', {
-                      prompt: `A beautiful natural food photograph of ${subject}, softly lit, simple warm background, no lettering.`,
+                      prompt:
+                        kind === 'store'
+                          ? `A grocery storefront for the shop named ${subject}`
+                          : subject,
+                      kind,
                     })
                   ).url,
               )
             }
           >
-            <Sparkles size={16} /> Generate
+            <Sparkles size={16} />{' '}
+            {kind !== 'recipe' ? 'Generate icon' : 'Generate photo'}
           </button>
         )}
         {value && (
@@ -89,8 +96,10 @@ export function ImageField({
         )}
       </div>
       <small>
-        JPG, PNG or WebP, up to 8 MB. Photos are resized and stored privately
-        for your household.
+        JPG, PNG or WebP, up to 8 MB.{' '}
+        {kind !== 'recipe'
+          ? 'Generated icons match our flat artwork and are saved at 256 px. Transparent backgrounds are preserved.'
+          : 'Photos are resized and stored privately for your household.'}
       </small>
       {busy && (
         <p role="status">

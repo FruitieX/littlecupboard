@@ -342,7 +342,14 @@ pub async fn upload(
         .map_err(ApiError::internal)??;
     save_image(&server, &actor.household_id, image)
 }
-pub fn encode_image(bytes: &[u8]) -> Result<Vec<u8>> {
+pub struct StoredImage {
+    pub bytes: Vec<u8>,
+    pub mime: &'static str,
+}
+pub fn encode_image(bytes: &[u8]) -> Result<StoredImage> {
+    encode_image_at_size(bytes, 1600)
+}
+pub fn encode_image_at_size(bytes: &[u8], edge: u32) -> Result<StoredImage> {
     let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes))
         .with_guessed_format()
         .map_err(|_| ApiError::bad("Use a JPG, PNG, or WebP image."))?;
@@ -357,17 +364,42 @@ pub fn encode_image(bytes: &[u8]) -> Result<Vec<u8>> {
     limits.max_image_height = Some(8192);
     limits.max_alloc = Some(128 * 1024 * 1024);
     reader.limits(limits);
-    let image = reader
-        .decode()
-        .map_err(|_| ApiError::bad("The image is damaged or too large."))?
-        .thumbnail(1600, 1600);
+    use image::ImageDecoder;
+    let mut decoder = reader
+        .into_decoder()
+        .map_err(|_| ApiError::bad("The image is damaged or too large."))?;
+    let orientation = decoder
+        .orientation()
+        .unwrap_or(image::metadata::Orientation::NoTransforms);
+    let mut decoded = image::DynamicImage::from_decoder(decoder)
+        .map_err(|_| ApiError::bad("The image is damaged or too large."))?;
+    decoded.apply_orientation(orientation);
+    let image = decoded.thumbnail(edge, edge);
     let mut encoded = Vec::new();
-    image::codecs::jpeg::JpegEncoder::new_with_quality(&mut encoded, 85)
-        .encode_image(&image)
-        .map_err(ApiError::internal)?;
-    Ok(encoded)
+    let transparent =
+        image.color().has_alpha() && image.to_rgba8().pixels().any(|pixel| pixel[3] < 255);
+    let mime = if transparent || edge == 256 {
+        image::codecs::webp::WebPEncoder::new_lossless(&mut encoded)
+            .encode(
+                image.to_rgba8().as_raw(),
+                image.width(),
+                image.height(),
+                image::ExtendedColorType::Rgba8,
+            )
+            .map_err(ApiError::internal)?;
+        "image/webp"
+    } else {
+        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut encoded, 85)
+            .encode_image(&image.to_rgb8())
+            .map_err(ApiError::internal)?;
+        "image/jpeg"
+    };
+    Ok(StoredImage {
+        bytes: encoded,
+        mime,
+    })
 }
-pub fn save_image(server: &Server, household: &str, bytes: Vec<u8>) -> Result<Json<Value>> {
+pub fn save_image(server: &Server, household: &str, image: StoredImage) -> Result<Json<Value>> {
     let id = Uuid::new_v4().to_string();
     let conn = server.db.lock()?;
     let size: i64 = conn.query_row(
@@ -375,12 +407,21 @@ pub fn save_image(server: &Server, household: &str, bytes: Vec<u8>) -> Result<Js
         [household],
         |row| row.get(0),
     )?;
-    if size > 64 * 1024 * 1024 {
+    if size + image.bytes.len() as i64 > 64 * 1024 * 1024 {
         return Err(ApiError::bad(
             "The household image limit is 64 MB. Remove unused images first.",
         ));
     }
-    conn.execute("INSERT INTO uploads(id,household_id,mime,bytes,created_at) VALUES(?1,?2,'image/jpeg',?3,?4)",params![id,household,bytes,Utc::now().to_rfc3339()])?;
+    conn.execute(
+        "INSERT INTO uploads(id,household_id,mime,bytes,created_at) VALUES(?1,?2,?3,?4,?5)",
+        params![
+            id,
+            household,
+            image.mime,
+            image.bytes,
+            Utc::now().to_rfc3339()
+        ],
+    )?;
     Ok(Json(json!({"url":format!("/api/images/{id}")})))
 }
 pub async fn image(
@@ -389,19 +430,20 @@ pub async fn image(
     Path(id): Path<String>,
 ) -> Result<Response> {
     let actor = authenticate(&server, &headers)?;
-    let bytes: Option<Vec<u8>> = server
+    let stored: Option<(String, Vec<u8>)> = server
         .db
         .lock()?
         .query_row(
-            "SELECT bytes FROM uploads WHERE id=?1 AND household_id=?2",
+            "SELECT mime,bytes FROM uploads WHERE id=?1 AND household_id=?2",
             params![id, actor.household_id],
-            |row| row.get(0),
+            |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .optional()?;
-    let bytes = bytes.ok_or_else(|| ApiError(StatusCode::NOT_FOUND, "Image not found.".into()))?;
+    let (mime, bytes) =
+        stored.ok_or_else(|| ApiError(StatusCode::NOT_FOUND, "Image not found.".into()))?;
     Ok((
         [
-            (header::CONTENT_TYPE, "image/jpeg"),
+            (header::CONTENT_TYPE, mime.as_str()),
             (header::CACHE_CONTROL, "private, max-age=86400"),
             (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         ],
@@ -422,6 +464,10 @@ pub async fn delete_image(
         .items
         .iter()
         .any(|item| item.image.as_deref() == Some(&url))
+        || state
+            .stores
+            .iter()
+            .any(|store| store.image.as_deref() == Some(&url))
         || state
             .custom_products
             .iter()
@@ -623,8 +669,17 @@ pub async fn restore(
                 [&actor.household_id],
             )?;
         }
-        for (id, bytes) in uploads {
-            tx.execute("INSERT INTO uploads(id,household_id,mime,bytes,created_at) VALUES(?1,?2,'image/jpeg',?3,?4)",params![id,actor.household_id,bytes,Utc::now().to_rfc3339()])?;
+        for (id, image) in uploads {
+            tx.execute(
+                "INSERT INTO uploads(id,household_id,mime,bytes,created_at) VALUES(?1,?2,?3,?4,?5)",
+                params![
+                    id,
+                    actor.household_id,
+                    image.mime,
+                    image.bytes,
+                    Utc::now().to_rfc3339()
+                ],
+            )?;
         }
         for (id, member, kind, at, detail, changes, undone) in imported {
             tx.execute("INSERT INTO events(id,household_id,actor,kind,at,detail,changes,undone) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",params![id,actor.household_id,member,kind,at,detail.to_string(),changes.to_string(),undone])?;

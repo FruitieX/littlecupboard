@@ -244,27 +244,29 @@ export function AccountSettings() {
               Download recipes, shopping, pantry, history, and attached images.
               Account credentials and AI secrets stay on the server.
             </p>
-            <a className="secondary-button" href="/api/backup" download>
-              <Download size={16} />
-              Download household backup
-            </a>
-            <button
-              className="text-button"
-              disabled={busy}
-              onClick={() =>
-                void run(async () => {
-                  const result = await post<{ removed: number }>(
-                    '/images/cleanup',
-                    {},
-                  )
-                  setCleanupMessage(
-                    `${result.removed} unused photos removed. Recent uploads and photos needed for undo are kept.`,
-                  )
-                })
-              }
-            >
-              Free unused photo storage
-            </button>
+            <div className="backup-actions">
+              <a className="secondary-button" href="/api/backup" download>
+                <Download size={16} />
+                Download household backup
+              </a>
+              <button
+                className="secondary-button"
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    const result = await post<{ removed: number }>(
+                      '/images/cleanup',
+                      {},
+                    )
+                    setCleanupMessage(
+                      `${result.removed} unused photos removed. Recent uploads and photos needed for undo are kept.`,
+                    )
+                  })
+                }
+              >
+                Free unused photo storage
+              </button>
+            </div>
             {cleanupMessage && (
               <p className="success-message" role="status">
                 {cleanupMessage}

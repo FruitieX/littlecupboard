@@ -1,11 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import {
-  ShoppingBasket,
-  CalendarDays,
-  BookOpen,
-  Settings2,
-  Leaf,
-} from 'lucide-react'
+import { ShoppingBasket, CalendarDays, BookOpen, Settings2 } from 'lucide-react'
 import { Shopping } from './Shopping'
 import { Week } from './Week'
 import { Recipes } from './Recipes'
@@ -73,7 +67,6 @@ export function ForkBasket({ view = 'shopping' }: { view?: View }) {
               <ConnectionStatus />
             </div>
           </div>
-          <span className="sidebar-label">A LITTLE MORE TOGETHER</span>
           <nav aria-label="Main navigation">
             {navigation.map(({ view: tab, to, label, icon: Icon }) => (
               <Link
@@ -88,23 +81,6 @@ export function ForkBasket({ view = 'shopping' }: { view?: View }) {
               </Link>
             ))}
           </nav>
-          {view !== 'shopping' && (
-            <div className="sidebar-bottom">
-              <span className="little-plant">
-                <FoodIcon value="🌱" />
-              </span>
-              <h3>
-                Good food.
-                <br />
-                Less fuss.
-              </h3>
-              <p>
-                A little less planning.
-                <br />A little more living.
-              </p>
-              <span className="prototype-label">YOUR FAMILY KITCHEN</span>
-            </div>
-          )}
         </aside>
         <div className="main-shell">
           <header className="topbar">
@@ -115,11 +91,6 @@ export function ForkBasket({ view = 'shopping' }: { view?: View }) {
             >
               <Brand />
             </Link>
-            {view !== 'shopping' && (
-              <span className="topbar-greeting">
-                <Leaf size={15} /> A little more room for family time
-              </span>
-            )}
             <div className="topbar-right">
               <ConnectionStatus />
               {view !== 'shopping' && (

@@ -15,9 +15,10 @@ import {
 import { catalog, findProduct } from '../lib/data'
 import type { Recipe, Ingredient } from '../lib/data'
 import { useApp } from '../lib/state'
-import { EmptyState, Eyebrow, Modal } from './ui'
+import { EmptyState, Modal } from './ui'
 import { FoodIcon } from './FoodIcon'
 import { ImageField } from './ImageField'
+import { Markdown } from './Markdown'
 import { discovery } from '../lib/learning'
 
 export function Recipes() {
@@ -42,11 +43,9 @@ export function Recipes() {
     <>
       <div className="page-heading">
         <div>
-          <Eyebrow>GOOD FOOD, WORTH KEEPING</Eyebrow>
           <h1>
             Our recipe book<span className="heading-dot">.</span>
           </h1>
-          <p>The tried, the loved, and the “let’s make that again.”</p>
         </div>
         <button
           className="primary-button add-recipe-button"
@@ -62,7 +61,7 @@ export function Recipes() {
           <div>
             <span className="banner-overline">FROM OUR KITCHEN</span>
             <h2>{allRecipes[0].name}</h2>
-            <p>{allRecipes[0].subtitle}</p>
+            <Markdown compact>{allRecipes[0].subtitle}</Markdown>
             <button onClick={() => setSelected(allRecipes[0])}>
               Take a look <ArrowUpRight size={18} />
             </button>
@@ -73,9 +72,9 @@ export function Recipes() {
       )}
       {newIdea && (
         <section className="discovery-card">
-          <span className="eyebrow">A LITTLE SOMETHING NEW</span>
+          <span className="eyebrow">SUGGESTED RECIPE</span>
           <h3>{newIdea.name}</h3>
-          <p>{newIdea.subtitle}</p>
+          <Markdown compact>{newIdea.subtitle}</Markdown>
           <div className="recipe-manage">
             <button
               className="secondary-button"
@@ -181,7 +180,7 @@ export function Recipes() {
                 onClick={() => setSelected(recipe)}
               >
                 <h3>{recipe.name}</h3>
-                <p>{recipe.subtitle}</p>
+                <Markdown compact>{recipe.subtitle}</Markdown>
                 <div>
                   <span>
                     <Clock3 size={14} />
@@ -251,7 +250,7 @@ export function RecipeDetail({
         if (!v) onClose()
       }}
       title={recipe.name}
-      description={recipe.subtitle}
+      description={`${recipe.minutes} minutes · ${recipe.servings} servings`}
       className="recipe-detail"
     >
       <img
@@ -271,6 +270,7 @@ export function RecipeDetail({
             {recipe.tag}
           </span>
         </div>
+        <Markdown>{recipe.subtitle}</Markdown>
         <div className="ingredients-heading">
           <h3>Gather the good stuff</h3>
           <div className="servings-control">
@@ -364,7 +364,7 @@ export function RecipeDetail({
           {recipe.steps.map((step, i) => (
             <li key={i}>
               <span>{i + 1}</span>
-              <p>{step}</p>
+              <Markdown>{step}</Markdown>
             </li>
           ))}
         </ol>
@@ -416,9 +416,7 @@ function RecipeEditor({
 }) {
   const { state, update, groups } = useApp()
   const [name, setName] = useState(recipe?.name ?? '')
-  const [subtitle, setSubtitle] = useState(
-    recipe?.subtitle ?? 'From our family kitchen.',
-  )
+  const [subtitle, setSubtitle] = useState(recipe?.subtitle ?? '')
   const [minutes, setMinutes] = useState(recipe?.minutes ?? 20)
   const [servings, setServings] = useState(
     recipe?.servings ?? state.preferences?.servings ?? 4,
@@ -483,7 +481,7 @@ function RecipeEditor({
         if (!v) onClose()
       }}
       title={recipe ? 'Make it even better' : 'Keep a good thing'}
-      description="A family recipe, with all the little details."
+      description="Ingredients, method, and recipe notes."
     >
       <form
         className="editor-form"
@@ -542,13 +540,25 @@ function RecipeEditor({
           />
         </label>
         <label>
-          A little description
-          <input
-            maxLength={300}
+          Description
+          <textarea
+            aria-label="Description"
+            rows={5}
+            maxLength={8000}
             value={subtitle}
             onChange={(e) => setSubtitle(e.target.value)}
+            placeholder="A family favorite. Use **bold**, lists, headings and links for notes."
           />
+          <small>
+            Markdown supported: **bold**, *italic*, lists, headings and links.
+          </small>
         </label>
+        {!!subtitle.trim() && (
+          <details className="description-preview">
+            <summary>Preview description</summary>
+            <Markdown>{subtitle}</Markdown>
+          </details>
+        )}
         <div className="form-row">
           <label>
             Minutes
@@ -735,6 +745,7 @@ function RecipeEditor({
                       />
                     </label>
                     <ImageField
+                      kind="item"
                       value={pictures[product.id] || product.image || ''}
                       onChange={(image) =>
                         setPictures((current) => ({

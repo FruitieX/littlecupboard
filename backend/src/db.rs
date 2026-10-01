@@ -114,7 +114,7 @@ impl Database {
             [],
             |row| row.get(0),
         )?;
-        if version > 2 {
+        if version > 3 {
             return Err(ApiError::internal(
                 "This database was created by a newer ForkBasket version. Restore a compatible backup before downgrading.",
             ));
@@ -127,6 +127,11 @@ impl Database {
         if version < 2 {
             conn.execute_batch("BEGIN IMMEDIATE")?;
             conn.execute_batch(include_str!("../migrations/002_companion.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 3 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/003_media_settings.sql"))?;
             conn.execute_batch("COMMIT")?;
         }
         conn.execute(

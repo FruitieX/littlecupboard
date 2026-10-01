@@ -72,6 +72,7 @@ export type Store = {
   name: string
   location: string
   order: Category[]
+  image?: string
 }
 export type Plan = Record<string, string>
 export type AppState = {

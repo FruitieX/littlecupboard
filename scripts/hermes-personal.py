@@ -33,7 +33,7 @@ def personal_credential(refresh=False):
         return personal_credential(False)
     return token, base
 
-def image_provider(refresh=False, model=None):
+def image_provider(refresh=False, model=None, background=None, size=None):
     import hermes_cli
     root = Path(hermes_cli.__file__).resolve().parent.parent
     spec = importlib.util.spec_from_file_location('forkbasket_personal_images', root / 'plugins/image_gen/openai-codex/__init__.py')
@@ -44,4 +44,18 @@ def image_provider(refresh=False, model=None):
         if model not in module.GPT_IMAGE_2_TIERS:
             raise ValueError('Unsupported image model')
         module._resolve_model = lambda: (model, module.GPT_IMAGE_2_TIERS[model])
+    if background not in (None, 'opaque', 'transparent', 'auto'):
+        raise ValueError('Invalid image background')
+    if size not in (None, 'auto', '816x816', '1024x1024', '1536x1024', '1024x1536'):
+        raise ValueError('Invalid image size')
+    build = module._build_image_request
+    def image_request(**kwargs):
+        path, body = build(**kwargs)
+        if background is not None:
+            body['background'] = background
+            body['output_format'] = 'png'
+        if size not in (None, 'auto'):
+            body['size'] = size
+        return path, body
+    module._build_image_request = image_request
     return module.OpenAICodexImageGenProvider()

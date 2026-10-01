@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { spawn } from 'node:child_process'
-import { mkdtemp, rm, mkdir } from 'node:fs/promises'
+import { mkdtemp, rm, mkdir, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { launchBrowser, settle } from './browser.mjs'
@@ -420,12 +420,72 @@ try {
     'Autocomplete over 80 shops and independent device store selection passed.',
   )
 
+  const iconFixture = await owner.evaluate(
+    async (svg) => {
+      const image = new Image()
+      image.src = 'data:image/svg+xml;base64,' + btoa(svg)
+      await image.decode()
+      const canvas = document.createElement('canvas')
+      canvas.width = canvas.height = 512
+      canvas.getContext('2d').drawImage(image, 64, 64, 384, 384)
+      return canvas.toDataURL('image/png').split(',')[1]
+    },
+    await readFile('public/images/food/1f34e.svg', 'utf8'),
+  )
+  const providerRequests = []
   provider = createServer(async (req, res) => {
     let body = ''
     for await (const chunk of req) body += chunk
     const input = JSON.parse(body || '{}')
-    const content =
-      input.messages?.[0]?.role === 'user'
+    providerRequests.push(input)
+    if (req.url === '/v1/images/generations') {
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ data: [{ b64_json: iconFixture }] }))
+      return
+    }
+    const hasImages = input.messages?.some((message) =>
+      Array.isArray(message.content),
+    )
+    const content = hasImages
+      ? JSON.stringify({
+          message: 'Recipe transcribed. Review all quantities before saving.',
+          shopping: [],
+          plan: [],
+          recipes: [
+            {
+              name: 'Imported recipe',
+              subtitle:
+                '## Notes\n\n**Keep chilled**.\n\n- Serve fresh\n- Stir gently',
+              minutes: 10,
+              servings: 4,
+              tags: ['Imported'],
+              ingredients: [
+                {
+                  name: 'Apples',
+                  productId: 'apples',
+                  category: null,
+                  quantity: 4,
+                  unit: 'pc',
+                  note: '',
+                },
+                {
+                  name: 'Bergamot powder',
+                  productId: null,
+                  category: null,
+                  quantity: 1,
+                  unit: 'g',
+                  note: 'Check the original',
+                },
+              ],
+              steps: [
+                'Wash the apples.',
+                'Stir in **bergamot**.',
+                'Serve fresh.',
+              ],
+            },
+          ],
+        })
+      : input.messages?.[0]?.role === 'user'
         ? 'Connected'
         : JSON.stringify({
             message: 'Pick up a little fruit for lunch.',
@@ -448,6 +508,7 @@ try {
   await new Promise((resolve) => provider.listen(0, '127.0.0.1', resolve))
   await owner.goto(frontendUrl + '/settings')
   await settle(owner)
+  await owner.getByText('Configure AI assistant', { exact: true }).click()
   await owner
     .getByLabel('Enable the household assistant', { exact: true })
     .check()
@@ -504,16 +565,254 @@ try {
   console.log(
     'Provider configuration/test, hidden-until-configured assistant and reviewed proposals passed through the UI.',
   )
+  await owner.goto(`${frontendUrl}/settings`)
+  await settle(owner)
+  assert.equal(await owner.locator('.ai-setup').getAttribute('open'), null)
+  await owner.getByLabel('Family name', { exact: true }).fill('Test family')
+  await owner
+    .getByRole('button', { name: 'Save family name', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Family name saved', exact: true })
+    .waitFor()
+  await wife.waitForFunction(
+    () =>
+      document.querySelector('.household strong')?.textContent ===
+      'Test family',
+  )
+  await owner.getByText('Configure AI assistant', { exact: true }).click()
+  await owner
+    .getByText('Compatibility & image generation', { exact: true })
+    .click()
+  await owner.getByLabel('Image model', { exact: true }).fill('gpt-image-2')
+  await owner.getByText('Advanced prompts', { exact: true }).click()
+  await owner
+    .getByLabel('Assistant system instructions', { exact: true })
+    .fill(
+      'Use clear, concise Markdown recipe notes. Preserve original quantities.',
+    )
+  await owner
+    .getByRole('button', { name: 'Save provider', exact: true })
+    .click()
+  await owner
+    .locator('.store-option')
+    .filter({ hasText: 'Neighborhood Market 079' })
+    .click()
+  const shopsBefore = (await request(owner, '/state', undefined, 'GET')).state
+    .stores
+  const selectedShop = shopsBefore.find(
+    (shop) => shop.name === 'Neighborhood Market 079',
+  )
+  await owner.getByRole('button', { name: 'Edit shop', exact: true }).click()
+  await owner
+    .getByLabel('Store name', { exact: true })
+    .fill('Renamed Neighborhood Market')
+  await owner
+    .getByRole('button', { name: 'Generate icon', exact: true })
+    .click()
+  await owner.waitForFunction(() =>
+    document
+      .querySelector('.image-field-preview')
+      ?.getAttribute('src')
+      ?.startsWith('/api/images/'),
+  )
+  await owner.getByRole('button', { name: 'Save shop', exact: true }).click()
+  await settle(owner)
+  await owner
+    .getByRole('heading', {
+      name: 'Renamed Neighborhood Market · aisle order',
+      exact: true,
+    })
+    .waitFor()
+  const editedShop = (
+    await request(owner, '/state', undefined, 'GET')
+  ).state.stores.find((shop) => shop.id === selectedShop.id)
+  assert.equal(editedShop.name, 'Renamed Neighborhood Market')
+  assert.deepEqual(editedShop.order, selectedShop.order)
+  assert.ok(editedShop.image.startsWith('/api/images/'))
+  const sourceGroup = (
+    await request(owner, '/state', undefined, 'GET')
+  ).state.items.find((item) => item.id === 'apples').category
+  await owner
+    .getByRole('button', { name: `Edit group ${sourceGroup}`, exact: true })
+    .click()
+  await owner.getByLabel('Group name', { exact: true }).fill('Fresh fruit')
+  await owner.getByRole('button', { name: 'Save group', exact: true }).click()
+  await settle(owner)
+  await owner
+    .getByRole('button', { name: 'Edit group Fresh fruit', exact: true })
+    .waitFor()
+  let grouped = (await request(owner, '/state', undefined, 'GET')).state
+  assert.equal(grouped.productGroups.apples, 'Fresh fruit')
+  assert.ok(
+    grouped.stores.every(
+      (shop) =>
+        shop.order.includes('Fresh fruit') && !shop.order.includes(sourceGroup),
+    ),
+  )
+  await owner
+    .getByRole('button', { name: 'Edit group Fresh fruit', exact: true })
+    .click()
+  await owner.getByText('Delete this group', { exact: true }).click()
+  const targetGroup = grouped.groups.find((group) => group !== 'Fresh fruit')
+  await owner
+    .getByLabel('Move its items to', { exact: true })
+    .selectOption(targetGroup)
+  await owner.getByRole('button', { name: 'Delete group', exact: true }).click()
+  await settle(owner)
+  await owner.getByRole('dialog').waitFor({ state: 'hidden' })
+  grouped = (await request(owner, '/state', undefined, 'GET')).state
+  assert.equal(grouped.productGroups.apples, targetGroup)
+  assert.ok(!grouped.groups.includes('Fresh fruit'))
+  assert.ok(
+    grouped.stores.every(
+      (shop) => new Set(shop.order).size === shop.order.length,
+    ),
+  )
+  await owner
+    .getByRole('button', { name: 'Open family assistant', exact: true })
+    .click()
+  await owner
+    .getByLabel('Attach recipe images', { exact: true })
+    .setInputFiles('public/images/pasta.jpg')
+  await owner.locator('.attachment').waitFor()
+  assert.equal(
+    await owner
+      .getByLabel('Take recipe photo', { exact: true })
+      .getAttribute('capture'),
+    'environment',
+  )
+  await owner
+    .getByLabel('Take recipe photo', { exact: true })
+    .setInputFiles('public/images/pasta.jpg')
+  await owner.waitForFunction(
+    () => document.querySelectorAll('.attachment').length === 2,
+  )
+  await owner
+    .getByRole('button', { name: 'Remove recipe image 2', exact: true })
+    .click()
+  await owner.evaluate((encoded) => {
+    const bytes = Uint8Array.from(atob(encoded), (character) =>
+      character.charCodeAt(0),
+    )
+    const transfer = new DataTransfer()
+    transfer.items.add(
+      new File([bytes], 'Clipboard recipe.png', { type: 'image/png' }),
+    )
+    document.querySelector('.assistant-modal form').dispatchEvent(
+      new ClipboardEvent('paste', {
+        clipboardData: transfer,
+        bubbles: true,
+        cancelable: true,
+      }),
+    )
+  }, iconFixture)
+  await owner.waitForFunction(
+    () => document.querySelectorAll('.attachment').length === 2,
+  )
+  await owner
+    .getByLabel('What would help?', { exact: true })
+    .fill('Transcribe this recipe and help me create a dish photo.')
+  await owner
+    .getByRole('button', { name: 'Ask our assistant', exact: true })
+    .click()
+  await owner
+    .getByText('Recipe transcribed. Review all quantities before saving.', {
+      exact: true,
+    })
+    .waitFor()
+  assert.ok(
+    !(await request(owner, '/state', undefined, 'GET')).state.recipeBook.some(
+      (recipe) => recipe.name === 'Imported recipe',
+    ),
+  )
+  const visionRequest = providerRequests.find((request) =>
+    request.messages?.some((message) => Array.isArray(message.content)),
+  )
+  assert.equal(
+    visionRequest.messages[1].content.filter(
+      (part) => part.type === 'image_url',
+    ).length,
+    2,
+  )
+  assert.ok(
+    visionRequest.messages[0].content.includes('Use clear, concise Markdown'),
+  )
+  await owner.locator('.proposal-recipe summary').click()
+  assert.equal(
+    await owner
+      .locator('.proposal-recipe .markdown strong')
+      .filter({ hasText: 'Keep chilled' })
+      .count(),
+    1,
+  )
+  await owner
+    .getByRole('button', { name: 'Generate dish photo', exact: true })
+    .click()
+  await owner.locator('.proposal-dish-photo').waitFor()
+  await owner
+    .getByRole('button', { name: 'Generate icon', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Regenerate icon', exact: true })
+    .waitFor()
+  const iconRequest = providerRequests.find(
+    (request) => request.background === 'transparent',
+  )
+  assert.equal(iconRequest.output_format, 'png')
+  assert.equal(iconRequest.size, '816x816')
+  await mkdir('test-results', { recursive: true })
+  await owner.getByRole('dialog').screenshot({
+    path: 'test-results/recipe-import-mobile.png',
+  })
+  await owner
+    .getByRole('button', { name: 'Save selected suggestions', exact: true })
+    .click()
+  await settle(owner)
+  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await owner.goto(`${frontendUrl}/recipes`)
+  await settle(owner)
+  await owner
+    .getByRole('button', { name: 'Open Imported recipe', exact: true })
+    .click()
+  await owner
+    .locator('.detail-content .markdown strong')
+    .filter({ hasText: 'Keep chilled' })
+    .waitFor()
+  assert.equal(
+    await owner
+      .locator('.detail-content .markdown li')
+      .filter({ hasText: 'Serve fresh' })
+      .count(),
+    1,
+  )
+  await owner.getByRole('dialog').screenshot({
+    path: 'test-results/recipe-markdown-mobile.png',
+  })
+  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await wife.goto(`${frontendUrl}/settings`)
+  await settle(wife)
+  assert.equal(
+    await wife.getByText('Configure AI assistant', { exact: true }).count(),
+    0,
+  )
+  assert.equal(await wife.getByLabel('Family name', { exact: true }).count(), 0)
+  console.log(
+    'Vision upload/camera/clipboard, reviewed recipe photos/icons, Markdown, shop/family/group edits and owner-only settings passed.',
+  )
   await mkdir('test-results', { recursive: true })
   for (const width of [320, 390, 768, 1020, 1120, 1121, 1240, 1440, 1920]) {
     await owner.setViewportSize({ width, height: 1000 })
     await owner.goto(`${frontendUrl}/settings`)
     await settle(owner)
-    await owner.locator('.ai-provider-card summary').click()
+    if ([390, 1440].includes(width))
+      await owner.screenshot({ path: `test-results/settings-${width}.png` })
+    await owner.getByText('Configure AI assistant', { exact: true }).click()
+    await owner
+      .getByText('Compatibility & image generation', { exact: true })
+      .click()
+    await owner.getByText('Advanced prompts', { exact: true }).click()
     if ([390, 1440].includes(width)) {
-      await owner.screenshot({
-        path: `test-results/settings-${width}.png`,
-      })
       await owner.locator('.ai-provider-card').screenshot({
         path: `test-results/settings-ai-${width}.png`,
       })
@@ -548,6 +847,23 @@ try {
         columns,
         overflow,
         content: document.documentElement.scrollWidth,
+        backupButtons: [
+          ...document.querySelector('.backup-actions').children,
+        ].map((control) => {
+          const rect = control.getBoundingClientRect()
+          return {
+            x: rect.x,
+            right: rect.right,
+            y: rect.y,
+            center: rect.y + rect.height / 2,
+          }
+        }),
+        householdNameBottom: document
+          .querySelector('.household > div > span')
+          .getBoundingClientRect().bottom,
+        householdSyncTop: document
+          .querySelector('.household .connection-pill')
+          .getBoundingClientRect().top,
       }
     })
     assert.deepEqual(
@@ -559,6 +875,22 @@ try {
       layout.content <= width,
       `Expanded settings overflow at ${width}px`,
     )
+    const [download, cleanup] = layout.backupButtons
+    if (Math.abs(download.y - cleanup.y) < 2) {
+      assert.ok(
+        Math.abs(download.center - cleanup.center) <= 1,
+        'Backup actions have aligned centers',
+      )
+      assert.ok(
+        cleanup.x - download.right >= 10,
+        'Backup actions have comfortable spacing',
+      )
+    }
+    if (width > 1120)
+      assert.ok(
+        layout.householdSyncTop >= layout.householdNameBottom + 4,
+        'Sync badge has its own spaced row below the name',
+      )
     const [stores, preferences] = layout.columns
     if (width > 1120) {
       assert.ok(
@@ -580,6 +912,7 @@ try {
     await owner.setViewportSize({ width, height: 1000 })
     await owner.goto(`${frontendUrl}/settings`)
     await settle(owner)
+    await owner.getByText('Configure AI assistant', { exact: true }).click()
     await owner
       .getByLabel('Connection', { exact: true })
       .selectOption('companion')

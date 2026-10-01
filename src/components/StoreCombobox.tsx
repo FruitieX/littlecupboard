@@ -44,7 +44,11 @@ export function StoreCombobox() {
       }}
     >
       <div className="store-picker">
-        <MapPin size={16} aria-hidden="true" />
+        {store.image ? (
+          <img src={store.image} alt="" />
+        ) : (
+          <MapPin size={16} aria-hidden="true" />
+        )}
         <input
           ref={input}
           role="combobox"
@@ -128,6 +132,9 @@ export function StoreCombobox() {
                 aria-selected={index === i}
                 onClick={() => choose(candidate)}
               >
+                {candidate.image && (
+                  <img className="store-picture" src={candidate.image} alt="" />
+                )}
                 <span>
                   <strong>{candidate.name}</strong>
                   {candidate.location && <small>{candidate.location}</small>}

@@ -1,15 +1,18 @@
 import { useState } from 'react'
 import { Plus, Check } from 'lucide-react'
 import { useApp } from '../lib/state'
-import { categories } from '../lib/data'
 import { SectionTitle } from './ui'
+import { FamilySettings } from './FamilySettings'
+import { GroupEditor } from './GroupEditor'
 export function HouseholdSettings() {
   const { state, update, groups } = useApp()
   const [group, setGroup] = useState('')
+  const [editingGroup, setEditingGroup] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
   const preferences = state.preferences!
   return (
     <>
+      <FamilySettings />
       <section className="settings-card">
         <SectionTitle title="Our kitchen preferences" />
         <form
@@ -116,35 +119,14 @@ export function HouseholdSettings() {
         </p>
         <div className="group-list">
           {groups.map((g) => (
-            <span className="group-chip" key={g}>
+            <button
+              className="group-chip"
+              key={g}
+              aria-label={`Edit group ${g}`}
+              onClick={() => setEditingGroup(g)}
+            >
               {g}
-              {!(categories as readonly string[]).includes(g) && (
-                <button
-                  className="icon-button"
-                  aria-label={`Remove group ${g}`}
-                  onClick={() => {
-                    if (
-                      state.customProducts.some((p) => p.category === g) ||
-                      state.items.some((i) => i.category === g) ||
-                      Object.values(state.productGroups ?? {}).includes(g)
-                    ) {
-                      alert('Move items out of this group first.')
-                      return
-                    }
-                    update((s) => ({
-                      ...s,
-                      groups: s.groups?.filter((x) => x !== g),
-                      stores: s.stores.map((store) => ({
-                        ...store,
-                        order: store.order.filter((x) => x !== g),
-                      })),
-                    }))
-                  }}
-                >
-                  ×
-                </button>
-              )}
-            </span>
+            </button>
           ))}
         </div>
         <form
@@ -182,6 +164,13 @@ export function HouseholdSettings() {
           </button>
         </form>
       </section>
+      {editingGroup && (
+        <GroupEditor
+          key={editingGroup}
+          group={editingGroup}
+          onClose={() => setEditingGroup(null)}
+        />
+      )}
     </>
   )
 }

@@ -627,6 +627,7 @@ function ItemEditor({
           </p>
         ) : null}
         <ImageField
+          kind="item"
           value={image}
           onChange={setImage}
           subject={name}

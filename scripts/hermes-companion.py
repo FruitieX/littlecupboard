@@ -34,7 +34,22 @@ def validate_config(config):
 
 def chat_body(body):
     instructions='\n'.join(message['content'] for message in body['messages'] if message['role'] in ('system','developer')) or 'You are a helpful family shopping assistant.'
-    inputs=[{'role':message['role'],'content':[{'type':'input_text','text':message['content']}]} for message in body['messages'] if message['role']=='user']
+    def user_content(content):
+        if isinstance(content,str):
+            return [{'type':'input_text','text':content}]
+        parts=[]
+        for part in content:
+            if part['type']=='text':
+                parts.append({'type':'input_text','text':part['text']})
+            elif part['type']=='image_url':
+                url=part['image_url']['url']
+                if not re.match(r'^data:image/(jpeg|png|webp);base64,',url):
+                    raise ValueError('Only inline household images are supported')
+                parts.append({'type':'input_image','image_url':url,'detail':part['image_url'].get('detail','high')})
+            else:
+                raise ValueError('Unsupported user content')
+        return parts
+    inputs=[{'role':message['role'],'content':user_content(message['content'])} for message in body['messages'] if message['role']=='user']
     if not inputs or not isinstance(body.get('model'),str):
         raise ValueError('Missing model or message')
     result={'model':body['model'],'instructions':instructions,'input':inputs,'store':False,'stream':True}
@@ -90,7 +105,7 @@ def perform(job):
         if model not in ('gpt-image-2-low','gpt-image-2-medium','gpt-image-2-high'):
             raise ValueError('Unsupported Hermes image model')
         aspect={'1536x1024':'landscape','1024x1536':'portrait'}.get(body.get('size'),'square')
-        result=personal.image_provider(refresh=True,model=model).generate(body['prompt'],aspect_ratio=aspect)
+        result=personal.image_provider(refresh=True,model=model,background=body.get('background'),size=body.get('size')).generate(body['prompt'],aspect_ratio=aspect,reference_image_urls=body.get('reference_images'))
         if not result.get('success'):
             raise RuntimeError('Image provider failed')
         picture=Path(result['image'])
@@ -144,7 +159,7 @@ def main():
     def call(client,path,body):
         response=client.post(f"{config['url']}/api/companion/{path}",json=body)
         response.raise_for_status()
-        if len(response.content)>1024*1024:
+        if len(response.content)>9*1024*1024:
             raise ValueError('Companion response too large')
         return response.json()
     def heartbeat():

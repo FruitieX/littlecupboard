@@ -1124,6 +1124,10 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
             || store.name.trim().is_empty()
             || !text(&store.name, 80)
             || !text(&store.location, 120)
+            || store
+                .image
+                .as_ref()
+                .is_some_and(|image| !valid_image(image))
             || store.order.iter().collect::<BTreeSet<_>>() != groups
             || store.order.len() != groups.len()
         {
@@ -1157,7 +1161,7 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
             || !recipe_ids.insert(&recipe.id)
             || recipe.name.trim().is_empty()
             || !text(&recipe.name, 120)
-            || !text(&recipe.subtitle, 300)
+            || !text(&recipe.subtitle, 8000)
             || recipe.minutes == 0
             || recipe.minutes > 1440
             || !recipe.servings.is_finite()

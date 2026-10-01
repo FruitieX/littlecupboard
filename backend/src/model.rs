@@ -115,6 +115,9 @@ pub struct Store {
     pub name: String,
     pub location: String,
     pub order: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub image: Option<String>,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, TS, PartialEq)]
@@ -352,6 +355,7 @@ pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
         stores: vec![Store {
             id: "our-store".into(),
             name: "Our shop".into(),
+            image: None,
             location: "".into(),
             order: seed.categories.clone(),
         }],

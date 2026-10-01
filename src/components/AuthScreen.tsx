@@ -65,12 +65,11 @@ export function AuthScreen({
         ForkBasket<span className="heading-dot">.</span>
       </div>
       <section className="auth-card">
-        <span className="eyebrow">GOOD FOOD. LESS FUSS.</span>
         <h1>
           {mode === 'setup'
-            ? 'Your family’s basket.'
+            ? 'Set up ForkBasket'
             : mode === 'join'
-              ? 'A little more together.'
+              ? 'Join your family'
               : mode === 'recover'
                 ? 'Back to your basket.'
                 : 'Welcome home.'}
@@ -154,7 +153,7 @@ export function AuthScreen({
                 required
                 autoComplete="name"
                 maxLength={80}
-                placeholder="What should we call you?"
+                placeholder="Your name"
               />
             </label>
           )}

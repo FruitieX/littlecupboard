@@ -4,17 +4,17 @@ import {
   ArrowUp,
   Check,
   MapPin,
+  Pencil,
   Plus,
-  Settings2,
   Sparkles,
   Trash2,
   HardDrive,
   RefreshCw,
 } from 'lucide-react'
 import { useApp } from '../lib/state'
-import { APP_NAME } from '../lib/brand'
-import { Eyebrow, Modal, SectionTitle } from './ui'
-import { FoodIcon } from './FoodIcon'
+import { SectionTitle } from './ui'
+import { StoreEditor } from './StoreEditor'
+import type { Store } from '../lib/data'
 import { AccountSettings } from './AccountSettings'
 import { AISettings } from './AISettings'
 import { HouseholdSettings } from './HouseholdSettings'
@@ -26,9 +26,7 @@ export function Settings() {
     session.user.id,
   )
   const [storeId, setStoreId] = useState<string | null>(null)
-  const [addOpen, setAddOpen] = useState(false)
-  const [newName, setNewName] = useState('')
-  const [newLocation, setNewLocation] = useState('')
+  const [editor, setEditor] = useState<Store | 'new' | null>(null)
   const store =
     state.stores.find((s) => s.id === (storeId ?? state.storeId)) ??
     state.stores[0]
@@ -49,18 +47,7 @@ export function Settings() {
   return (
     <>
       <div className="page-heading">
-        <div>
-          <Eyebrow>A BASKET THAT FITS YOUR LIFE</Eyebrow>
-          <h1>
-            Make it yours<span className="heading-dot">.</span>
-          </h1>
-          <p>A little setup. A much smoother shop.</p>
-        </div>
-        <Settings2
-          className="settings-heading-icon"
-          size={38}
-          strokeWidth={1.2}
-        />
+        <h1>Settings</h1>
       </div>
       <div className="settings-layout">
         <div>
@@ -81,7 +68,7 @@ export function Settings() {
           </section>
           <section className="settings-card">
             <SectionTitle title="Our favorite stores">
-              <button className="text-button" onClick={() => setAddOpen(true)}>
+              <button className="text-button" onClick={() => setEditor('new')}>
                 <Plus size={16} />
                 Add store
               </button>
@@ -97,7 +84,11 @@ export function Settings() {
                   onClick={() => setStoreId(s.id)}
                 >
                   <span className="store-option-icon">
-                    <MapPin size={20} />
+                    {s.image ? (
+                      <img src={s.image} alt="" />
+                    ) : (
+                      <MapPin size={20} />
+                    )}
                   </span>
                   <span>
                     <strong>{s.name}</strong>
@@ -110,6 +101,9 @@ export function Settings() {
           </section>
           <section className="settings-card aisle-card">
             <SectionTitle title={`${store.name} · aisle order`}>
+              <button className="text-button" onClick={() => setEditor(store)}>
+                <Pencil size={16} /> Edit shop
+              </button>
               <span className="saved-label">
                 <Check size={13} />
                 Saved
@@ -171,71 +165,18 @@ export function Settings() {
           <HouseholdSettings />
           <AISettings />
           <AccountSettings />
-          <div className="settings-signoff">
-            <span>
-              <FoodIcon value="🌿" />
-            </span>
-            <h3>{APP_NAME}</h3>
-            <p>Good food. Less fuss.</p>
-            <small>Your shared family kitchen</small>
-          </div>
         </aside>
       </div>
-      <Modal
-        open={addOpen}
-        onOpenChange={setAddOpen}
-        title="Another favorite shop"
-        description="Add a store, then arrange its groups to match your usual route."
-      >
-        <form
-          className="editor-form"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const id = crypto.randomUUID()
-            update((s) => ({
-              ...s,
-              stores: [
-                ...s.stores,
-                {
-                  id,
-                  name: newName.trim(),
-                  location: newLocation.trim(),
-                  order: [...(s.groups ?? [])],
-                },
-              ],
-            }))
-            setStoreId(id)
-            setAddOpen(false)
-            setNewName('')
-            setNewLocation('')
+      {editor && (
+        <StoreEditor
+          key={editor === 'new' ? 'new' : editor.id}
+          store={editor === 'new' ? undefined : editor}
+          onClose={(id) => {
+            setEditor(null)
+            if (id) setStoreId(id)
           }}
-        >
-          <label>
-            Store name
-            <input
-              autoFocus
-              required
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              maxLength={60}
-              placeholder="e.g. The corner shop"
-            />
-          </label>
-          <label>
-            A little reminder
-            <input
-              value={newLocation}
-              onChange={(e) => setNewLocation(e.target.value)}
-              maxLength={100}
-              placeholder="e.g. A quick stop on the way home"
-            />
-          </label>
-          <button type="submit" className="primary-button">
-            <Plus size={18} />
-            Add store
-          </button>
-        </form>
-      </Modal>
+        />
+      )}
     </>
   )
 }

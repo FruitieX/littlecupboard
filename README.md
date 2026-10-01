@@ -65,7 +65,7 @@ TanStack Start/Router, React, TypeScript, Tailwind, Radix Dialog, Motion and Luc
 
 ## Asset credits
 
-Food and household SVG illustrations are [Twemoji](https://github.com/twitter/twemoji), copyright Twitter and contributors, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The bundled license is in `public/images/food/LICENSE-GRAPHICS.txt`. They replace platform-dependent emoji rendering; the graphics themselves are unmodified.
+Food and household SVG illustrations are [Twemoji](https://github.com/twitter/twemoji), copyright Twitter and contributors, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The bundled license is in `public/images/food/LICENSE-GRAPHICS.txt`. They replace platform-dependent emoji rendering; the SVG graphics are unmodified. `backend/assets/item-style-reference.png` is a raster arrangement of six of those graphics for companion icon generation, reproduced by `scripts/render-item-reference.mjs`; its license is bundled alongside it.
 
 DM Sans and Fraunces are bundled from [Google Fonts](https://github.com/google/fonts), with their SIL Open Font License files in `public/fonts/`.
 

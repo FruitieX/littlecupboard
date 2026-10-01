@@ -87,6 +87,7 @@ pub fn app(server: Server) -> Router {
         .route("/api/auth/recover", post(auth::recover))
         .route("/api/auth/join", post(auth::join))
         .route("/api/auth/profile", put(auth::profile))
+        .route("/api/household", put(auth::household_profile))
         .route("/api/auth/recovery-code", post(auth::new_recovery_code))
         .route("/api/invitations", post(auth::invite))
         .route("/api/invitations/{token}", get(auth::invitation))

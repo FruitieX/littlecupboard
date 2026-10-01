@@ -931,6 +931,323 @@ async fn compatible_image_generation_stores_a_private_resized_attachment() {
     task.abort();
 }
 
+#[tokio::test]
+async fn recipe_vision_icon_alpha_and_generated_draft_photos_are_private_and_reviewed() {
+    use axum::routing::post;
+    use base64::Engine;
+    let rgba = image::RgbaImage::from_fn(1024, 1024, |x, y| {
+        if x < 200 || y < 200 {
+            image::Rgba([0, 0, 0, 0])
+        } else {
+            image::Rgba([255, 80, 40, 255])
+        }
+    });
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::ImageRgba8(rgba)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    let encoded = base64::engine::general_purpose::STANDARD.encode(png.get_ref());
+    let calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::<Value>::new()));
+    let chat_calls = calls.clone();
+    let image_calls = calls.clone();
+    let fixture = Router::new().route("/v1/chat/completions", post(move |Json(body):Json<Value>| {
+        chat_calls.lock().unwrap().push(body);
+        async { Json(json!({"choices":[{"message":{"content":json!({"message":"Transcribed. Review the notes.","shopping":[],"recipes":[{"name":"Screenshot recipe","subtitle":"## Notes\n\n**Keep chilled**.\n\n- Serve fresh","minutes":10,"servings":4,"tags":["Imported"],"ingredients":[{"name":"Synthetic truffle flakes","productId":null,"category":null,"quantity":80,"unit":"g","note":"As written"}],"steps":["Mix the ingredients.","Serve **fresh**."]}],"plan":[]}).to_string()}}]})) }
+    })).route("/v1/images/generations",post(move |Json(body):Json<Value>| {
+        image_calls.lock().unwrap().push(body);
+        let encoded=encoded.clone();
+        async move { Json(json!({"data":[{"b64_json":encoded}]})) }
+    }));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let task = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let household: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT id FROM households", [], |row| row.get(0))
+        .unwrap();
+    let upload = api::save_image(
+        &server,
+        &household,
+        api::encode_image(png.get_ref()).unwrap(),
+    )
+    .unwrap()
+    .0;
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"gpt-image-2","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit","prompts":{"assistant":"Use metric quantities and concise Markdown notes.","itemImage":"Draw a flat Twemoji icon with transparent background.","recipeImage":"Photograph the finished dish in natural light."}});
+    assert_eq!(
+        request(
+            &server,
+            Method::PUT,
+            "/api/ai/config",
+            json!({"config":config,"apiKey":"fixture"}),
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    for images in [
+        json!(["https://example.test/private.png"]),
+        json!(["/api/images/00000000-0000-0000-0000-000000000000"]),
+        json!([
+            upload["url"],
+            upload["url"],
+            upload["url"],
+            upload["url"],
+            upload["url"]
+        ]),
+    ] {
+        assert_eq!(
+            request(
+                &server,
+                Method::POST,
+                "/api/ai/assistant",
+                json!({"prompt":"Read this recipe","images":images}),
+                Some(&owner)
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+    let (status, proposal, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/assistant",
+        json!({"prompt":"","images":[upload["url"]]}),
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{proposal}");
+    {
+        let seen = calls.lock().unwrap();
+        assert!(
+            seen[0]["messages"][0]["content"]
+                .as_str()
+                .unwrap()
+                .contains("Use metric quantities")
+        );
+        assert!(
+            seen[0]["messages"][1]["content"][1]["image_url"]["url"]
+                .as_str()
+                .unwrap()
+                .starts_with("data:image/webp;base64,")
+        );
+    }
+    let before = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert!(
+        !before["state"]["recipeBook"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|recipe| recipe["name"] == "Screenshot recipe")
+    );
+    let (status,photo,_)=request(&server,Method::POST,"/api/ai/image",json!({"kind":"recipe","proposalId":proposal["id"],"recipeId":proposal["recipes"][0]["id"]}),Some(&owner)).await;
+    assert_eq!(status, StatusCode::OK, "{photo}");
+    assert!(
+        calls.lock().unwrap()[1]["prompt"]
+            .as_str()
+            .unwrap()
+            .contains("80 g Synthetic truffle flakes")
+    );
+    let (status,icon,_)=request(&server,Method::POST,"/api/ai/image",json!({"kind":"item","proposalId":proposal["id"],"productId":proposal["products"][0]["id"]}),Some(&owner)).await;
+    assert_eq!(status, StatusCode::OK, "{icon}");
+    {
+        let seen = calls.lock().unwrap();
+        assert_eq!(seen[2]["background"], "transparent");
+        assert_eq!(seen[2]["size"], "816x816");
+        assert_eq!(seen[2]["output_format"], "png");
+        assert!(
+            seen[2]["prompt"]
+                .as_str()
+                .unwrap()
+                .contains("Draw a flat Twemoji icon")
+        );
+    }
+    let (status,applied)=operation(&server,&owner,json!({"type":"applyProposal","proposalId":proposal["id"],"recipeIds":[proposal["recipes"][0]["id"]],"shoppingIndices":[],"days":[]})).await;
+    assert_eq!(status, StatusCode::OK, "{applied}");
+    let snapshot = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert!(
+        snapshot["state"]["recipeBook"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|recipe| recipe["image"] == photo["url"]
+                && recipe["subtitle"]
+                    .as_str()
+                    .unwrap()
+                    .contains("**Keep chilled**"))
+    );
+    assert!(
+        snapshot["state"]["customProducts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|product| product["image"] == icon["url"])
+    );
+    let url = icon["url"].as_str().unwrap();
+    let response = app(server.clone())
+        .oneshot(
+            Request::builder()
+                .uri(url)
+                .header(header::COOKIE, &owner)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.headers()[header::CONTENT_TYPE], "image/webp");
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    let decoded = image::load_from_memory(&bytes).unwrap().to_rgba8();
+    assert_eq!(decoded.dimensions(), (256, 256));
+    assert_eq!(decoded.get_pixel(0, 0)[3], 0);
+    assert_eq!(
+        request(&server, Method::GET, url, Value::Null, None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    let backup = request(
+        &server,
+        Method::GET,
+        "/api/backup",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    let (status, restored, _) = request(
+        &server,
+        Method::POST,
+        "/api/restore",
+        json!({"backup":backup,"expectedRevision":snapshot["revision"]}),
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{restored}");
+    let bytes:Vec<u8>=server.db.lock().unwrap().query_row("SELECT bytes FROM uploads WHERE household_id=?1 AND mime='image/webp' ORDER BY length(bytes) LIMIT 1",[&household],|row|row.get(0)).unwrap();
+    assert_eq!(
+        image::load_from_memory(&bytes)
+            .unwrap()
+            .to_rgba8()
+            .get_pixel(0, 0)[3],
+        0
+    );
+    task.abort();
+}
+
+#[tokio::test]
+async fn family_rename_is_owner_only_scoped_and_rejects_stale_names() {
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let current = request(
+        &server,
+        Method::GET,
+        "/api/auth/me",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    let mut notices = server.notices.subscribe();
+    let body = json!({"name":"New family","expectedName":current["householdName"]});
+    assert_eq!(
+        request(&server, Method::PUT, "/api/household", body.clone(), None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    server
+        .db
+        .lock()
+        .unwrap()
+        .execute("UPDATE users SET role='member'", [])
+        .unwrap();
+    assert_eq!(
+        request(
+            &server,
+            Method::PUT,
+            "/api/household",
+            body.clone(),
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::FORBIDDEN
+    );
+    server
+        .db
+        .lock()
+        .unwrap()
+        .execute("UPDATE users SET role='owner'", [])
+        .unwrap();
+    assert_eq!(
+        request(
+            &server,
+            Method::PUT,
+            "/api/household",
+            body.clone(),
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        notices.try_recv().unwrap(),
+        current["householdId"].as_str().unwrap()
+    );
+    assert_eq!(
+        request(
+            &server,
+            Method::GET,
+            "/api/auth/me",
+            Value::Null,
+            Some(&owner)
+        )
+        .await
+        .1["householdName"],
+        "New family"
+    );
+    assert_eq!(
+        request(&server, Method::PUT, "/api/household", body, Some(&owner))
+            .await
+            .0,
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        request(
+            &server,
+            Method::PUT,
+            "/api/household",
+            json!({"name":" ","expectedName":"New family"}),
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+}
+
 #[test]
 fn pantry_confirmation_includes_reserved_purchases_and_reveals_shortages() {
     let mut state = model::fresh_state(true, "UTC".into());

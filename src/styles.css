@@ -291,6 +291,7 @@ svg {
 }
 .topbar-right {
   display: flex;
+  margin-left: auto;
   gap: 18px;
   align-items: center;
 }
@@ -1840,6 +1841,10 @@ svg {
 .store-list {
   display: grid;
   gap: 8px;
+  max-height: 360px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 .store-option {
   width: 100%;
@@ -3145,10 +3150,45 @@ svg {
 }
 .household .connection-pill {
   margin-top: 6px;
+  display: flex;
+  width: fit-content;
 }
 .connection-pill span {
   font-size: inherit;
   color: inherit;
+}
+.household > div:last-child {
+  min-width: 0;
+}
+.household strong,
+.household > div > span {
+  overflow-wrap: anywhere;
+}
+.household-icon {
+  flex-shrink: 0;
+}
+.backup-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.backup-actions > * {
+  min-height: 44px;
+  justify-content: center;
+}
+.store-option-icon img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.store-picker > img,
+.store-suggestions .store-picture {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .app-error {
   display: flex;
@@ -3323,6 +3363,43 @@ svg {
 .assistant-proposal section {
   margin-bottom: 24px;
 }
+.proposal-products {
+  display: grid;
+  gap: 10px;
+}
+.proposal-products > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.proposal-products strong {
+  flex: 1;
+  min-width: 100px;
+  overflow-wrap: anywhere;
+  font-size: 0.85rem;
+}
+.group-delete {
+  margin-top: 20px;
+}
+.group-delete label {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+.ai-setup > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--forest);
+}
+.ai-setup > form {
+  margin-top: 16px;
+}
+.advanced-prompts label {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
 .assistant-proposal > .quiet-label {
   display: block;
   margin-top: 15px;
@@ -3409,9 +3486,142 @@ svg {
 .image-field-preview {
   width: 100%;
   max-height: 220px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 16px;
   margin-bottom: 0.75rem;
+}
+.assistant-attachments {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  min-width: 0;
+}
+.assistant-attachments legend {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0 6px;
+}
+.attachment-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.attachment {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  background: var(--cream);
+  border-radius: 12px;
+  padding: 8px;
+}
+.attachment img {
+  width: 48px;
+  height: 56px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.attachment span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 0.8rem;
+}
+.proposal-dish-photo {
+  width: 100%;
+  max-height: 260px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin: 12px 0;
+}
+.markdown {
+  min-width: 0;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+.markdown > :first-child {
+  margin-top: 0;
+}
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+.markdown p,
+.markdown ul,
+.markdown ol,
+.markdown blockquote {
+  margin: 0.65em 0;
+}
+.markdown ul,
+.markdown ol {
+  padding-left: 1.5em;
+}
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  font-size: 1em;
+  margin: 1.2em 0 0.5em;
+}
+.markdown a {
+  color: var(--forest);
+  text-decoration: underline;
+}
+.markdown blockquote {
+  border-left: 3px solid var(--line);
+  padding-left: 1em;
+  color: var(--muted);
+}
+.markdown pre,
+.markdown-table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.markdown code {
+  font-size: 0.85em;
+  background: #edf2e4;
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+}
+.markdown table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.markdown th,
+.markdown td {
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  text-align: left;
+}
+.markdown-summary {
+  color: var(--muted);
+  font-size: 0.75rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.markdown-summary > * {
+  display: inline;
+  margin: 0;
+  font-size: inherit;
+}
+.detail-content > .markdown {
+  margin: 18px 0 24px;
+}
+.recipe-steps .markdown {
+  flex: 1;
+}
+.description-preview summary {
+  cursor: pointer;
+  color: var(--forest);
+  font-size: 0.85rem;
+}
+.description-preview .markdown {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-top: 10px;
 }
 .image-field-actions {
   display: flex;

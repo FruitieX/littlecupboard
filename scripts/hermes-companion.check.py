@@ -32,6 +32,13 @@ class Protocol(unittest.TestCase):
         for lines in ([delta],['data: {"type":"response.failed"}'],['data: {"type":"response.incomplete"}']):
             with self.assertRaises(RuntimeError):module.stream_text(lines)
 
+    def test_recipe_images_preserve_inline_data_and_detail(self):
+        body={'model':'gpt-6-luna','messages':[{'role':'system','content':'Transcribe recipes.'},{'role':'user','content':[{'type':'text','text':'Read this page.'},{'type':'image_url','image_url':{'url':'data:image/png;base64,AAAA','detail':'high'}}]}]}
+        parts=module.chat_body(body)['input'][0]['content']
+        self.assertEqual(parts,[{'type':'input_text','text':'Read this page.'},{'type':'input_image','image_url':'data:image/png;base64,AAAA','detail':'high'}])
+        body['messages'][1]['content'][1]['image_url']['url']='https://example.test/private.png'
+        with self.assertRaises(ValueError):module.chat_body(body)
+
     def test_oversized_output_is_rejected(self):
         with self.assertRaises(ValueError):module.stream_text(['data: '+json.dumps({'type':'response.output_text.delta','delta':'x'*(1024*1024+1)})])
 
