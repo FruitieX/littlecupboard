@@ -446,30 +446,9 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
                         *amounts = totals(amounts);
                     }
                 }
-                let mut surplus = totals(previous.amounts.as_deref().unwrap_or(&[Amount {
-                    quantity: previous.quantity,
-                    unit: previous.unit.clone(),
-                }]));
-                for required in totals(
-                    &previous
-                        .plan_credits
-                        .as_deref()
-                        .unwrap_or(&[])
-                        .iter()
-                        .map(|credit| Amount {
-                            quantity: credit.quantity,
-                            unit: credit.unit.clone(),
-                        })
-                        .collect::<Vec<_>>(),
-                ) {
-                    if let Some(amount) = surplus
-                        .iter_mut()
-                        .find(|amount| amount.unit == required.unit)
-                    {
-                        amount.quantity = (amount.quantity - required.quantity).max(0.0);
-                    }
-                }
-                adjust_stock(state, id, &surplus, -1.0);
+                // Restoring means this item was not bought. Remove its pantry
+                // entry entirely, including surplus released by changed plans.
+                state.pantry.remove(id);
                 let has_demand = outstanding(state, today)
                     .iter()
                     .any(|credit| credit.product_id == *id);

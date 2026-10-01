@@ -373,6 +373,8 @@ export function toggleShoppingItem(
       stored?.planCredits ?? [],
       -1,
     )
+    restored.pantry = { ...restored.pantry }
+    delete restored.pantry[id]
     const hasDemand = outstanding(restored, now).some(
       (requirement) => requirement.productId === id,
     )

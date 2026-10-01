@@ -141,11 +141,14 @@ export function KitchenTools() {
                   className="icon-button"
                   aria-label={`Remove ${product?.name} from pantry`}
                   onClick={() =>
-                    update((s) => {
-                      const pantry = { ...s.pantry }
-                      delete pantry[id]
-                      return { ...s, pantry }
-                    })
+                    update(
+                      (s) => {
+                        const pantry = { ...s.pantry }
+                        delete pantry[id]
+                        return { ...s, pantry }
+                      },
+                      `Remove ${product?.name ?? id} from pantry`,
+                    )
                   }
                 >
                   <X size={16} />

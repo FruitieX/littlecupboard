@@ -37,6 +37,40 @@ function find(state: AppState, id = 'pasta') {
 }
 
 describe('automatic meal shopping', () => {
+  it('removes restored groceries from pantry immediately, retaining unrelated stock and shopping details', () => {
+    const pantry = {
+      pasta: {
+        amounts: [{ quantity: 400, unit: 'g' }],
+        confirmed: false,
+        observedAt: now.toISOString(),
+        expiresAt: null,
+        note: '',
+      },
+      rice: {
+        amounts: [{ quantity: 300, unit: 'g' }],
+        confirmed: true,
+        observedAt: now.toISOString(),
+        expiresAt: null,
+        note: '',
+      },
+    }
+    const checked = {
+      ...fixture(),
+      plan: {},
+      items: [{ ...pasta(800), checked: true }],
+      pantry,
+    }
+    const restored = toggleShoppingItem(checked, 'pasta', now)
+    expect(restored.pantry?.pasta).toBeUndefined()
+    expect(restored.pantry?.rice).toEqual(pantry.rice)
+    expect(restored.items[0]).toMatchObject({
+      quantity: 800,
+      note: 'Whole wheat',
+      checked: false,
+    })
+    expect(checked.pantry.pasta).toEqual(pantry.pasta)
+    expect(JSON.parse(JSON.stringify(restored)).pantry.pasta).toBeUndefined()
+  })
   it('allocates confirmed pantry totals to purchased reservations before using the remainder', () => {
     const purchased = toggleShoppingItem(fixture(), 'pasta', now)
     const planned = {

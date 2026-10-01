@@ -51,7 +51,7 @@ export function ConnectionStatus() {
         open={open}
         onOpenChange={setOpen}
         title="A change needs your attention"
-        description="Another household member changed an entry while your edits were waiting to sync."
+        description="Some changes could not be synced. Review them, then retry or discard them."
       >
         <PendingChanges />
       </Modal>
@@ -76,15 +76,22 @@ export function PendingChanges() {
       )}
       {pending.map((entry) => (
         <div className="pending-change" key={entry.id}>
-          <strong>{entry.operation.type.replace(/([A-Z])/g, ' $1')}</strong>
+          <strong>
+            {entry.operation.type === 'patch'
+              ? entry.operation.label
+              : entry.operation.type.replace(/([A-Z])/g, ' $1')}
+          </strong>
           <p>{entry.failed || 'Saved on this device. Waiting to sync.'}</p>
           <div className="modal-actions">
-            {!entry.failed && (
-              <button className="secondary-button" onClick={retry}>
-                <RefreshCw size={15} />
-                Try syncing
-              </button>
-            )}
+            <button
+              className="secondary-button"
+              onClick={() =>
+                entry.failed ? resolvePending(entry.id, false) : retry()
+              }
+            >
+              <RefreshCw size={15} />
+              Try syncing
+            </button>
             <button
               className="text-button danger"
               onClick={() => resolvePending(entry.id, true)}

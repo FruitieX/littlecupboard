@@ -22,7 +22,7 @@ type ContextValue = {
   pending: Pending[]
   error: string
   clearError: () => void
-  update: (fn: (state: AppState) => AppState) => void
+  update: (fn: (state: AppState) => AppState, label?: string) => void
   action: (operation: Operation) => void
   retry: () => void
   resolvePending: (id: string, discard: boolean) => void
@@ -354,7 +354,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     publish()
     void flushRef.current()
   }
-  function update(fn: (state: AppState) => AppState) {
+  function update(
+    fn: (state: AppState) => AppState,
+    label = 'Household update',
+  ) {
     const before = current.current,
       after = fn(before)
     if (after.storeId !== before.storeId) {
@@ -368,8 +371,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setState(current.current)
     }
     const changes = diffState(before, after)
-    if (changes.length)
-      action({ type: 'patch', changes, label: 'Household update' })
+    if (changes.length) action({ type: 'patch', changes, label })
   }
   async function signOut() {
     if (queue.current.length) {

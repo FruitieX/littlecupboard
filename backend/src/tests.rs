@@ -8,6 +8,107 @@ use serde_json::{Value, json};
 use tower::ServiceExt;
 
 #[test]
+fn restoring_a_purchase_removes_pantry_stock_including_released_meal_surplus() {
+    let today = "2026-10-01";
+    for scenario in ["manual", "planned", "released"] {
+        let mut state = model::fresh_state(true, "UTC".into());
+        let id = if scenario == "manual" {
+            "cherry-tomatoes"
+        } else {
+            "pasta"
+        };
+        let quantity = if scenario == "manual" { 2.0 } else { 800.0 };
+        let unit = if scenario == "manual" { "pc" } else { "g" };
+        if scenario != "manual" {
+            state.plan.insert(today.into(), "green-pasta".into());
+        }
+        domain::apply(
+            &mut state,
+            &model::Operation::AddItem {
+                product_id: id.into(),
+                quantity,
+                unit: unit.into(),
+                note: "Keep this note".into(),
+                accumulate: false,
+            },
+            today,
+        )
+        .unwrap();
+        domain::apply(
+            &mut state,
+            &model::Operation::CheckItem {
+                id: id.into(),
+                checked: true,
+                expected: None,
+            },
+            today,
+        )
+        .unwrap();
+        assert!(state.pantry.contains_key(id));
+        if scenario == "released" {
+            domain::apply(
+                &mut state,
+                &model::Operation::Patch {
+                    label: "Remove lunch".into(),
+                    changes: vec![model::Change {
+                        collection: "plan".into(),
+                        key: today.into(),
+                        field: None,
+                        before: json!("green-pasta"),
+                        after: Value::Null,
+                    }],
+                },
+                today,
+            )
+            .unwrap();
+            assert_eq!(state.pantry[id].amounts[0].quantity, 800.0);
+        }
+        let expected = domain::displayed(&state, id, today).unwrap();
+        assert!(expected.checked);
+        domain::apply(
+            &mut state,
+            &model::Operation::CheckItem {
+                id: id.into(),
+                checked: false,
+                expected: Some(Box::new(expected)),
+            },
+            today,
+        )
+        .unwrap();
+        assert!(!state.pantry.contains_key(id), "{scenario}");
+        assert!(
+            state
+                .purchased_coverage
+                .values()
+                .all(|products| products.get(id).is_none_or(|amounts| amounts.is_empty()))
+        );
+        let restored = domain::displayed(&state, id, today).unwrap();
+        assert!(!restored.checked);
+        assert_eq!(restored.note, "Keep this note");
+        let mut reloaded: model::HouseholdState =
+            serde_json::from_str(&serde_json::to_string(&state).unwrap()).unwrap();
+        domain::apply(
+            &mut reloaded,
+            &model::Operation::Patch {
+                label: "Change a setting".into(),
+                changes: vec![],
+            },
+            today,
+        )
+        .unwrap();
+        assert!(!reloaded.pantry.contains_key(id));
+        if scenario == "released" {
+            reloaded.plan.insert(today.into(), "green-pasta".into());
+            assert!(
+                domain::outstanding(&reloaded, today)
+                    .iter()
+                    .any(|credit| credit.product_id == id)
+            );
+        }
+    }
+}
+
+#[test]
 fn pantry_removal_accepts_the_same_whole_number_serialized_by_a_browser() {
     let mut state = model::fresh_state(false, "UTC".into());
     state.pantry.insert(

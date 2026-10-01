@@ -223,12 +223,19 @@ try {
   await owner
     .getByRole('button', { name: 'Restore Avocado', exact: true })
     .waitFor()
+  assert.ok(
+    (await request(owner, '/state', undefined, 'GET')).state.pantry.avocado,
+  )
   await owner
     .getByRole('button', { name: 'Restore Avocado', exact: true })
     .click()
   await wife
     .getByRole('button', { name: 'Check Avocado', exact: true })
     .waitFor()
+  assert.equal(
+    (await request(wife, '/state', undefined, 'GET')).state.pantry.avocado,
+    undefined,
+  )
   await hold(
     wife,
     wife.getByRole('button', { name: 'Check Avocado', exact: true }),
@@ -305,8 +312,53 @@ try {
     .getByRole('dialog')
     .getByText(/500 g · Confirmed/)
     .waitFor()
+  await owner.waitForFunction(
+    async () =>
+      (await (await fetch('/api/state')).json()).state.pantry.rice?.amounts[0]
+        ?.quantity === 500,
+  )
+  const rejectPantryOnce = async (route) => {
+    const operation = route.request().postDataJSON()?.operation
+    if (
+      operation?.type === 'patch' &&
+      operation.changes.some((change) => change.collection === 'pantry')
+    )
+      await route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          message:
+            'Someone changed this entry. Review the latest version and try again.',
+        }),
+      })
+    else await route.continue()
+  }
+  await owner.route('**/api/operations', rejectPantryOnce)
   await owner
     .getByRole('button', { name: 'Remove Rice from pantry', exact: true })
+    .click()
+  await owner
+    .locator('.connection-pill')
+    .filter({ hasText: 'Review changes' })
+    .first()
+    .waitFor({ state: 'attached' })
+  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await owner.unroute('**/api/operations', rejectPantryOnce)
+  await owner
+    .getByRole('button', { name: /Review changes/ })
+    .first()
+    .click()
+  const review = owner.getByRole('dialog', {
+    name: 'A change needs your attention',
+  })
+  await review.getByText('Remove Rice from pantry', { exact: true }).waitFor()
+  await review.screenshot({ path: 'test-results/pantry-retry-mobile.png' })
+  await review.getByRole('button', { name: 'Try syncing', exact: true }).click()
+  await review
+    .getByText('Everything is synced with your household.', { exact: true })
+    .waitFor()
+  await review
+    .getByRole('button', { name: 'Close dialog', exact: true })
     .click()
   await owner
     .getByRole('button', { name: 'Remove Rice from pantry', exact: true })
