@@ -44,6 +44,23 @@ Subscription inference uses [streamed Responses](https://developers.openai.com/s
 
 ## Recommended design for ForkBasket
 
+### Hermes companion investigation
+
+The user plans a 24/7 personal Hermes agent on a machine outside the homelab. Hermes's [image provider documentation](https://github.com/NousResearch/hermes-agent/blob/main/website/docs/user-guide/features/image-generation.md) describes an `openai-codex` backend using native Codex image generation/edit endpoints, separate from SIWC Responses. The installed source on Pear contains that provider and its own Codex OAuth device/browser login flow. This is a third-party implementation, not evidence that OpenAI supports those endpoints as a general hosted image API.
+
+The standalone `scripts/probe-hermes.mjs` runs a small Python probe using Hermes's published runtime command and its existing pinned dependency bootstrap. It invokes only the native image provider, without changing the configured image provider, enabling plugins, starting an agent conversation or exporting credentials. Diagnostics are filtered; only safe capability/results metadata and synthetic image artifacts are retained under ignored `test-results/hermes-probe`. There is no fallback to another provider. Default mode checks availability; `--images` attempts a shopping icon, recipe photograph and reference-guided icon, stopping on the first failure and decoding any returned image before counting success.
+
+```sh
+nix develop --command node scripts/probe-hermes.mjs
+nix develop --command node scripts/probe-hermes.mjs --images
+```
+
+On 2026-10-01, the local Hermes CLI reported `openai-codex: logged in`; the probe confirmed a native Codex route and available image provider. Its actual first image request returned HTTP 401 (`api_error`) in 0.1 seconds. No image was returned, and the other two requests were skipped. This does not establish whether the credential is stale or the native route rejects that session. A fresh Hermes-owned OAuth sign-in is the next diagnostic step, followed by rerunning the same bounded probe. The existing successful native Codex-client trial used a different runtime/session.
+
+For local testing, no credentials need to be sent to the coding agent: run Hermes's OAuth login in the user's own terminal and leave authentication in Hermes. A fresh, explicitly prioritized test entry can be created with `hermes auth add openai-codex --type oauth --priority 0 --label forkbasket-image-test`. For a different machine, provide an SSH destination reachable from Pear and the selected Hermes profile; authenticate Hermes on that machine. Do not transfer auth files, bearer tokens or passwords through chat, and do not expose a raw agent server publicly.
+
+The proposed production bridge remains a scoped image-job queue: ForkBasket queues user-owned jobs, a worker on the personal agent machine claims them through private HTTPS/VPN access, invokes a selected local image provider and uploads validated artifacts. Credentials stay on the personal machine. Use stored style prompts/references, bounded concurrency, explicit job failures and deduplication. Sharing household artifacts is separate from sharing a person's subscription credentials; moving the worker outside Kubernetes does not establish a hosted-service authentication exception.
+
 Use separate chat and image capabilities, with per-person subscription connections. Preserve the existing owner-configured household API provider. A household member's subscription connection should not automatically lend that person's credentials to everyone else; shared recipes, images and accepted shopping proposals remain ordinary household data.
 
 For the homelab application, prefer an app-owned SIWC connection for subscription chat once eligibility and onboarding are verified. A small desktop setup helper can complete the required loopback flow and transfer the selected ForkBasket credential record directly to its authenticated private HTTPS backend. Keep tokens out of browser storage and household JSON exports, encrypt them on the backend, serialize rotating refreshes, and support disconnect/revocation and clear expiry/usage-limit errors. [Accounts and sessions](https://developers.openai.com/siwc/token-sharing-open-source/profiles-and-sessions) describes those token lifecycle requirements. Do not copy this machine's general Codex login into the app.
