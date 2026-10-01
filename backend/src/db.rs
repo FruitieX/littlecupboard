@@ -114,7 +114,7 @@ impl Database {
             [],
             |row| row.get(0),
         )?;
-        if version > 1 {
+        if version > 2 {
             return Err(ApiError::internal(
                 "This database was created by a newer ForkBasket version. Restore a compatible backup before downgrading.",
             ));
@@ -124,6 +124,15 @@ impl Database {
             conn.execute_batch(include_str!("../migrations/001_initial.sql"))?;
             conn.execute_batch("COMMIT")?;
         }
+        if version < 2 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/002_companion.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        conn.execute(
+            "DELETE FROM companion_jobs WHERE deadline < unixepoch()",
+            [],
+        )?;
         conn.execute("DELETE FROM sessions WHERE expires_at < unixepoch()", [])?;
         conn.execute("DELETE FROM invitations WHERE expires_at < unixepoch()", [])?;
         conn.execute(

@@ -1,6 +1,7 @@
 mod ai;
 mod api;
 mod auth;
+mod companion;
 mod db;
 mod domain;
 mod error;
@@ -116,6 +117,16 @@ pub fn app(server: Server) -> Router {
         .route("/api/ai/test", post(ai::test))
         .route("/api/ai/assistant", post(ai::assistant))
         .route("/api/ai/image", post(ai::generate_image))
+        .route(
+            "/api/ai/companion",
+            post(companion::pair).delete(companion::disconnect),
+        )
+        .route("/api/companion/claim", post(companion::claim))
+        .route("/api/companion/heartbeat", post(companion::heartbeat))
+        .route(
+            "/api/companion/complete",
+            post(companion::complete).layer(DefaultBodyLimit::max(28 * 1024 * 1024)),
+        )
         .layer(DefaultBodyLimit::max(9 * 1024 * 1024))
         .layer(middleware::from_fn_with_state(server.clone(), protect))
         .with_state(server);
@@ -306,6 +317,54 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         client,
         limits: Arc::new(Mutex::new(HashMap::new())),
     };
+    let args: Vec<String> = std::env::args().skip(1).collect();
+    if args
+        .first()
+        .is_some_and(|arg| matches!(arg.as_str(), "--pair-companion" | "--check-companion"))
+    {
+        let checking = args[0] == "--check-companion";
+        let households: Vec<String> = server
+            .db
+            .lock()
+            .map_err(|e| e.1)?
+            .prepare("SELECT id FROM households")?
+            .query_map([], |row| row.get(0))?
+            .collect::<std::result::Result<_, _>>()?;
+        let household_arg = if checking {
+            args.get(1).filter(|id| *id != "--image")
+        } else {
+            args.get(3)
+        };
+        let household = if let Some(id) = household_arg {
+            households
+                .iter()
+                .find(|h| *h == id)
+                .ok_or("Unknown household")?
+        } else {
+            if households.len() != 1 {
+                return Err(
+                    "Specify a household ID when there is not exactly one household".into(),
+                );
+            }
+            &households[0]
+        };
+        if checking {
+            let result =
+                ai::check_companion(&server, household, args.iter().any(|a| a == "--image"))
+                    .await
+                    .map_err(|e| e.1)?;
+            println!("{result}");
+            return Ok(());
+        }
+        let model = args
+            .get(1)
+            .ok_or("Usage: --pair-companion MODEL REASONING [HOUSEHOLD_ID]")?;
+        let reasoning = args.get(2).ok_or("Specify a reasoning effort")?;
+        let result =
+            ai::provision_companion(&server, household, model, reasoning).map_err(|e| e.1)?;
+        println!("{result}");
+        return Ok(());
+    }
     let bind = std::env::var("FORKBASKET_BIND").unwrap_or_else(|_| "127.0.0.1:3001".into());
     let listener = tokio::net::TcpListener::bind(&bind).await?;
     tracing::info!("ForkBasket API listening on {bind}");

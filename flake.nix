@@ -42,7 +42,7 @@
     });
     devShells = eachSystem (system: let pkgs = (forSystem system).pkgs; in {
       default = pkgs.mkShell {
-        packages = with pkgs; [ nodejs_22 cargo rustc rustfmt clippy pkg-config gcc git kustomize sops ]
+        packages = with pkgs; [ nodejs_22 python3 cargo rustc rustfmt clippy pkg-config gcc git kustomize sops ]
           ++ lib.optionals stdenv.hostPlatform.isLinux [ chromium ];
         shellHook = ''
           ${nixpkgs.lib.optionalString (nixpkgs.lib.hasSuffix "linux" system) "export PLAYWRIGHT_CHROMIUM_EXECUTABLE=${pkgs.chromium}/bin/chromium"}

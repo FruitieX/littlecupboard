@@ -617,7 +617,7 @@ pub async fn restore(
         if previous.revision != input.expected_revision {
             return Err(ApiError::conflict());
         }
-        for table in ["events", "uploads", "ai_proposals"] {
+        for table in ["events", "uploads", "ai_proposals", "companion_jobs"] {
             tx.execute(
                 &format!("DELETE FROM {table} WHERE household_id=?1"),
                 [&actor.household_id],

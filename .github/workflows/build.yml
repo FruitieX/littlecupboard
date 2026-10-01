@@ -30,6 +30,7 @@ jobs:
           nix develop --command npm ci --prefix scripts/siwc-probe --ignore-scripts
           nix develop --command npm test --prefix scripts/siwc-probe
       - run: nix develop --command npm run typecheck
+      - run: nix develop --command python3 scripts/hermes-companion.check.py
       - run: nix develop --command npm test
       - run: nix develop --command npm run format:check
       - run: nix develop --command cargo fmt --manifest-path backend/Cargo.toml -- --check

@@ -7,6 +7,160 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
+fn worker_headers(token: &str) -> axum::http::HeaderMap {
+    let mut headers = axum::http::HeaderMap::new();
+    headers.insert("authorization", format!("Bearer {token}").parse().unwrap());
+    headers
+}
+
+#[tokio::test]
+async fn companion_jobs_are_scoped_claimed_once_revocable_and_forward_requested_reasoning() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let household: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT id FROM households", [], |r| r.get(0))
+        .unwrap();
+    let pairing = ai::provision_companion(&server, &household, "gpt-6-luna", "xhigh").unwrap();
+    let token = pairing["token"].as_str().unwrap();
+    let headers = worker_headers(token);
+    let (_, config, _) = request(
+        &server,
+        Method::GET,
+        "/api/ai/config",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(config["config"]["transport"], "companion");
+    assert_eq!(config["config"]["reasoningEffort"], "xhigh");
+    assert!(!config.to_string().contains(token));
+    assert_eq!(config["companion"]["online"], false);
+    assert!(
+        companion::send(&server, &household, "models", None)
+            .await
+            .is_err()
+    );
+    let _ = companion::heartbeat(axum::extract::State(server.clone()), headers.clone())
+        .await
+        .unwrap();
+    let second_state: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT state FROM households", [], |r| r.get(0))
+        .unwrap();
+    server
+        .db
+        .lock()
+        .unwrap()
+        .execute(
+            "INSERT INTO households(id,name,state) VALUES('other','Other',?1)",
+            [second_state],
+        )
+        .unwrap();
+    let other = worker_headers(&companion::rotate(&server, "other").unwrap());
+    let test_server = server.clone();
+    let test_cookie = cookie.clone();
+    let waiting = tokio::spawn(async move {
+        request(&test_server,Method::POST,"/api/ai/test",json!({"config":{"enabled":true,"transport":"companion","baseUrl":"https://api.openai.com/v1","model":"gpt-6-luna","reasoningEffort":"xhigh","imageModel":"gpt-image-2-medium","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit"}}),Some(&test_cookie)).await
+    });
+    let mut job = Value::Null;
+    for _ in 0..100 {
+        job = companion::claim(axum::extract::State(server.clone()), headers.clone())
+            .await
+            .unwrap()
+            .0["job"]
+            .clone();
+        if !job.is_null() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    assert_eq!(job["body"]["model"], "gpt-6-luna");
+    assert_eq!(job["body"]["reasoning_effort"], "xhigh");
+    assert!(
+        companion::claim(axum::extract::State(server.clone()), headers.clone())
+            .await
+            .unwrap()
+            .0["job"]
+            .is_null()
+    );
+    assert!(
+        companion::claim(axum::extract::State(server.clone()), other.clone())
+            .await
+            .unwrap()
+            .0["job"]
+            .is_null()
+    );
+    let payload = || companion::Completion {
+        id: job["id"].as_str().unwrap().into(),
+        lease: job["lease"].as_str().unwrap().into(),
+        failed: false,
+        result: Some(json!({"choices":[{"message":{"content":"Connected"}}]})),
+    };
+    assert!(
+        companion::complete(axum::extract::State(server.clone()), other, Json(payload()))
+            .await
+            .is_err()
+    );
+    let mut invalid = payload();
+    invalid.lease = "a".repeat(64);
+    assert!(
+        companion::complete(
+            axum::extract::State(server.clone()),
+            headers.clone(),
+            Json(invalid)
+        )
+        .await
+        .is_err()
+    );
+    let _ = companion::complete(
+        axum::extract::State(server.clone()),
+        headers.clone(),
+        Json(payload()),
+    )
+    .await
+    .unwrap();
+    assert!(
+        companion::complete(
+            axum::extract::State(server.clone()),
+            headers.clone(),
+            Json(payload())
+        )
+        .await
+        .is_err()
+    );
+    assert_eq!(waiting.await.unwrap().0, StatusCode::OK);
+    assert_eq!(
+        server
+            .db
+            .lock()
+            .unwrap()
+            .query_row("SELECT COUNT(*) FROM companion_jobs", [], |r| r
+                .get::<_, u32>(0))
+            .unwrap(),
+        0
+    );
+    companion::rotate(&server, &household).unwrap();
+    assert!(
+        companion::claim(axum::extract::State(server.clone()), headers)
+            .await
+            .is_err()
+    );
+    let request = Request::builder()
+        .uri("/api/state")
+        .header("authorization", format!("Bearer {token}"))
+        .body(Body::empty())
+        .unwrap();
+    assert_eq!(
+        app(server).oneshot(request).await.unwrap().status(),
+        StatusCode::UNAUTHORIZED
+    );
+}
+
 fn server() -> (Server, tempfile::TempDir) {
     let directory = tempfile::tempdir().expect("temporary data directory");
     let config = Arc::new(Config {

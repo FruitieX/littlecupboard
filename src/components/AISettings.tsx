@@ -5,6 +5,8 @@ import { api, post } from '../lib/http'
 import { SectionTitle } from './ui'
 
 type ProviderConfig = {
+  transport: 'api' | 'companion'
+  reasoningEffort: string
   enabled: boolean
   baseUrl: string
   model: string
@@ -14,6 +16,8 @@ type ProviderConfig = {
   tokenParameter: string
 }
 const defaults: ProviderConfig = {
+  transport: 'api',
+  reasoningEffort: '',
   enabled: false,
   baseUrl: 'https://api.openai.com/v1',
   model: '',
@@ -32,15 +36,32 @@ export function AISettings() {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+  const [companion, setCompanion] = useState({ paired: false, online: false })
+  const [pairingToken, setPairingToken] = useState('')
   useEffect(() => {
     if (session.user.role !== 'owner') return
-    void api<{ config: ProviderConfig; hasKey: boolean }>('/ai/config')
+    void api<{
+      config: ProviderConfig
+      hasKey: boolean
+      companion: typeof companion
+    }>('/ai/config')
       .then((result) => {
         setConfig(result.config)
         setHasKey(result.hasKey)
+        setCompanion(result.companion)
       })
       .catch((error) => setError(error.message))
   }, [session.user.role])
+  useEffect(() => {
+    if (config.transport !== 'companion' || session.user.role !== 'owner')
+      return
+    const timer = setInterval(() => {
+      void api<{ companion: typeof companion }>('/ai/config')
+        .then((result) => setCompanion(result.companion))
+        .catch(() => {})
+    }, 10000)
+    return () => clearInterval(timer)
+  }, [config.transport, session.user.role])
   async function run(action: () => Promise<void>) {
     setBusy(true)
     setError('')
@@ -78,9 +99,8 @@ export function AISettings() {
         <Sparkles size={20} />
       </SectionTitle>
       <p className="settings-description">
-        Connect OpenAI or another compatible provider for groceries, recipe
-        ideas, meal plans, and optional images. Keys are encrypted on your
-        server.
+        Connect a provider or your personal Hermes companion for groceries,
+        recipe ideas, meal plans and images.
       </p>
       <form
         className="editor-form"
@@ -111,41 +131,154 @@ export function AISettings() {
           Enable the household assistant
         </label>
         <label>
-          Provider base URL
-          <input
-            aria-label="Provider base URL"
-            type="url"
-            value={config.baseUrl}
-            onChange={(event) => field('baseUrl', event.target.value)}
-            required
-            maxLength={500}
-            placeholder="https://your-provider.example/v1"
-          />
-          <small>
-            OpenAI-compatible Chat Completions endpoint. Local HTTP servers are
-            supported.
-          </small>
+          Connection
+          <select
+            aria-label="Connection"
+            value={config.transport}
+            onChange={(event) => {
+              const transport = event.target
+                .value as ProviderConfig['transport']
+              setConfig((current) => ({
+                ...current,
+                transport,
+                ...(transport === 'companion'
+                  ? {
+                      model: 'gpt-6-luna',
+                      reasoningEffort: 'xhigh',
+                      imageModel: 'gpt-image-2-medium',
+                      responseFormat: 'schema',
+                      tokenParameter: 'omit',
+                    }
+                  : {}),
+              }))
+              setMessage('')
+            }}
+          >
+            <option value="api">OpenAI-compatible API</option>
+            <option value="companion">Personal Hermes companion</option>
+          </select>
         </label>
-        <label>
-          API key
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(event) => setApiKey(event.target.value)}
-            autoComplete="new-password"
-            placeholder={
-              hasKey
-                ? 'Saved securely · leave blank to keep'
-                : 'Optional for local providers'
-            }
-            maxLength={2048}
-          />
-          <small>
-            {hasKey
-              ? 'A key is already saved; its value is never sent back to your browser.'
-              : 'Enter a key if your provider requires one.'}
-          </small>
-        </label>
+        {config.transport === 'companion' ? (
+          <div className="companion-connection">
+            <p className="settings-description">
+              Your ChatGPT login stays on your agent machine. The companion
+              handles chat and images for your household.
+            </p>
+            <p role="status">
+              {companion.online
+                ? 'Companion online'
+                : companion.paired
+                  ? 'Paired · companion offline'
+                  : 'No companion paired'}
+            </p>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={busy}
+              onClick={() =>
+                void run(async () => {
+                  const result = await post<{ token: string }>(
+                    '/ai/companion',
+                    {},
+                  )
+                  setPairingToken(result.token)
+                  setCompanion({ paired: true, online: false })
+                  setMessage(
+                    'New pairing token created. Previous worker access was revoked.',
+                  )
+                })
+              }
+            >
+              {companion.paired
+                ? 'Replace companion token'
+                : 'Create pairing token'}
+            </button>
+            {pairingToken && (
+              <label>
+                One-time pairing token
+                <input
+                  type="password"
+                  readOnly
+                  value={pairingToken}
+                  aria-label="Companion pairing token"
+                  autoComplete="off"
+                />
+                <small>
+                  Run the companion setup command on your agent machine and
+                  paste this token at its masked prompt.
+                </small>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() =>
+                    void run(async () => {
+                      await navigator.clipboard.writeText(pairingToken)
+                      setMessage('Pairing token copied.')
+                    })
+                  }
+                >
+                  Copy pairing token
+                </button>
+              </label>
+            )}
+            {companion.paired && (
+              <button
+                type="button"
+                className="text-button danger"
+                disabled={busy}
+                onClick={() =>
+                  void run(async () => {
+                    await api('/ai/companion', { method: 'DELETE' })
+                    setCompanion({ paired: false, online: false })
+                    setPairingToken('')
+                    setMessage('Companion access revoked.')
+                  })
+                }
+              >
+                Revoke companion access
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            <label>
+              Provider base URL
+              <input
+                aria-label="Provider base URL"
+                type="url"
+                value={config.baseUrl}
+                onChange={(event) => field('baseUrl', event.target.value)}
+                required
+                maxLength={500}
+                placeholder="https://your-provider.example/v1"
+              />
+              <small>
+                OpenAI-compatible Chat Completions endpoint. Local HTTP servers
+                are supported.
+              </small>
+            </label>
+            <label>
+              API key
+              <input
+                type="password"
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
+                autoComplete="new-password"
+                placeholder={
+                  hasKey
+                    ? 'Saved securely · leave blank to keep'
+                    : 'Optional for local providers'
+                }
+                maxLength={2048}
+              />
+              <small>
+                {hasKey
+                  ? 'A key is already saved; its value is never sent back to your browser.'
+                  : 'Enter a key if your provider requires one.'}
+              </small>
+            </label>
+          </>
+        )}
         <label>
           Chat model
           <input
@@ -161,6 +294,27 @@ export function AISettings() {
               <option key={model} value={model} />
             ))}
           </datalist>
+        </label>
+        <label>
+          Reasoning effort
+          <select
+            aria-label="Reasoning effort"
+            value={config.reasoningEffort}
+            onChange={(event) => field('reasoningEffort', event.target.value)}
+          >
+            <option value="">Model default</option>
+            {['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'].map(
+              (effort) => (
+                <option key={effort} value={effort}>
+                  {effort}
+                </option>
+              ),
+            )}
+          </select>
+          <small>
+            Higher effort gives the model more time to think. Supported levels
+            depend on the model.
+          </small>
         </label>
         <button
           className="text-button"
@@ -218,8 +372,10 @@ export function AISettings() {
               placeholder="Optional · supported image model ID"
             />
             <small>
-              Uses this provider’s /images/generations endpoint. Leave blank to
-              hide generation controls.
+              {config.transport === 'companion'
+                ? 'Uses Hermes’s native image provider. Chat reasoning does not affect images.'
+                : 'Uses this provider’s /images/generations endpoint.'}{' '}
+              Leave blank to hide generation controls.
             </small>
           </label>
           <label>

@@ -25,6 +25,10 @@ use uuid::Uuid;
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[ts(export, export_to = "../../src/lib/api/")]
 pub struct ProviderConfig {
+    #[serde(default = "default_transport")]
+    pub transport: String,
+    #[serde(default)]
+    pub reasoning_effort: String,
     pub enabled: bool,
     pub base_url: String,
     pub model: String,
@@ -33,9 +37,14 @@ pub struct ProviderConfig {
     pub response_format: String,
     pub token_parameter: String,
 }
+fn default_transport() -> String {
+    "api".into()
+}
 impl Default for ProviderConfig {
     fn default() -> Self {
         Self {
+            transport: default_transport(),
+            reasoning_effort: String::new(),
             enabled: false,
             base_url: "https://api.openai.com/v1".into(),
             model: String::new(),
@@ -53,6 +62,16 @@ pub struct ProviderInput {
     pub api_key: Option<String>,
 }
 fn validate_config(config: &ProviderConfig) -> Result<()> {
+    if !matches!(config.transport.as_str(), "api" | "companion")
+        || !matches!(
+            config.reasoning_effort.as_str(),
+            "" | "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
+        )
+    {
+        return Err(ApiError::bad(
+            "Choose a valid provider and reasoning effort.",
+        ));
+    }
     let url = reqwest::Url::parse(&config.base_url)
         .map_err(|_| ApiError::bad("Enter a valid provider base URL."))?;
     if !matches!(url.scheme(), "http" | "https")
@@ -110,6 +129,68 @@ fn decrypt(server: &Server, secret: &str) -> Result<String> {
         })?;
     String::from_utf8(clear).map_err(ApiError::internal)
 }
+pub fn provision_companion(
+    server: &Server,
+    household: &str,
+    model: &str,
+    reasoning: &str,
+) -> Result<Value> {
+    let config = ProviderConfig {
+        enabled: true,
+        transport: "companion".into(),
+        model: model.into(),
+        reasoning_effort: reasoning.into(),
+        image_model: "gpt-image-2-medium".into(),
+        response_format: "schema".into(),
+        token_parameter: "omit".into(),
+        ..ProviderConfig::default()
+    };
+    validate_config(&config)?;
+    let token = crate::companion::rotate(server, household)?;
+    let secret = encrypt(server, "")?;
+    server.db.lock()?.execute("INSERT INTO providers(household_id,config,secret) VALUES(?1,?2,?3) ON CONFLICT(household_id) DO UPDATE SET config=excluded.config,secret=excluded.secret",params![household,serde_json::to_string(&config)?,secret])?;
+    server.notify(household);
+    Ok(json!({"url":server.config.origin,"token":token}))
+}
+pub async fn check_companion(server: &Server, household: &str, images: bool) -> Result<Value> {
+    let (config, key) = provider(server, household)?;
+    if config.transport != "companion" {
+        return Err(ApiError::bad("The household is not using a companion."));
+    }
+    let models = send(server, household, &config, &key, "models", None).await?;
+    let body = json!({"model":config.model,"reasoning_effort":config.reasoning_effort,"messages":[{"role":"user","content":"Reply with just the word Connected."}]});
+    let response = send(
+        server,
+        household,
+        &config,
+        &key,
+        "chat/completions",
+        Some(&body),
+    )
+    .await?;
+    if response["choices"][0]["message"]["content"]
+        .as_str()
+        .is_none()
+    {
+        return Err(ApiError::bad("The companion returned no chat message."));
+    }
+    let mut report = json!({"connected":true,"model":config.model,"reasoningEffort":config.reasoning_effort,"modelListed":models["data"].as_array().is_some_and(|models|models.iter().any(|model|model["id"]==config.model))});
+    if images {
+        let response=send(server,household,&config,&key,"images/generations",Some(&json!({"model":config.image_model,"prompt":"A single ripe pear on warm ivory, friendly soft clay food illustration, no lettering, no border.","size":config.image_size,"n":1}))).await?;
+        let bytes = STANDARD
+            .decode(
+                response["data"][0]["b64_json"]
+                    .as_str()
+                    .ok_or_else(|| ApiError::bad("The companion returned no image."))?,
+            )
+            .map_err(|_| ApiError::bad("Invalid companion image."))?;
+        let image = tokio::task::spawn_blocking(move || api::encode_image(&bytes))
+            .await
+            .map_err(ApiError::internal)??;
+        report["image"] = api::save_image(server, household, image)?.0;
+    }
+    Ok(report)
+}
 fn optional_provider(server: &Server, household: &str) -> Result<(ProviderConfig, String)> {
     let exists: bool = server.db.lock()?.query_row(
         "SELECT EXISTS(SELECT 1 FROM providers WHERE household_id=?1)",
@@ -140,7 +221,9 @@ pub async fn config(State(server): State<Server>, headers: HeaderMap) -> Result<
     let actor = authenticate(&server, &headers)?;
     actor.owner()?;
     let (config, key) = optional_provider(&server, &actor.household_id)?;
-    Ok(Json(json!({"config":config,"hasKey":!key.is_empty()})))
+    Ok(Json(
+        json!({"config":config,"hasKey":!key.is_empty(),"companion":crate::companion::status(&server,&actor.household_id)?}),
+    ))
 }
 pub async fn save_config(
     State(server): State<Server>,
@@ -175,6 +258,14 @@ pub async fn delete_config(
         "DELETE FROM providers WHERE household_id=?1",
         [&actor.household_id],
     )?;
+    server.db.lock()?.execute(
+        "DELETE FROM companion_workers WHERE household_id=?1",
+        [&actor.household_id],
+    )?;
+    server.db.lock()?.execute(
+        "DELETE FROM companion_jobs WHERE household_id=?1",
+        [&actor.household_id],
+    )?;
     server.notify(&actor.household_id);
     Ok(Json(json!({"ok":true})))
 }
@@ -183,11 +274,15 @@ fn provider_error(status: StatusCode) -> ApiError {
 }
 async fn send(
     server: &Server,
+    household: &str,
     config: &ProviderConfig,
     key: &str,
     path: &str,
     body: Option<&Value>,
 ) -> Result<Value> {
+    if config.transport == "companion" {
+        return crate::companion::send(server, household, path, body).await;
+    }
     let url = format!("{}/{}", config.base_url.trim_end_matches('/'), path);
     let mut request = if let Some(body) = body {
         server.client.post(&url).json(body)
@@ -237,7 +332,7 @@ pub async fn models(State(server): State<Server>, headers: HeaderMap) -> Result<
     let actor = authenticate(&server, &headers)?;
     actor.owner()?;
     let (config, key) = provider(&server, &actor.household_id)?;
-    let response = send(&server, &config, &key, "models", None).await?;
+    let response = send(&server, &actor.household_id, &config, &key, "models", None).await?;
     let models = response["data"]
         .as_array()
         .map(|models| {
@@ -266,11 +361,15 @@ pub async fn test(
             .unwrap_or_default()
     });
     let mut body = json!({"model":input.config.model,"messages":[{"role":"user","content":"Reply with just the word Connected."}]});
+    if !input.config.reasoning_effort.is_empty() {
+        body["reasoning_effort"] = json!(input.config.reasoning_effort);
+    }
     if input.config.token_parameter != "omit" {
         body[&input.config.token_parameter] = json!(128);
     }
     let response = send(
         &server,
+        &actor.household_id,
         &input.config,
         &key,
         "chat/completions",
@@ -450,6 +549,9 @@ pub async fn assistant(
         schema()
     );
     let mut body = json!({"model":config.model,"messages":[{"role":"system","content":instruction},{"role":"user","content":format!("Household context: {context}\nRequest: {}",input.prompt)}]});
+    if !config.reasoning_effort.is_empty() {
+        body["reasoning_effort"] = json!(config.reasoning_effort);
+    }
     if config.token_parameter != "omit" {
         body[&config.token_parameter] = json!(6000);
     }
@@ -460,7 +562,15 @@ pub async fn assistant(
         "json" => body["response_format"] = json!({"type":"json_object"}),
         _ => {}
     }
-    let response = send(&server, &config, &key, "chat/completions", Some(&body)).await?;
+    let response = send(
+        &server,
+        &actor.household_id,
+        &config,
+        &key,
+        "chat/completions",
+        Some(&body),
+    )
+    .await?;
     let content = response["choices"][0]["message"]["content"]
         .as_str()
         .ok_or_else(|| {
@@ -618,7 +728,7 @@ pub async fn generate_image(
     if !config.enabled || config.image_model.is_empty() {
         return Err(ApiError::bad("Configure an image model in settings first."));
     }
-    let response=send(&server,&config,&key,"images/generations",Some(&json!({"model":config.image_model,"prompt":input.prompt,"n":1,"size":config.image_size}))).await?;
+    let response=send(&server,&actor.household_id,&config,&key,"images/generations",Some(&json!({"model":config.image_model,"prompt":input.prompt,"n":1,"size":config.image_size}))).await?;
     let bytes = if let Some(encoded) = response["data"][0]["b64_json"].as_str() {
         STANDARD
             .decode(encoded)

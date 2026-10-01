@@ -13,4 +13,5 @@ data/
 *.sqlite3-shm
 result
 result-*
+__pycache__/
 deploy/kubernetes/apps/forkbasket/secret.sops.yaml

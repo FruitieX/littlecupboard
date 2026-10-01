@@ -577,6 +577,48 @@ try {
     'Expanded settings controls fit balanced desktop columns and stacked tablet/mobile layouts.',
   )
   for (const width of [320, 390, 768, 1440]) {
+    await owner.setViewportSize({ width, height: 1000 })
+    await owner.goto(`${frontendUrl}/settings`)
+    await settle(owner)
+    await owner
+      .getByLabel('Connection', { exact: true })
+      .selectOption('companion')
+    assert.equal(
+      await owner.getByLabel('Chat model', { exact: true }).inputValue(),
+      'gpt-6-luna',
+    )
+    assert.equal(
+      await owner.getByLabel('Reasoning effort', { exact: true }).inputValue(),
+      'xhigh',
+    )
+    assert.equal(
+      await owner.getByLabel('Provider base URL', { exact: true }).count(),
+      0,
+    )
+    await owner
+      .getByRole('button', { name: 'Create pairing token', exact: true })
+      .click()
+    const token = owner.getByLabel('Companion pairing token', { exact: true })
+    await token.waitFor()
+    assert.equal(await token.getAttribute('type'), 'password')
+    assert.match(await token.inputValue(), /^[a-f0-9]{64}$/)
+    await owner
+      .getByRole('button', { name: 'Revoke companion access', exact: true })
+      .click()
+    await owner
+      .getByText('Companion access revoked.', { exact: true })
+      .waitFor()
+    assert.equal(await token.count(), 0)
+    assert.ok(
+      await owner.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    )
+  }
+  console.log(
+    'Companion selection, model/reasoning defaults, masked pairing and revocation passed on mobile/desktop.',
+  )
+  for (const width of [320, 390, 768, 1440]) {
     await owner.setViewportSize({ width, height: 900 })
     for (const path of ['/', '/week', '/recipes', '/settings']) {
       await owner.goto(`${frontendUrl}${path}`)
