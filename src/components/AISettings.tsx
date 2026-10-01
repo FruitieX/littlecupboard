@@ -3,6 +3,7 @@ import { Check, LoaderCircle, Sparkles, Trash2 } from 'lucide-react'
 import { useApp } from '../lib/state'
 import { api, post } from '../lib/http'
 import { Modal, SectionTitle } from './ui'
+import { IconGenerationSettings } from './IconGenerationSettings'
 
 type ProviderConfig = {
   transport: 'api' | 'companion'
@@ -12,6 +13,7 @@ type ProviderConfig = {
   model: string
   imageModel: string
   imageSize: string
+  autoItemIcons: boolean
   responseFormat: string
   tokenParameter: string
   prompts: { assistant: string; itemImage: string; recipeImage: string }
@@ -24,6 +26,7 @@ const defaults: ProviderConfig = {
   model: '',
   imageModel: '',
   imageSize: '1024x1024',
+  autoItemIcons: false,
   responseFormat: 'json',
   tokenParameter: 'max_completion_tokens',
   prompts: { assistant: '', itemImage: '', recipeImage: '' },
@@ -401,6 +404,23 @@ export function AISettings() {
                 companion may return a different generation size.
               </small>
             </label>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={config.autoItemIcons}
+                disabled={!config.imageModel.trim()}
+                onChange={(event) =>
+                  field('autoItemIcons', event.target.checked)
+                }
+              />
+              Automatically generate icons for new items
+            </label>
+            <small>
+              Applies after saving to new items with the generic cart
+              placeholder. Uses your image provider’s quota. Existing artwork is
+              kept.
+            </small>
+            <IconGenerationSettings />
           </details>
           <details className="settings-disclosure advanced-prompts">
             <summary>Advanced prompts</summary>

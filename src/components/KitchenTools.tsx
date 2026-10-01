@@ -225,7 +225,9 @@ export function KitchenTools() {
                             ? 'Finished shopping'
                             : event.kind === 'addItem'
                               ? `Added ${products.find((p) => p.id === detail.productId)?.name ?? detail.productId}`
-                              : event.kind}
+                              : event.kind === 'generateItemIcon'
+                                ? `Generated icon for ${detail.name ?? 'an item'}`
+                                : event.kind}
                   </strong>
                   <small>
                     {event.actor} · {new Date(event.at).toLocaleString()}

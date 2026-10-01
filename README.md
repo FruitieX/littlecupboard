@@ -16,6 +16,8 @@ Shopping patterns produce explained restock suggestions after repeated purchases
 
 An optional assistant supports natural-language shopping, reviewed recipe drafts/variations, weekly plans and generated images. Settings offers an OpenAI-compatible API or a [personal Hermes companion](docs/HERMES-COMPANION.md), with chat model and reasoning controls. API keys are encrypted on the server; companion OAuth stays on the personal agent machine. The assistant is hidden until enabled.
 
+Settings → AI assistant → Configure AI assistant → Compatibility & image generation offers optional automatic icons for new items and **Generate missing icons** for existing cart placeholders. Existing artwork is preserved. Generation runs in a durable server queue with progress, stop and retry controls; flat transparent icons are saved at 256 px. Automatic generation defaults off and uses your configured image provider's quota.
+
 ## Deploy
 
 The homelab app is live at **https://forkbasket.fruitiex.org** through the private Envoy gateway. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Flux/SOPS setup, first-owner account, wife/member invitations, HTTPS/PWA behavior, AI compatibility, backups and upgrades.

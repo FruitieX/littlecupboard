@@ -62,6 +62,14 @@ async function request(page, path, body, method = 'POST') {
   assert.ok(response.ok(), `${path}: ${await response.text()}`)
   return response.json()
 }
+async function eventually(check) {
+  const deadline = Date.now() + 30000
+  while (Date.now() < deadline) {
+    if (await check()) return
+    await new Promise((resolve) => setTimeout(resolve, 200))
+  }
+  throw new Error('Background operation did not complete in time')
+}
 let browser
 let owner
 let provider
@@ -531,13 +539,23 @@ try {
     await readFile('public/images/food/1f34e.svg', 'utf8'),
   )
   const providerRequests = []
+  let imageDelay = 0
+  let imageFailures = 0
   provider = createServer(async (req, res) => {
     let body = ''
     for await (const chunk of req) body += chunk
     const input = JSON.parse(body || '{}')
     providerRequests.push(input)
     if (req.url === '/v1/images/generations') {
+      if (imageDelay)
+        await new Promise((resolve) => setTimeout(resolve, imageDelay))
       res.setHeader('Content-Type', 'application/json')
+      if (imageFailures > 0) {
+        imageFailures--
+        res.statusCode = 429
+        res.end(JSON.stringify({ error: 'Fixture image failure' }))
+        return
+      }
       res.end(JSON.stringify({ data: [{ b64_json: iconFixture }] }))
       return
     }
@@ -623,6 +641,151 @@ try {
       exact: true,
     })
     .waitFor()
+  await owner
+    .getByRole('button', { name: 'Save provider', exact: true })
+    .click()
+  // Existing artwork, including emoji icons, must survive bulk generation.
+  const iconState = (await request(owner, '/state', undefined, 'GET')).state
+  const { catalog } = await import('../src/lib/data.ts')
+  const placeholderArtwork = catalog
+    .filter(
+      (product) =>
+        product.icon === '🛒' && !iconState.productImages[product.id],
+    )
+    .map((product) => ({
+      collection: 'productImages',
+      key: product.id,
+      field: null,
+      before: null,
+      after: '/images/pasta.jpg',
+    }))
+  if (placeholderArtwork.length)
+    await request(owner, '/operations', {
+      id: crypto.randomUUID(),
+      operation: {
+        type: 'patch',
+        label: 'Existing fixture artwork',
+        changes: placeholderArtwork,
+      },
+    })
+  await owner.getByText('Manage items', { exact: true }).click()
+  await owner.getByRole('button', { name: 'Create item', exact: true }).click()
+  await owner
+    .getByLabel('Item name', { exact: true })
+    .fill('Automatic icon fixture')
+  await owner.getByRole('button', { name: 'Save item', exact: true }).click()
+  await owner.getByRole('dialog').waitFor({ state: 'hidden' })
+  const fixtureItem = (
+    await request(owner, '/state', undefined, 'GET')
+  ).state.customProducts.find(
+    (product) => product.name === 'Automatic icon fixture',
+  )
+  assert.ok(fixtureItem)
+  assert.equal(
+    (await request(owner, '/ai/item-icons', undefined, 'GET')).queued,
+    0,
+  )
+  await owner
+    .getByText('Compatibility & image generation', { exact: true })
+    .click()
+  await owner.getByLabel('Image model', { exact: true }).fill('gpt-image-2')
+  await owner
+    .getByLabel('Automatically generate icons for new items', { exact: true })
+    .check()
+  await owner
+    .getByRole('button', { name: 'Save provider', exact: true })
+    .click()
+  await owner.getByRole('button', { name: 'Create item', exact: true }).click()
+  await owner
+    .getByLabel('Item name', { exact: true })
+    .fill('New automatic icon fixture')
+  await owner.getByRole('button', { name: 'Save item', exact: true }).click()
+  await owner.getByRole('dialog').waitFor({ state: 'hidden' })
+  await eventually(async () => {
+    const snapshot = await request(owner, '/state', undefined, 'GET')
+    const product = snapshot.state.customProducts.find(
+      (product) => product.name === 'New automatic icon fixture',
+    )
+    return product && !!snapshot.state.productImages[product.id]
+  })
+  await owner
+    .getByLabel('Automatically generate icons for new items', { exact: true })
+    .uncheck()
+  await owner
+    .getByRole('button', { name: 'Save provider', exact: true })
+    .click()
+  await owner.reload()
+  await settle(owner)
+  await owner.getByText('Configure AI assistant', { exact: true }).click()
+  await owner
+    .getByText('Compatibility & image generation', { exact: true })
+    .click()
+  assert.equal(
+    await owner
+      .getByLabel('Automatically generate icons for new items', { exact: true })
+      .isChecked(),
+    false,
+  )
+  await owner
+    .getByRole('button', { name: 'Generate missing icons', exact: true })
+    .click()
+  let bulkDialog = owner.getByRole('dialog', {
+    name: 'Generate missing item icons?',
+  })
+  await bulkDialog.getByRole('button', { name: 'Cancel', exact: true }).click()
+  assert.equal(
+    (await request(owner, '/ai/item-icons', undefined, 'GET')).queued,
+    0,
+  )
+  imageFailures = 1
+  imageDelay = 300
+  await owner
+    .getByRole('button', { name: 'Generate missing icons', exact: true })
+    .click()
+  bulkDialog = owner.getByRole('dialog', {
+    name: 'Generate missing item icons?',
+  })
+  await bulkDialog
+    .getByRole('button', { name: 'Generate icons', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Retry failed icons', exact: true })
+    .waitFor()
+  await owner
+    .getByRole('button', { name: 'Retry failed icons', exact: true })
+    .click()
+  await eventually(async () => {
+    const result = await request(owner, '/ai/item-icons', undefined, 'GET')
+    return (
+      result.missing === 0 &&
+      result.queued === 0 &&
+      result.running === 0 &&
+      result.failed === 0
+    )
+  })
+  imageDelay = 0
+  const filledIcons = (await request(owner, '/state', undefined, 'GET')).state
+  assert.ok(filledIcons.productImages[fixtureItem.id])
+  for (const change of placeholderArtwork)
+    assert.equal(filledIcons.productImages[change.key], change.after)
+  assert.equal(filledIcons.productImages.apples, iconState.productImages.apples)
+  await mkdir('test-results', { recursive: true })
+  await owner
+    .locator('.icon-generation-settings')
+    .screenshot({ path: 'test-results/missing-icons-mobile.png' })
+  await wife.reload()
+  await settle(wife)
+  const sharedIcons = (await request(wife, '/state', undefined, 'GET')).state
+    .productImages
+  assert.equal(
+    sharedIcons[fixtureItem.id],
+    filledIcons.productImages[fixtureItem.id],
+  )
+  console.log(
+    'Automatic icons, persisted toggle, confirmed bulk generation, retry, private artwork and shared state passed.',
+  )
+  // Restore the original configuration for the subsequent provider/UI checks.
+  await owner.getByLabel('Image model', { exact: true }).fill('')
   await owner
     .getByRole('button', { name: 'Save provider', exact: true })
     .click()

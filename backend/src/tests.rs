@@ -7,6 +7,479 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
+#[tokio::test]
+async fn item_icons_are_opt_in_durable_deduplicated_private_and_retryable() {
+    use axum::{Json, routing::post};
+    use base64::Engine;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::ImageRgba8(image::RgbaImage::from_fn(512, 512, |x, _| {
+        if x < 50 {
+            image::Rgba([0, 0, 0, 0])
+        } else {
+            image::Rgba([255, 100, 0, 255])
+        }
+    }))
+    .write_to(&mut png, image::ImageFormat::Png)
+    .unwrap();
+    let encoded = base64::engine::general_purpose::STANDARD.encode(png.get_ref());
+    let failing = Arc::new(AtomicBool::new(false));
+    let calls = Arc::new(Mutex::new(Vec::<Value>::new()));
+    let fail = failing.clone();
+    let received = calls.clone();
+    let fixture = Router::new().route(
+        "/v1/images/generations",
+        post(move |Json(body): Json<Value>| {
+            received.lock().unwrap().push(body);
+            let fail = fail.swap(false, Ordering::SeqCst);
+            let encoded = encoded.clone();
+            async move {
+                if fail {
+                    (StatusCode::TOO_MANY_REQUESTS, Json(json!({})))
+                } else {
+                    (StatusCode::OK, Json(json!({"data":[{"b64_json":encoded}]})))
+                }
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let task = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let (server, dir) = server();
+    let owner = owner(&server).await;
+    let mut config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"gpt-image-2","imageSize":"1024x1024","responseFormat":"json","tokenParameter":"omit"});
+    let (_, saved, _) = request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config,"apiKey":"fixture"}),
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(saved["config"]["autoItemIcons"], false);
+    // Give pre-existing catalog placeholders artwork so this fixture's bulk
+    // batch contains just the newly created missing item.
+    let existing: Vec<_> = domain::products(&model::fresh_state(true,"UTC".into()),false).into_iter().filter(crate::icon_jobs::missing_icon).map(|product|json!({"collection":"productImages","key":product.id,"field":null,"before":null,"after":"/images/pasta.jpg"})).collect();
+    assert_eq!(
+        operation(
+            &server,
+            &owner,
+            json!({"type":"patch","label":"Existing catalog artwork","changes":existing})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    for (id, icon) in [("custom-missing", "🛒"), ("custom-emoji", "🍎")] {
+        assert_eq!(operation(&server,&owner,json!({"type":"patch","label":"Create item","changes":[{"collection":"customProducts","key":id,"field":null,"before":null,"after":{"id":id,"name":id,"category":"Fruits","icon":icon}}]})).await.0,StatusCode::OK);
+    }
+    assert!(
+        !crate::icon_jobs::run_one(&server).await.unwrap(),
+        "Generation is off by default"
+    );
+    let (_, jobs, _) = request(
+        &server,
+        Method::GET,
+        "/api/ai/item-icons",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(jobs["missing"], 1);
+    assert_eq!(jobs["queued"], 0);
+    for _ in 0..2 {
+        assert_eq!(
+            request(
+                &server,
+                Method::POST,
+                "/api/ai/item-icons",
+                json!({"action":"generate"}),
+                Some(&owner)
+            )
+            .await
+            .0,
+            StatusCode::OK
+        );
+    }
+    let reopened = db::Database::open(&dir.path().join("test.sqlite3")).unwrap();
+    assert_eq!(
+        reopened
+            .lock()
+            .unwrap()
+            .query_row(
+                "SELECT count(*) FROM item_icon_jobs WHERE status='queued'",
+                [],
+                |row| row.get::<_, u32>(0)
+            )
+            .unwrap(),
+        1
+    );
+    drop(reopened);
+    failing.store(true, Ordering::SeqCst);
+    assert!(crate::icon_jobs::run_one(&server).await.unwrap());
+    assert!(
+        !crate::icon_jobs::run_one(&server).await.unwrap(),
+        "Provider failures must not retry automatically"
+    );
+    let (_, jobs, _) = request(
+        &server,
+        Method::GET,
+        "/api/ai/item-icons",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(jobs["failed"], 1);
+    request(
+        &server,
+        Method::POST,
+        "/api/ai/item-icons",
+        json!({"action":"retry"}),
+        Some(&owner),
+    )
+    .await;
+    assert!(crate::icon_jobs::run_one(&server).await.unwrap());
+    let (_, snapshot, _) = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    let url = snapshot["state"]["productImages"]["custom-missing"]
+        .as_str()
+        .unwrap();
+    assert!(snapshot["state"]["productImages"]["custom-emoji"].is_null());
+    assert!(snapshot["state"]["productImages"]["apples"].is_null());
+    let household = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT id FROM households", [], |row| {
+            row.get::<_, String>(0)
+        })
+        .unwrap();
+    let bytes: Vec<u8> = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row(
+            "SELECT bytes FROM uploads WHERE household_id=?1 AND id=?2",
+            rusqlite::params![household, url.trim_start_matches("/api/images/")],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let decoded = image::load_from_memory(&bytes).unwrap().into_rgba8();
+    assert_eq!(decoded.dimensions(), (256, 256));
+    assert_eq!(decoded.get_pixel(0, 0)[3], 0);
+    assert_eq!(
+        request(&server, Method::GET, url, Value::Null, None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert!(
+        calls
+            .lock()
+            .unwrap()
+            .iter()
+            .all(|body| body["background"] == "transparent"
+                && body["size"] == "816x816"
+                && body["prompt"].as_str().unwrap().contains("Twemoji"))
+    );
+    config["autoItemIcons"] = json!(true);
+    request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config}),
+        Some(&owner),
+    )
+    .await;
+    let mutation = json!({"id":uuid::Uuid::new_v4().to_string(),"operation":{"type":"patch","label":"Create automatic item","changes":[{"collection":"customProducts","key":"custom-auto","field":null,"before":null,"after":{"id":"custom-auto","name":"Automatic item","category":"Fruits","icon":"🛒"}}]}});
+    for _ in 0..2 {
+        assert_eq!(
+            request(
+                &server,
+                Method::POST,
+                "/api/operations",
+                mutation.clone(),
+                Some(&owner)
+            )
+            .await
+            .0,
+            StatusCode::OK
+        );
+    }
+    let (_, jobs, _) = request(
+        &server,
+        Method::GET,
+        "/api/ai/item-icons",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(jobs["queued"], 1);
+    {
+        let conn = server.db.lock().unwrap();
+        for number in 0..20 {
+            conn.execute(
+                "INSERT INTO item_icon_attempts(id,household_id) VALUES(?1,?2)",
+                rusqlite::params![format!("pace-{number}"), household],
+            )
+            .unwrap();
+        }
+    }
+    assert!(
+        !crate::icon_jobs::run_one(&server).await.unwrap(),
+        "A full hourly budget keeps the remaining work queued"
+    );
+    {
+        let conn = server.db.lock().unwrap();
+        conn.execute(
+            "UPDATE item_icon_attempts SET started_at=unixepoch()-3601 WHERE id LIKE 'pace-%'",
+            [],
+        )
+        .unwrap();
+        conn.execute("UPDATE item_icon_jobs SET status='running',run_id='interrupted' WHERE product_id='custom-auto'",[]).unwrap();
+    }
+    crate::icon_jobs::resume_interrupted(&server).unwrap();
+    request(
+        &server,
+        Method::POST,
+        "/api/ai/item-icons",
+        json!({"action":"generate"}),
+        Some(&owner),
+    )
+    .await;
+    config["autoItemIcons"] = json!(false);
+    request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config}),
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(
+        request(
+            &server,
+            Method::GET,
+            "/api/ai/item-icons",
+            Value::Null,
+            Some(&owner)
+        )
+        .await
+        .1["queued"],
+        1,
+        "A manual batch adopts queued automatic work and survives switching auto off"
+    );
+    // A partner can create missing items but cannot spend quota on bulk jobs.
+    let (_, invite, _) = request(
+        &server,
+        Method::POST,
+        "/api/invitations",
+        json!({"email":"wife@example.test"}),
+        Some(&owner),
+    )
+    .await;
+    let token = invite["url"]
+        .as_str()
+        .unwrap()
+        .split("invite=")
+        .nth(1)
+        .unwrap();
+    let (_,_,wife)=request(&server,Method::POST,"/api/auth/join",json!({"token":token,"email":"wife@example.test","name":"Wife","password":"another good long password"}),None).await;
+    for method in [Method::GET, Method::POST] {
+        assert_eq!(
+            request(
+                &server,
+                method,
+                "/api/ai/item-icons",
+                json!({"action":"generate"}),
+                wife.as_deref()
+            )
+            .await
+            .0,
+            StatusCode::FORBIDDEN
+        );
+    }
+    assert!(crate::icon_jobs::run_one(&server).await.unwrap());
+    let (_, shared, _) = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        wife.as_deref(),
+    )
+    .await;
+    assert!(
+        shared["state"]["productImages"]["custom-auto"]
+            .as_str()
+            .is_some()
+    );
+    config["autoItemIcons"] = json!(false);
+    request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config}),
+        Some(&owner),
+    )
+    .await;
+    task.abort();
+}
+
+#[tokio::test]
+async fn background_icons_do_not_overwrite_edits_or_apply_after_canceling() {
+    use axum::{Json, routing::post};
+    use base64::Engine;
+    let started = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::new_rgba8(32, 32)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    let encoded = base64::engine::general_purpose::STANDARD.encode(png.get_ref());
+    let begin = started.clone();
+    let gate = release.clone();
+    let fixture = Router::new().route(
+        "/v1/images/generations",
+        post(move || {
+            let begin = begin.clone();
+            let gate = gate.clone();
+            let encoded = encoded.clone();
+            async move {
+                begin.notify_one();
+                gate.notified().await;
+                Json(json!({"data":[{"b64_json":encoded}]}))
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let task = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let mut config = json!({"enabled":true,"autoItemIcons":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"gpt-image-2","imageSize":"1024x1024","responseFormat":"json","tokenParameter":"omit"});
+    for action in ["upload", "delete", "archive", "cancel", "disable", "rename"] {
+        config["autoItemIcons"] = json!(true);
+        request(
+            &server,
+            Method::PUT,
+            "/api/ai/config",
+            json!({"config":config,"apiKey":"fixture"}),
+            Some(&owner),
+        )
+        .await;
+        let product = json!({"id":format!("custom-{action}"),"name":format!("Item {action}"),"category":"Fruits","icon":"🛒"});
+        let id = product["id"].as_str().unwrap();
+        assert_eq!(operation(&server,&owner,json!({"type":"patch","label":"Create item","changes":[{"collection":"customProducts","key":id,"field":null,"before":null,"after":product}]})).await.0,StatusCode::OK);
+        let runner = server.clone();
+        let generation =
+            tokio::spawn(async move { crate::icon_jobs::run_one(&runner).await.unwrap() });
+        tokio::time::timeout(std::time::Duration::from_secs(5), started.notified())
+            .await
+            .unwrap();
+        let change = match action {
+            "upload" => Some(
+                json!({"collection":"productImages","key":id,"field":null,"before":null,"after":"/images/pasta.jpg"}),
+            ),
+            "delete" => {
+                let (_, snapshot, _) = request(
+                    &server,
+                    Method::GET,
+                    "/api/state",
+                    Value::Null,
+                    Some(&owner),
+                )
+                .await;
+                let stored = snapshot["state"]["customProducts"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|entry| entry["id"] == id)
+                    .unwrap();
+                Some(
+                    json!({"collection":"customProducts","key":id,"field":null,"before":stored,"after":null}),
+                )
+            }
+            "archive" => Some(
+                json!({"collection":"archivedProductIds","key":"","field":null,"before":[],"after":[id]}),
+            ),
+            "rename" => Some(
+                json!({"collection":"customProducts","key":id,"field":"name","before":product["name"],"after":"Changed item"}),
+            ),
+            _ => None,
+        };
+        if let Some(change) = change {
+            assert_eq!(
+                operation(
+                    &server,
+                    &owner,
+                    json!({"type":"patch","label":"Edit while generating","changes":[change]})
+                )
+                .await
+                .0,
+                StatusCode::OK
+            );
+        }
+        if action == "cancel" {
+            request(
+                &server,
+                Method::POST,
+                "/api/ai/item-icons",
+                json!({"action":"cancel"}),
+                Some(&owner),
+            )
+            .await;
+        }
+        if action == "disable" {
+            config["autoItemIcons"] = json!(false);
+            request(
+                &server,
+                Method::PUT,
+                "/api/ai/config",
+                json!({"config":config}),
+                Some(&owner),
+            )
+            .await;
+        }
+        release.notify_one();
+        assert!(generation.await.unwrap());
+        let (_, snapshot, _) = request(
+            &server,
+            Method::GET,
+            "/api/state",
+            Value::Null,
+            Some(&owner),
+        )
+        .await;
+        assert_eq!(
+            snapshot["state"]["productImages"][id],
+            if action == "upload" {
+                json!("/images/pasta.jpg")
+            } else {
+                Value::Null
+            },
+            "{action}"
+        );
+    }
+    assert_eq!(
+        server
+            .db
+            .lock()
+            .unwrap()
+            .query_row("SELECT count(*) FROM uploads", [], |row| row
+                .get::<_, u32>(0))
+            .unwrap(),
+        0,
+        "Discarded generation must not leak unused uploads"
+    );
+    task.abort();
+}
+
 #[test]
 fn restoring_a_purchase_removes_pantry_stock_including_released_meal_surplus() {
     let today = "2026-10-01";

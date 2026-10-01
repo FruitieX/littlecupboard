@@ -5,6 +5,7 @@ mod companion;
 mod db;
 mod domain;
 mod error;
+mod icon_jobs;
 mod insights;
 mod model;
 #[cfg(test)]
@@ -118,6 +119,10 @@ pub fn app(server: Server) -> Router {
         .route("/api/ai/test", post(ai::test))
         .route("/api/ai/assistant", post(ai::assistant))
         .route("/api/ai/image", post(ai::generate_image))
+        .route(
+            "/api/ai/item-icons",
+            get(icon_jobs::status).post(icon_jobs::manage),
+        )
         .route(
             "/api/ai/companion",
             post(companion::pair).delete(companion::disconnect),
@@ -369,6 +374,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let bind = std::env::var("FORKBASKET_BIND").unwrap_or_else(|_| "127.0.0.1:3001".into());
     let listener = tokio::net::TcpListener::bind(&bind).await?;
     tracing::info!("ForkBasket API listening on {bind}");
+    icon_jobs::start(server.clone()).map_err(|error| error.1)?;
     axum::serve(listener, app(server))
         .with_graceful_shutdown(async {
             #[cfg(unix)]

@@ -34,6 +34,8 @@ pub struct ProviderConfig {
     pub model: String,
     pub image_model: String,
     pub image_size: String,
+    #[serde(default)]
+    pub auto_item_icons: bool,
     pub response_format: String,
     pub token_parameter: String,
     #[serde(default)]
@@ -69,6 +71,7 @@ impl Default for ProviderConfig {
             model: String::new(),
             image_model: String::new(),
             image_size: "1024x1024".into(),
+            auto_item_icons: false,
             response_format: "json".into(),
             token_parameter: "max_completion_tokens".into(),
             prompts: SystemPrompts::default(),
@@ -270,6 +273,7 @@ pub async fn save_config(
     };
     let secret = encrypt(&server, &key)?;
     server.db.lock()?.execute("INSERT INTO providers(household_id,config,secret) VALUES(?1,?2,?3) ON CONFLICT(household_id) DO UPDATE SET config=excluded.config,secret=excluded.secret",params![actor.household_id,serde_json::to_string(&input.config)?,secret])?;
+    crate::icon_jobs::cancel_automatic_if_disabled(&server, &actor.household_id, &input.config)?;
     server.notify(&actor.household_id);
     Ok(Json(
         json!({"config":input.config,"hasKey":!key.is_empty()}),
@@ -293,6 +297,7 @@ pub async fn delete_config(
         "DELETE FROM companion_jobs WHERE household_id=?1",
         [&actor.household_id],
     )?;
+    crate::icon_jobs::cancel_all(&*server.db.lock()?, &actor.household_id)?;
     server.notify(&actor.household_id);
     Ok(Json(json!({"ok":true})))
 }
@@ -760,7 +765,7 @@ fn assistant_images(server: &Server, household: &str, urls: &[String]) -> Result
     }).collect()
 }
 
-#[derive(Default, Deserialize, PartialEq)]
+#[derive(Clone, Default, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ImageKind {
     Item,
@@ -861,12 +866,51 @@ pub async fn generate_image(
             "Describe the image in up to 4,000 characters.",
         ));
     }
-    let (config, key) = provider(&server, &actor.household_id)?;
+    let image = render_image(&server, &actor.household_id, input.kind.clone(), subject).await?;
+    let result = api::save_image(&server, &actor.household_id, image)?;
+    if let (Some(id), Some(recipe_id)) = (&input.proposal_id, &input.recipe_id) {
+        let conn = server.db.lock()?;
+        let mut proposal = image_proposal(&conn, &actor.household_id, id)?;
+        let recipe = proposal
+            .recipes
+            .iter_mut()
+            .find(|recipe| &recipe.id == recipe_id)
+            .ok_or_else(|| ApiError::bad("Choose a recipe in this proposal."))?;
+        recipe.image = result.0["url"].as_str().unwrap().into();
+        conn.execute(
+            "UPDATE ai_proposals SET proposal=?3 WHERE id=?1 AND household_id=?2",
+            params![id, actor.household_id, serde_json::to_string(&proposal)?],
+        )?;
+    }
+    if let (Some(id), Some(product_id)) = (&input.proposal_id, &input.product_id) {
+        let conn = server.db.lock()?;
+        let mut proposal = image_proposal(&conn, &actor.household_id, id)?;
+        let product = proposal
+            .products
+            .iter_mut()
+            .find(|product| &product.id == product_id)
+            .ok_or_else(|| ApiError::bad("Choose a new item in this proposal."))?;
+        product.image = result.0["url"].as_str().map(String::from);
+        conn.execute(
+            "UPDATE ai_proposals SET proposal=?3 WHERE id=?1 AND household_id=?2",
+            params![id, actor.household_id, serde_json::to_string(&proposal)?],
+        )?;
+    }
+    Ok(result)
+}
+
+pub(crate) async fn render_image(
+    server: &Server,
+    household: &str,
+    kind: ImageKind,
+    subject: &str,
+) -> Result<api::StoredImage> {
+    let (config, key) = provider(server, household)?;
     if !config.enabled || config.image_model.is_empty() {
         return Err(ApiError::bad("Configure an image model in settings first."));
     }
-    let mut body = json!({"model":config.image_model,"prompt":image_prompt(&config, &input.kind, subject),"n":1,"size":config.image_size});
-    if input.kind != ImageKind::Recipe {
+    let mut body = json!({"model":config.image_model,"prompt":image_prompt(&config, &kind, subject),"n":1,"size":config.image_size});
+    if kind != ImageKind::Recipe {
         body["background"] = json!("transparent");
         body["output_format"] = json!("png");
         if config.image_model.starts_with("gpt-image-2") {
@@ -886,8 +930,8 @@ pub async fn generate_image(
         }
     }
     let response = send(
-        &server,
-        &actor.household_id,
+        server,
+        household,
         &config,
         &key,
         "images/generations",
@@ -939,44 +983,10 @@ pub async fn generate_image(
     } else {
         return Err(ApiError::bad("The provider returned no image."));
     };
-    let edge = if input.kind != ImageKind::Recipe {
-        256
-    } else {
-        1600
-    };
-    let image = tokio::task::spawn_blocking(move || api::encode_image_at_size(&bytes, edge))
+    let edge = if kind != ImageKind::Recipe { 256 } else { 1600 };
+    tokio::task::spawn_blocking(move || api::encode_image_at_size(&bytes, edge))
         .await
-        .map_err(ApiError::internal)??;
-    let result = api::save_image(&server, &actor.household_id, image)?;
-    if let (Some(id), Some(recipe_id)) = (&input.proposal_id, &input.recipe_id) {
-        let conn = server.db.lock()?;
-        let mut proposal = image_proposal(&conn, &actor.household_id, id)?;
-        let recipe = proposal
-            .recipes
-            .iter_mut()
-            .find(|recipe| &recipe.id == recipe_id)
-            .ok_or_else(|| ApiError::bad("Choose a recipe in this proposal."))?;
-        recipe.image = result.0["url"].as_str().unwrap().into();
-        conn.execute(
-            "UPDATE ai_proposals SET proposal=?3 WHERE id=?1 AND household_id=?2",
-            params![id, actor.household_id, serde_json::to_string(&proposal)?],
-        )?;
-    }
-    if let (Some(id), Some(product_id)) = (&input.proposal_id, &input.product_id) {
-        let conn = server.db.lock()?;
-        let mut proposal = image_proposal(&conn, &actor.household_id, id)?;
-        let product = proposal
-            .products
-            .iter_mut()
-            .find(|product| &product.id == product_id)
-            .ok_or_else(|| ApiError::bad("Choose a new item in this proposal."))?;
-        product.image = result.0["url"].as_str().map(String::from);
-        conn.execute(
-            "UPDATE ai_proposals SET proposal=?3 WHERE id=?1 AND household_id=?2",
-            params![id, actor.household_id, serde_json::to_string(&proposal)?],
-        )?;
-    }
-    Ok(result)
+        .map_err(ApiError::internal)?
 }
 
 fn image_proposal(

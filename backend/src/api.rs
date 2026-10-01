@@ -228,6 +228,7 @@ pub async fn mutate(
                 .clone();
         }
         domain::validate(&snapshot.state)?;
+        crate::icon_jobs::enqueue_new(&tx, &actor.household_id, &before, &snapshot.state)?;
         let changes = domain::changes(&before, &snapshot.state)?;
         let kind = serde_json::to_value(&input.operation)?["type"]
             .as_str()
@@ -684,6 +685,7 @@ pub async fn restore(
         for (id, member, kind, at, detail, changes, undone) in imported {
             tx.execute("INSERT INTO events(id,household_id,actor,kind,at,detail,changes,undone) VALUES(?1,?2,?3,?4,?5,?6,?7,?8)",params![id,actor.household_id,member,kind,at,detail.to_string(),changes.to_string(),undone])?;
         }
+        crate::icon_jobs::cancel_all(&tx, &actor.household_id)?;
         // Reject references to images outside the restored household.
         let text = serde_json::to_string(&state)?;
         for part in text.split("/api/images/").skip(1) {
