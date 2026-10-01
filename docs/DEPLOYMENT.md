@@ -1,6 +1,8 @@
 # Deploy ForkBasket
 
-ForkBasket runs as one unprivileged Rust process serving the API and compiled TanStack frontend. SQLite, private photos and encrypted provider configuration live in `/data`. Your cluster has not been modified. The manifests in `deploy/kubernetes/` follow the existing `/home/rasse/homelab` Flux/SOPS layout, private Envoy HTTPS gateway and `syno-storage` block storage.
+ForkBasket runs as one unprivileged Rust process serving the API and compiled TanStack frontend. SQLite, private photos and encrypted provider configuration live in `/data`. The manifests in `deploy/kubernetes/` follow the existing `/home/rasse/homelab` Flux/SOPS layout, private Envoy HTTPS gateway and `syno-storage` block storage.
+
+The homelab deployment is live as of 2026-10-01 at **https://forkbasket.fruitiex.org**, using the private gateway (`192.168.11.99`). The public gateway returns 404 for this app. Flux reports Ready, the data PVC is bound, and HTTPS/mobile first-owner setup have been verified. The live manifests, encrypted secrets and first-login instructions are in `~/homelab/apps/forkbasket/`; that deployment uses the existing GHCR pull secret and a pinned image digest. The templates here remain reusable deployment examples. Create your owner account, invite your wife and configure the AI provider through Settings when ready.
 
 ## Build and image publishing
 

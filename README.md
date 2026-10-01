@@ -14,7 +14,7 @@ An optional OpenAI-compatible assistant supports natural-language shopping, revi
 
 ## Deploy
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for the complete setup, Flux/SOPS manifests matching your homelab, first-owner account, wife/member invitations, HTTPS/PWA behavior, AI compatibility, backups and upgrades. Your live cluster has not been changed.
+The homelab app is live at **https://forkbasket.fruitiex.org** through the private Envoy gateway. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Flux/SOPS setup, first-owner account, wife/member invitations, HTTPS/PWA behavior, AI compatibility, backups and upgrades.
 
 ```sh
 nix build .#container
