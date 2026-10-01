@@ -10,6 +10,11 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.publish.outputs.digest }}
+    concurrency:
+      group: forkbasket-build-${{ github.ref }}
+      cancel-in-progress: true
     permissions:
       contents: read
       packages: write
@@ -34,6 +39,7 @@ jobs:
           docker load < result
           nix develop --command npm run test:container
       - name: Publish image
+        id: publish
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -42,3 +48,49 @@ jobs:
           docker tag ghcr.io/fruitiex/forkbasket:main ghcr.io/fruitiex/forkbasket:${{ github.sha }}
           docker push ghcr.io/fruitiex/forkbasket:main
           docker push ghcr.io/fruitiex/forkbasket:${{ github.sha }}
+          forkbasket_reference="$(docker inspect --format '{{index .RepoDigests 0}}' ghcr.io/fruitiex/forkbasket:${{ github.sha }})"
+          [[ "$forkbasket_reference" == ghcr.io/fruitiex/forkbasket@sha256:* ]]
+          forkbasket_digest="${forkbasket_reference##*@}"
+          [[ "$forkbasket_digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          printf 'digest=%s\n' "$forkbasket_digest" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      HOMELAB_DISPATCH_TOKEN: ${{ secrets.HOMELAB_DISPATCH_TOKEN }}
+    steps:
+      - name: Check deployment configuration and source revision
+        id: deployment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ -z "$HOMELAB_DISPATCH_TOKEN" ]]; then
+            echo '::warning::Auto deployment is disabled until HOMELAB_DISPATCH_TOKEN is added to this repository.'
+            printf 'enabled=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          forkbasket_head="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$forkbasket_head" != "$GITHUB_SHA" ]]; then
+            echo 'A newer main commit exists; skipping deployment of this older build.'
+            printf 'enabled=false\n' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          printf 'enabled=true\n' >> "$GITHUB_OUTPUT"
+
+      - name: Deploy tested image to homelab
+        if: steps.deployment.outputs.enabled == 'true'
+        uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
+        with:
+          token: ${{ secrets.HOMELAB_DISPATCH_TOKEN }}
+          repository: FruitieX/homelab
+          event-type: image-update
+          client-payload: |
+            {
+              "image": "ghcr.io/fruitiex/forkbasket",
+              "digest": "${{ needs.build.outputs.digest }}",
+              "revision": "${{ github.sha }}"
+            }
