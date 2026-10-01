@@ -8,7 +8,7 @@ Missing meal ingredients automatically join the list with a small source marker.
 
 Settings manages shops, aisle order, groups, item names/aliases/pictures, recipes, family/account details and backups. Item and recipe management is collapsed and searchable. Archive catalog items to hide suggestions without breaking existing recipe ingredients; restore them later, or permanently delete unreferenced custom items. Shared deletions and AI disconnection require confirmation. AI connection setup and advanced prompts are collapsed and owner-only.
 
-ForkBasket is an installable PWA with a standalone manifest, app icons and an offline shell. On Android, open its private HTTPS address in Chrome and choose **Add to home screen → Install**. The phone needs LAN/VPN access for synchronization; queued shopping changes survive offline use.
+ForkBasket is an installable PWA with a standalone manifest, app icons and an offline shell. On Android, open its HTTPS address in Chrome and choose **Add to home screen → Install**. The public homelab ingress allows synchronization outside the LAN/VPN; queued shopping changes survive offline use.
 
 Accounts, expiring invitations, secure cookie sessions, SQLite transactions and SSE keep independent devices together. A persisted offline outbox and installable app shell keep shopping usable through connection loss. Concurrent edits get explicit review rather than overwriting another person’s changes. History supports guarded undo and shopping-trip completion.
 
@@ -20,14 +20,14 @@ Settings → AI assistant → Configure AI assistant → Compatibility & image g
 
 ## Deploy
 
-The homelab app is live at **https://forkbasket.fruitiex.org** through the private Envoy gateway. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Flux/SOPS setup, first-owner account, wife/member invitations, HTTPS/PWA behavior, AI compatibility, backups and upgrades.
+The homelab app is live at **https://forkbasket.fruitiex.org** through the public and private Envoy gateways, with authenticated access to household data. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Flux/SOPS setup, first-owner account, wife/member invitations, HTTPS/PWA behavior, AI compatibility, backups and upgrades.
 
 ```sh
 nix build .#container
 docker load < result
 ```
 
-The image serves frontend and API in one Rust process on port 8080. Keep /data on persistent storage and set FORKBASKET_ORIGIN to the externally visited origin. WAL is the default for local/block storage; NFS requires FORKBASKET_SQLITE_JOURNAL_MODE=DELETE and reliable NFSv4 locking/sync. The supplied Kubernetes template uses one replica, Recreate, a block PVC, non-root permissions, a private Envoy HTTPS route and health probes. The live homelab instead uses the migrated NFS claim; see [the deployment guide](docs/DEPLOYMENT.md). Generate and SOPS-encrypt the deployment secrets before copying them into your homelab.
+The image serves frontend and API in one Rust process on port 8080. Keep /data on persistent storage and set FORKBASKET_ORIGIN to the externally visited origin. WAL is the default for local/block storage; NFS requires FORKBASKET_SQLITE_JOURNAL_MODE=DELETE and reliable NFSv4 locking/sync. The supplied Kubernetes template uses one replica, Recreate, a block PVC, non-root permissions, public/private Envoy HTTPS routes and health probes. The live homelab instead uses the migrated NFS claim; see [the deployment guide](docs/DEPLOYMENT.md). Generate and SOPS-encrypt the deployment secrets before copying them into your homelab.
 
 ## Develop
 
