@@ -10,7 +10,7 @@ Accounts, expiring invitations, secure cookie sessions, SQLite transactions and 
 
 Shopping patterns produce explained restock suggestions after repeated purchases, with confidence, preferred descriptions/packages, store/day signals, product associations, snoozing and dismissal. Meal suggestions use favorites, ratings, rotation, dietary/ingredient preferences and likely ingredients. Discovery offers reviewed variations of saved recipes. Inventory is best effort, and estimates are distinguished from confirmed observations.
 
-An optional OpenAI-compatible assistant supports natural-language shopping, reviewed recipe drafts/variations, weekly plans and generated images. Configure the endpoint and models later in Settings. Provider keys are encrypted on the server; the assistant is hidden until enabled.
+An optional assistant supports natural-language shopping, reviewed recipe drafts/variations, weekly plans and generated images. Settings offers an OpenAI-compatible API or a [personal Hermes companion](docs/HERMES-COMPANION.md), with chat model and reasoning controls. API keys are encrypted on the server; companion OAuth stays on the personal agent machine. The assistant is hidden until enabled.
 
 ## Deploy
 
@@ -41,6 +41,7 @@ Open http://localhost:3100. Vite proxies /api to 127.0.0.1:3001. The server crea
 ```sh
 nix develop --command npm run typecheck
 nix develop --command npm test
+nix develop --command python3 scripts/hermes-companion.check.py
 nix develop --command npm run format:check
 nix develop --command cargo fmt --manifest-path backend/Cargo.toml -- --check
 nix develop --command cargo clippy --manifest-path backend/Cargo.toml -- -D warnings

@@ -1,6 +1,6 @@
 # ChatGPT and Codex integration investigation
 
-Investigated on 2026-10-01. This records evidence and an implementation design; ForkBasket does not yet expose a subscription connector. No production credentials or homelab runtime configuration were changed for this investigation.
+Investigated on 2026-10-01. This records the original evidence and integration boundaries. A subsequent explicit user request led to the opt-in [personal Hermes companion](HERMES-COMPANION.md), now implemented and connected in production with `gpt-6-luna` / `xhigh` and native images. OAuth remains on the personal machine; the company coding login was preserved. The SIWC text connector below remains an investigation rather than an installed provider.
 
 ## What was verified locally
 

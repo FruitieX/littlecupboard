@@ -41,6 +41,8 @@ Jobs are stored in SQLite, bounded to four per household, expire after six minut
 
 The worker logs only task kind, success, duration, exception class and optional HTTP status. It never logs prompts, responses, credentials or provider error bodies. Generated image files may also remain in the profile's private Hermes image cache.
 
+On 2026-10-01 this setup was paired with the live private homelab application. The running user service passed native model discovery, `gpt-6-luna` / `xhigh` chat and image generation through the actual HTTPS job queue; the generated image's public unauthenticated request returned 401. Personal token refresh was also verified with root Hermes and Codex CLI credentials blocked. The NixOS configuration is committed; user Home Manager activation installs/runs the service immediately, and the administrator must switch Pear's NixOS generation to preserve that new unit through future system boot activation.
+
 ## Verification
 
 ```sh
