@@ -288,7 +288,11 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         data_dir: data_dir.clone(),
         encryption_key,
     });
-    let db = db::Database::open(&data_dir.join("forkbasket.sqlite3")).map_err(|error| error.1)?;
+    let journal = db::JournalMode::parse(
+        &std::env::var("FORKBASKET_SQLITE_JOURNAL_MODE").unwrap_or_else(|_| "WAL".into()),
+    )?;
+    let db = db::Database::open_with_journal(&data_dir.join("forkbasket.sqlite3"), journal)
+        .map_err(|error| error.1)?;
     let (notices, _) = broadcast::channel(128);
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(120))

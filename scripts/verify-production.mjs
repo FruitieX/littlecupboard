@@ -72,6 +72,7 @@ try {
     FORKBASKET_ORIGIN: frontendUrl,
     FORKBASKET_DATA_DIR: data,
     FORKBASKET_SETUP_TOKEN: 'ui-only-bootstrap-token',
+    FORKBASKET_SQLITE_JOURNAL_MODE: 'DELETE',
   })
   await wait(`${backendUrl}/api/ready`)
   if (!production)
@@ -149,6 +150,62 @@ try {
     .waitFor()
   await owner.goto(frontendUrl)
   await settle(owner)
+  for (const name of ['Milk', 'Bananas']) {
+    await owner
+      .getByRole('combobox', { name: 'Add a shopping item' })
+      .fill(name)
+    await owner
+      .getByRole('option')
+      .filter({ hasText: new RegExp(`^${name}`) })
+      .first()
+      .click()
+    await owner
+      .getByRole('button', { name: `Check ${name}`, exact: true })
+      .waitFor()
+  }
+  const continuousOrder = await owner
+    .locator('.item-grid .tile-check strong')
+    .allTextContents()
+  // Fruits precede dairy in the initial store, regardless of insertion order.
+  assert.ok(
+    continuousOrder.indexOf('Bananas') < continuousOrder.indexOf('Milk'),
+  )
+  assert.equal(await owner.locator('.shopping-main .item-grid').count(), 1)
+  await owner.goto(`${frontendUrl}/settings`)
+  const grouping = owner.getByRole('checkbox', { name: 'Group by category' })
+  assert.equal(await grouping.isChecked(), false)
+  await grouping.check()
+  await owner.goto(frontendUrl)
+  await settle(owner)
+  assert.ok((await owner.locator('.shopping-group h2').count()) > 0)
+  assert.deepEqual(
+    await owner.locator('.item-grid .tile-check strong').allTextContents(),
+    continuousOrder,
+  )
+  await owner.reload()
+  await settle(owner)
+  assert.ok((await owner.locator('.shopping-group h2').count()) > 0)
+  assert.equal(await wife.locator('.shopping-main .item-grid').count(), 1)
+  await owner.goto(`${frontendUrl}/settings`)
+  await owner.getByRole('checkbox', { name: 'Group by category' }).uncheck()
+  await owner.goto(frontendUrl)
+  await settle(owner)
+  assert.equal(await owner.locator('.shopping-main .item-grid').count(), 1)
+  for (const id of ['milk', 'bananas']) {
+    await request(owner, '/operations', {
+      id: crypto.randomUUID(),
+      operation: { type: 'removeItem', id },
+    })
+    await owner
+      .getByRole('button', {
+        name: `Check ${id === 'milk' ? 'Milk' : 'Bananas'}`,
+        exact: true,
+      })
+      .waitFor({ state: 'hidden' })
+  }
+  console.log(
+    'Continuous shopping grid defaults, optional persistent category grouping and independent family preferences passed.',
+  )
   await wife.getByRole('button', { name: 'Check Avocado', exact: true }).click()
   await owner
     .getByRole('button', { name: 'Restore Avocado', exact: true })

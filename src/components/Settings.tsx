@@ -18,9 +18,13 @@ import { FoodIcon } from './FoodIcon'
 import { AccountSettings } from './AccountSettings'
 import { AISettings } from './AISettings'
 import { HouseholdSettings } from './HouseholdSettings'
+import { useShoppingLayout } from '../lib/shopping-layout'
 
 export function Settings() {
-  const { state, update } = useApp()
+  const { state, update, session } = useApp()
+  const { groupByCategory, setGroupByCategory } = useShoppingLayout(
+    session.user.id,
+  )
   const [storeId, setStoreId] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [newName, setNewName] = useState('')
@@ -60,6 +64,21 @@ export function Settings() {
       </div>
       <div className="settings-layout">
         <div>
+          <section className="settings-card">
+            <SectionTitle title="Shopping list" />
+            <p className="settings-description">
+              Items always follow your store’s aisle order. Choose how they
+              appear on this device.
+            </p>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={groupByCategory}
+                onChange={(event) => setGroupByCategory(event.target.checked)}
+              />
+              Group by category
+            </label>
+          </section>
           <section className="settings-card">
             <SectionTitle title="Our favorite stores">
               <button className="text-button" onClick={() => setAddOpen(true)}>

@@ -10,16 +10,104 @@ use std::{
 
 #[derive(Clone)]
 pub struct Database(pub Arc<Mutex<Connection>>);
+
+#[derive(Clone, Copy)]
+pub enum JournalMode {
+    Wal,
+    Delete,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rollback_journal_preserves_wal_data_transactions_backups_and_restart() {
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("database.sqlite3");
+        let database = Database::open(&path).unwrap();
+        database.lock().unwrap().execute_batch("CREATE TABLE storage_probe(value BLOB); INSERT INTO storage_probe VALUES (X'001122FF');").unwrap();
+        drop(database);
+
+        let database = Database::open_with_journal(&path, JournalMode::Delete).unwrap();
+        {
+            let mut conn = database.lock().unwrap();
+            let mode: String = conn
+                .query_row("PRAGMA journal_mode", [], |row| row.get(0))
+                .unwrap();
+            assert_eq!(mode, "delete");
+            let sync: u32 = conn
+                .query_row("PRAGMA synchronous", [], |row| row.get(0))
+                .unwrap();
+            assert_eq!(sync, 3);
+            let transaction = conn.transaction().unwrap();
+            transaction
+                .execute("DELETE FROM storage_probe", [])
+                .unwrap();
+            drop(transaction);
+        }
+        // The separate connection used by --backup can read a running DELETE database.
+        let backup = directory.path().join("backup.sqlite3");
+        Connection::open(&path)
+            .unwrap()
+            .backup("main", &backup, None)
+            .unwrap();
+        drop(database);
+        for file in [&path, &backup] {
+            let reopened = Database::open_with_journal(file, JournalMode::Delete).unwrap();
+            let value: Vec<u8> = reopened
+                .lock()
+                .unwrap()
+                .query_row("SELECT value FROM storage_probe", [], |row| row.get(0))
+                .unwrap();
+            assert_eq!(value, [0, 17, 34, 255]);
+            let integrity: String = reopened
+                .lock()
+                .unwrap()
+                .query_row("PRAGMA integrity_check", [], |row| row.get(0))
+                .unwrap();
+            assert_eq!(integrity, "ok");
+        }
+        assert!(!path.with_file_name("database.sqlite3-wal").exists());
+        assert!(!path.with_file_name("database.sqlite3-shm").exists());
+    }
+}
+impl JournalMode {
+    pub fn parse(value: &str) -> std::result::Result<Self, &'static str> {
+        match value {
+            "WAL" | "wal" => Ok(Self::Wal),
+            "DELETE" | "delete" => Ok(Self::Delete),
+            _ => Err("FORKBASKET_SQLITE_JOURNAL_MODE must be WAL or DELETE"),
+        }
+    }
+}
 impl Database {
+    #[cfg(test)]
     pub fn open(path: &Path) -> Result<Self> {
+        Self::open_with_journal(path, JournalMode::Wal)
+    }
+    pub fn open_with_journal(path: &Path, journal: JournalMode) -> Result<Self> {
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent)?;
         }
         let conn = Connection::open(path)?;
         conn.busy_timeout(std::time::Duration::from_secs(5))?;
-        conn.execute_batch(
-            "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA synchronous=FULL;",
-        )?;
+        let (mode, synchronous) = match journal {
+            JournalMode::Wal => ("WAL", "FULL"),
+            // NFS cannot share a WAL index. EXTRA also syncs the directory after
+            // deleting a rollback journal, making a completed commit durable.
+            JournalMode::Delete => ("DELETE", "EXTRA"),
+        };
+        let actual: String =
+            conn.query_row(&format!("PRAGMA journal_mode={mode}"), [], |row| row.get(0))?;
+        if !actual.eq_ignore_ascii_case(mode) {
+            return Err(ApiError::internal(
+                "SQLite could not activate the configured journal mode",
+            ));
+        }
+        conn.execute_batch(&format!(
+            "PRAGMA foreign_keys=ON; PRAGMA synchronous={synchronous};"
+        ))?;
         conn.execute_batch("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)")?;
         let version: i64 = conn.query_row(
             "SELECT COALESCE(MAX(version),0) FROM schema_migrations",

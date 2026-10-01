@@ -13,6 +13,7 @@ import { HoldButton } from './HoldButton'
 import { StoreCombobox } from './StoreCombobox'
 import { shoppingQuantity } from '../lib/meal-shopping'
 import { cleanItem } from '../lib/sync'
+import { useShoppingLayout } from '../lib/shopping-layout'
 
 const categoryColors: Partial<Record<Category, string>> = {
   'Fruit & vegetables': 'produce',
@@ -31,7 +32,8 @@ const categoryColors: Partial<Record<Category, string>> = {
   'Meat & fish': 'fish',
 }
 export function Shopping() {
-  const { state, update, action, shoppingItems } = useApp()
+  const { state, update, action, shoppingItems, session } = useApp()
+  const { groupByCategory } = useShoppingLayout(session.user.id)
   const { insights } = useLearning()
   const [query, setQuery] = useState('')
   const [isFocused, setFocused] = useState(false)
@@ -45,6 +47,18 @@ export function Shopping() {
   const store =
     state.stores.find((s) => s.id === state.storeId) ?? state.stores[0]
   const active = shoppingItems.filter((i) => !i.checked)
+  const categoryOrder = [
+    ...new Set([...store.order, ...active.map((item) => item.category)]),
+  ]
+  const sorted = categoryOrder.flatMap((category) =>
+    active.filter((item) => item.category === category),
+  )
+  const sections = groupByCategory
+    ? categoryOrder.map((category) => ({
+        category,
+        items: sorted.filter((item) => item.category === category),
+      }))
+    : [{ category: null, items: sorted }]
   const checked = shoppingItems.filter((i) => i.checked)
   const products = [...catalog, ...state.customProducts].map((p) => ({
     ...p,
@@ -248,12 +262,17 @@ export function Shopping() {
             />
           )}
           <div className="shopping-groups">
-            {store.order.map((category) => {
-              const items = active.filter((i) => i.category === category)
+            {sections.map(({ category, items }) => {
               return (
                 items.length > 0 && (
-                  <section className="shopping-group" key={category}>
-                    <SectionTitle title={category} count={items.length} />
+                  <section
+                    className="shopping-group"
+                    key={category ?? 'all'}
+                    aria-label={category ?? 'Shopping items'}
+                  >
+                    {category && (
+                      <SectionTitle title={category} count={items.length} />
+                    )}
                     <motion.div layout className="item-grid">
                       <AnimatePresence mode="popLayout" initial={false}>
                         {items.map((item) => (
@@ -268,7 +287,7 @@ export function Shopping() {
                               stiffness: 400,
                               damping: 30,
                             }}
-                            className={`item-tile ${categoryColors[category] ?? 'other'} ${item.autoAdded ? 'auto-added' : ''}`}
+                            className={`item-tile ${categoryColors[item.category] ?? 'other'} ${item.autoAdded ? 'auto-added' : ''}`}
                           >
                             <HoldButton
                               className="tile-check"
