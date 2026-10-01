@@ -504,6 +504,78 @@ try {
   console.log(
     'Provider configuration/test, hidden-until-configured assistant and reviewed proposals passed through the UI.',
   )
+  await mkdir('test-results', { recursive: true })
+  for (const width of [320, 390, 768, 1020, 1120, 1121, 1240, 1440, 1920]) {
+    await owner.setViewportSize({ width, height: 1000 })
+    await owner.goto(`${frontendUrl}/settings`)
+    await settle(owner)
+    await owner.locator('.ai-provider-card summary').click()
+    if ([390, 1440].includes(width)) {
+      await owner.screenshot({
+        path: `test-results/settings-${width}.png`,
+      })
+      await owner.locator('.ai-provider-card').screenshot({
+        path: `test-results/settings-ai-${width}.png`,
+      })
+    }
+    const layout = await owner.evaluate(() => {
+      const columns = [
+        ...document.querySelector('.settings-layout').children,
+      ].map((column) => {
+        const { x, y, width } = column.getBoundingClientRect()
+        return { x, y, width }
+      })
+      const overflow = [...document.querySelectorAll('.settings-card')].flatMap(
+        (card) => {
+          const bounds = card.getBoundingClientRect()
+          return [...card.querySelectorAll('input, select, textarea, button')]
+            .filter((control) => control.getClientRects().length > 0)
+            .filter((control) => {
+              const rect = control.getBoundingClientRect()
+              return (
+                rect.left < bounds.left - 1 || rect.right > bounds.right + 1
+              )
+            })
+            .map(
+              (control) =>
+                control.getAttribute('aria-label') ||
+                control.textContent ||
+                control.tagName,
+            )
+        },
+      )
+      return {
+        columns,
+        overflow,
+        content: document.documentElement.scrollWidth,
+      }
+    })
+    assert.deepEqual(
+      layout.overflow,
+      [],
+      `Settings controls overflow at ${width}px`,
+    )
+    assert.ok(
+      layout.content <= width,
+      `Expanded settings overflow at ${width}px`,
+    )
+    const [stores, preferences] = layout.columns
+    if (width > 1120) {
+      assert.ok(
+        Math.abs(stores.y - preferences.y) < 1,
+        'Desktop settings share a row',
+      )
+      assert.ok(
+        preferences.width >= stores.width * 0.9,
+        `Settings forms are squeezed at ${width}px: ${JSON.stringify(layout.columns)}`,
+      )
+    } else {
+      assert.ok(preferences.y > stores.y, `Settings stack at ${width}px`)
+    }
+  }
+  console.log(
+    'Expanded settings controls fit balanced desktop columns and stacked tablet/mobile layouts.',
+  )
   for (const width of [320, 390, 768, 1440]) {
     await owner.setViewportSize({ width, height: 900 })
     for (const path of ['/', '/week', '/recipes', '/settings']) {

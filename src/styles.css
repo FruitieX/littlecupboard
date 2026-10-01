@@ -1779,8 +1779,11 @@ svg {
 }
 .settings-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 26px;
+}
+.settings-layout > * {
+  min-width: 0;
 }
 .settings-card {
   border: 1px solid #e1e6d6;
@@ -1788,6 +1791,30 @@ svg {
   padding: 23px;
   background: #fffef9;
   margin-bottom: 22px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.settings-card .editor-form > *,
+.settings-card .editor-form label {
+  min-width: 0;
+}
+.settings-card .form-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.settings-card input,
+.settings-card select,
+.settings-card textarea {
+  min-width: 0;
+  max-width: 100%;
+}
+.settings-card .modal-actions {
+  flex-wrap: wrap;
+}
+.settings-card .primary-button,
+.settings-card .secondary-button,
+.settings-card .text-button {
+  max-width: 100%;
+  white-space: normal;
 }
 .settings-card .section-heading h2 {
   font-size: 14px;
@@ -2035,7 +2062,6 @@ svg {
     display: none;
   }
   .settings-layout {
-    grid-template-columns: minmax(0, 1fr) 245px;
     gap: 20px;
   }
 }
@@ -2071,17 +2097,6 @@ svg {
   .week-bottom .primary-button {
     padding: 12px;
     font-size: 11px;
-  }
-  .settings-layout {
-    grid-template-columns: 1fr;
-  }
-  .settings-layout > aside {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 18px;
-  }
-  .settings-signoff {
-    grid-column: span 2;
   }
   .settings-card {
     padding: 20px;
@@ -3534,15 +3549,9 @@ svg {
   gap: 0.45rem;
   margin-bottom: 1rem;
 }
-.settings-layout > aside {
-  min-width: 0;
-}
-.settings-card {
-  min-width: 0;
-}
-@media (min-width: 761px) and (max-width: 1120px) {
-  .settings-layout > aside {
-    display: block;
+@media (max-width: 1120px) {
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 .editable-ingredients {
