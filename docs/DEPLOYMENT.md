@@ -22,11 +22,15 @@ If the token is in 1Password, transfer it directly through GitHub's secret form,
 
 ```sh
 set -o pipefail
-op read 'op://AI Agents/Homelab dispatch/token' |
+op-agent read 'op://Agents/GitHub FruitieX homelab deploy token HOMELAB_DISPATCH_TOKEN/credential' |
   gh secret set HOMELAB_DISPATCH_TOKEN --repo FruitieX/forkbasket
 ```
 
-For ongoing agent access, use a dedicated vault containing only agent-accessible credentials and a [1Password service account](https://www.1password.dev/service-accounts/get-started) granted only `read_items` in that vault. Disable vault creation and omit write/share permissions. Authenticate the CLI with `OP_SERVICE_ACCOUNT_TOKEN` injected by the agent launcher. A scoped service account is the access boundary; a CLI vault selector alone does not restrict a personal account. Run agents in a separate OS user or container if they must also be isolated from your personal session's credentials and 1Password integration. The service-account credential itself must remain protected outside the repository.
+For ongoing agent access, use a dedicated vault containing only agent-accessible credentials and a [1Password service account](https://www.1password.dev/service-accounts/get-started) granted only `read_items` in that vault. Disable vault creation and omit write/share permissions. Authenticate the CLI with `OP_SERVICE_ACCOUNT_TOKEN` injected by the agent launcher. A scoped service account is the access boundary; a CLI vault selector alone does not restrict a personal account. Run agents in a separate OS user or container if they must also be isolated from your personal session's credentials and 1Password integration. Keep the plaintext service-account credential outside the repository; SOPS ciphertext can be versioned.
+
+On Pear, `op-agent` is now configured through `~/nixos-config`: its SOPS-encrypted service-account token is decrypted into a mode-0600 runtime file and loaded only for explicit child processes. The verified account `ai-agents` can see only the `Agents` vault; no token is exported globally. Setup and rotation are documented in that repository's `docs/1password-agent.md`. Use ordinary `op read` instead if you are authenticating manually on another machine.
+
+Automatic deployment was activated and verified on 2026-10-01. The fine-grained dispatch PAT was transferred directly from the scoped vault into GitHub without appearing in chat/output. The deployment job for tested release `cfba1c4` succeeded, homelab's receiver committed the new source tag/digest as `dcfe140`, and Flux reported Ready with one healthy pod using the expected image. NFS storage remains unchanged. The pipeline now deploys subsequent successful main builds automatically.
 
 ## Flux deployment
 
