@@ -1,5 +1,45 @@
 @import 'tailwindcss';
 
+.settings-managed-list {
+  max-height: 360px;
+  overflow-y: auto;
+  margin: 16px 0;
+}
+.settings-managed-entry {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+.settings-managed-entry > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.settings-managed-entry strong,
+.settings-managed-entry small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.settings-managed-entry small {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 3px;
+}
+.settings-managed-image {
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.settings-managed-image .food-icon {
+  width: 100%;
+  height: 100%;
+}
+
 @font-face {
   font-family: 'DM Sans';
   src: url('/fonts/dm-sans.ttf') format('truetype');

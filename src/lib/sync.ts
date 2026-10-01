@@ -9,7 +9,7 @@ import {
   confirmPantry,
 } from './meal-shopping'
 import { addIngredients, mergeItem } from './shopping'
-import { catalog } from './data'
+import { getProducts } from './catalog'
 
 const lists = [
   'items',
@@ -27,8 +27,14 @@ const maps = [
   'suggestionFeedback',
   'productImages',
   'productGroups',
+  'productDetails',
 ] as const
-const scalars = ['groups', 'favoriteRecipeIds', 'preferences'] as const
+const scalars = [
+  'groups',
+  'favoriteRecipeIds',
+  'preferences',
+  'archivedProductIds',
+] as const
 function equal(a: unknown, b: unknown) {
   return JSON.stringify(a ?? null) === JSON.stringify(b ?? null)
 }
@@ -135,7 +141,7 @@ export function optimistic(state: AppState, operation: Operation): AppState {
       return toggleShoppingItem(state, operation.id)
     }
     case 'addItem': {
-      const product = [...catalog, ...state.customProducts].find(
+      const product = getProducts(state).find(
         (product) => product.id === operation.productId,
       )
       return product
@@ -160,6 +166,7 @@ export function optimistic(state: AppState, operation: Operation): AppState {
           operation.ingredients,
           operation.multiplier,
           state.customProducts,
+          getProducts(state),
         ),
       }
     case 'removeItem':

@@ -1,6 +1,6 @@
+import { getProducts } from '../lib/catalog'
 import { useState } from 'react'
 import { Archive, History, Plus, X, Check, RefreshCw } from 'lucide-react'
-import { catalog } from '../lib/data'
 import { useApp } from '../lib/state'
 import { useLearning } from '../lib/learning'
 import { Modal, SectionTitle } from './ui'
@@ -13,7 +13,7 @@ export function KitchenTools() {
   const [quantity, setQuantity] = useState(1)
   const [unit, setUnit] = useState('pc')
   const [expiry, setExpiry] = useState('')
-  const products = [...catalog, ...state.customProducts]
+  const products = getProducts(state)
   const product = products.find(
     (p) => p.name.toLowerCase() === name.toLowerCase(),
   )

@@ -80,11 +80,10 @@ export function addIngredients(
   ingredients: Ingredient[],
   multiplier = 1,
   customProducts: Product[] = [],
+  products: Product[] = [...catalog, ...customProducts],
 ): ShoppingItem[] {
   return ingredients.reduce((result, ingredient) => {
-    const product = [...catalog, ...customProducts].find(
-      (p) => p.id === ingredient.productId,
-    )
+    const product = products.find((p) => p.id === ingredient.productId)
     return product
       ? mergeItem(
           result,

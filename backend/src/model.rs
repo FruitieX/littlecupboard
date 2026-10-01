@@ -204,6 +204,10 @@ pub struct HouseholdState {
     pub product_images: BTreeMap<String, String>,
     #[serde(default)]
     pub product_groups: BTreeMap<String, String>,
+    #[serde(default)]
+    pub product_details: BTreeMap<String, Product>,
+    #[serde(default)]
+    pub archived_product_ids: Vec<String>,
 }
 
 #[derive(Clone, Deserialize, Serialize, TS)]
@@ -379,5 +383,7 @@ pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
         },
         product_images: BTreeMap::new(),
         product_groups: BTreeMap::new(),
+        product_details: BTreeMap::new(),
+        archived_product_ids: vec![],
     }
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Check, LoaderCircle, Sparkles, Trash2 } from 'lucide-react'
 import { useApp } from '../lib/state'
 import { api, post } from '../lib/http'
-import { SectionTitle } from './ui'
+import { Modal, SectionTitle } from './ui'
 
 type ProviderConfig = {
   transport: 'api' | 'companion'
@@ -40,6 +40,9 @@ export function AISettings() {
   const [error, setError] = useState('')
   const [companion, setCompanion] = useState({ paired: false, online: false })
   const [pairingToken, setPairingToken] = useState('')
+  const [confirmation, setConfirmation] = useState<
+    'remove' | 'revoke' | 'replace' | null
+  >(null)
   useEffect(() => {
     if (session.user.role !== 'owner') return
     void api<{
@@ -82,6 +85,12 @@ export function AISettings() {
   ) {
     setConfig((current) => ({ ...current, [key]: value }))
     setMessage('')
+  }
+  async function pairCompanion() {
+    const result = await post<{ token: string }>('/ai/companion', {})
+    setPairingToken(result.token)
+    setCompanion({ paired: true, online: false })
+    setMessage('New pairing token created. Previous worker access was revoked.')
   }
   if (session.user.role !== 'owner')
     return (
@@ -182,17 +191,9 @@ export function AISettings() {
                 className="secondary-button"
                 disabled={busy}
                 onClick={() =>
-                  void run(async () => {
-                    const result = await post<{ token: string }>(
-                      '/ai/companion',
-                      {},
-                    )
-                    setPairingToken(result.token)
-                    setCompanion({ paired: true, online: false })
-                    setMessage(
-                      'New pairing token created. Previous worker access was revoked.',
-                    )
-                  })
+                  companion.paired
+                    ? setConfirmation('replace')
+                    : void run(pairCompanion)
                 }
               >
                 {companion.paired
@@ -232,14 +233,7 @@ export function AISettings() {
                   type="button"
                   className="text-button danger"
                   disabled={busy}
-                  onClick={() =>
-                    void run(async () => {
-                      await api('/ai/companion', { method: 'DELETE' })
-                      setCompanion({ paired: false, online: false })
-                      setPairingToken('')
-                      setMessage('Companion access revoked.')
-                    })
-                  }
+                  onClick={() => setConfirmation('revoke')}
                 >
                   Revoke companion access
                 </button>
@@ -493,27 +487,92 @@ export function AISettings() {
               {error}
             </p>
           )}
+          {(hasKey || companion.paired || session.aiEnabled) && (
+            <button
+              type="button"
+              className="text-button danger"
+              disabled={busy}
+              onClick={() => setConfirmation('remove')}
+            >
+              <Trash2 size={15} />
+              Disconnect and remove credentials
+            </button>
+          )}
         </form>
       </details>
-      {(hasKey || session.aiEnabled) && (
-        <button
-          className="text-button danger"
-          disabled={busy}
-          onClick={() =>
-            void run(async () => {
-              await api('/ai/config', { method: 'DELETE' })
-              setConfig(defaults)
-              setHasKey(false)
-              setApiKey('')
-              await refreshSession()
-              setMessage('Provider configuration and credentials removed.')
-            })
-          }
-        >
-          <Trash2 size={15} />
-          Disconnect and remove credentials
-        </button>
-      )}
+      <Modal
+        open={confirmation !== null}
+        onOpenChange={(open) => {
+          if (!open && !busy) setConfirmation(null)
+        }}
+        title={
+          confirmation === 'replace'
+            ? 'Replace companion token?'
+            : confirmation === 'revoke'
+              ? 'Revoke companion access?'
+              : 'Disconnect AI assistant?'
+        }
+        description={
+          confirmation === 'replace'
+            ? 'The current companion will stop working until you install the new pairing token on your agent machine.'
+            : confirmation === 'revoke'
+              ? 'This stops the companion for your whole family. You will need to pair it again to reconnect.'
+              : 'This removes the saved provider settings and credentials and revokes companion access for your whole family. You will need to configure the assistant again. Recipes and shopping lists are kept.'
+        }
+      >
+        {error && (
+          <p className="form-error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="modal-actions">
+          <button
+            className="secondary-button"
+            type="button"
+            autoFocus
+            disabled={busy}
+            onClick={() => setConfirmation(null)}
+          >
+            Cancel
+          </button>
+          <button
+            className="secondary-button danger"
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void run(async () => {
+                if (confirmation === 'replace') {
+                  await pairCompanion()
+                } else if (confirmation === 'revoke') {
+                  await api('/ai/companion', { method: 'DELETE' })
+                  setCompanion({ paired: false, online: false })
+                  setPairingToken('')
+                  setMessage('Companion access revoked.')
+                } else if (confirmation === 'remove') {
+                  await api('/ai/config', { method: 'DELETE' })
+                  const reset = await api<{ config: ProviderConfig }>(
+                    '/ai/config',
+                  )
+                  setConfig(reset.config)
+                  setHasKey(false)
+                  setApiKey('')
+                  setCompanion({ paired: false, online: false })
+                  setPairingToken('')
+                  await refreshSession()
+                  setMessage('Provider configuration and credentials removed.')
+                }
+                setConfirmation(null)
+              })
+            }
+          >
+            {confirmation === 'replace'
+              ? 'Replace token'
+              : confirmation === 'revoke'
+                ? 'Revoke access'
+                : 'Disconnect and delete credentials'}
+          </button>
+        </div>
+      </Modal>
     </section>
   )
 }

@@ -131,6 +131,7 @@ pub fn summarize(
         if let Some(interval) = interval
             && elapsed >= interval
             && !hidden
+            && !state.archived_product_ids.contains(id)
             && !state
                 .items
                 .iter()

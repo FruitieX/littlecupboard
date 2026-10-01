@@ -6,6 +6,10 @@ A shared family shopping list, recipe book and weekly lunch planner, ready to se
 
 Missing meal ingredients automatically join the list with a small source marker. Recipes support editing, favorites, tags, serving scaling, custom ingredients and private photos. Current/next-week lunches have serving counts and cooked/skipped feedback. Confirm pantry amounts or use conservative purchase estimates; the app keeps purchased meal ingredients reserved and releases them when plans change.
 
+Settings manages shops, aisle order, groups, item names/aliases/pictures, recipes, family/account details and backups. Item and recipe management is collapsed and searchable. Archive catalog items to hide suggestions without breaking existing recipe ingredients; restore them later, or permanently delete unreferenced custom items. Shared deletions and AI disconnection require confirmation. AI connection setup and advanced prompts are collapsed and owner-only.
+
+ForkBasket is an installable PWA with a standalone manifest, app icons and an offline shell. On Android, open its private HTTPS address in Chrome and choose **Add to home screen → Install**. The phone needs LAN/VPN access for synchronization; queued shopping changes survive offline use.
+
 Accounts, expiring invitations, secure cookie sessions, SQLite transactions and SSE keep independent devices together. A persisted offline outbox and installable app shell keep shopping usable through connection loss. Concurrent edits get explicit review rather than overwriting another person’s changes. History supports guarded undo and shopping-trip completion.
 
 Shopping patterns produce explained restock suggestions after repeated purchases, with confidence, preferred descriptions/packages, store/day signals, product associations, snoozing and dismissal. Meal suggestions use favorites, ratings, rotation, dietary/ingredient preferences and likely ingredients. Discovery offers reviewed variations of saved recipes. Inventory is best effort, and estimates are distinguished from confirmed observations.

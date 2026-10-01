@@ -1,4 +1,5 @@
-import { catalog, recipes } from './data'
+import { getProducts } from './catalog'
+import { recipes } from './data'
 import type { Amount, AppState, PlanCredit, ShoppingItem } from './data'
 import { dateKey, mondayOfWeek, householdDate } from './shopping'
 
@@ -201,8 +202,7 @@ export function getShoppingItems(
       }
     const combined = [...total].map(([unit, quantity]) => ({ unit, quantity }))
     const product =
-      existing ??
-      [...catalog, ...state.customProducts].find((product) => product.id === id)
+      existing ?? getProducts(state).find((product) => product.id === id)
     if (!product) return []
     if (!combined.length)
       return existing?.checked

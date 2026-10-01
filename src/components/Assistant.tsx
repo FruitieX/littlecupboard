@@ -1,3 +1,4 @@
+import { getProducts } from '../lib/catalog'
 import { useState } from 'react'
 import {
   Sparkles,
@@ -14,7 +15,6 @@ import { post, uploadImage } from '../lib/http'
 import { Markdown } from './Markdown'
 import { FoodIcon } from './FoodIcon'
 import type { Ingredient, Product, Recipe } from '../lib/data'
-import { catalog } from '../lib/data'
 import { Modal, SectionTitle } from './ui'
 
 type Proposal = {
@@ -201,11 +201,7 @@ export function Assistant() {
       setBusy(false)
     }
   }
-  const products = [
-    ...catalog,
-    ...state.customProducts,
-    ...(proposal?.products ?? []),
-  ]
+  const products = [...getProducts(state), ...(proposal?.products ?? [])]
   function toggle<T>(values: T[], value: T, setter: (values: T[]) => void) {
     setter(
       values.includes(value)

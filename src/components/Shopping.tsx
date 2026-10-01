@@ -1,7 +1,8 @@
+import { getProducts } from '../lib/catalog'
 import { useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Check, Plus, Search, CalendarDays } from 'lucide-react'
-import { catalog, categories } from '../lib/data'
+import { categories } from '../lib/data'
 import type { Category, Product, ShoppingItem } from '../lib/data'
 import { useApp } from '../lib/state'
 import { useLearning } from '../lib/learning'
@@ -60,7 +61,7 @@ export function Shopping() {
       }))
     : [{ category: null, items: sorted }]
   const checked = shoppingItems.filter((i) => i.checked)
-  const products = [...catalog, ...state.customProducts].map((p) => ({
+  const products = getProducts(state, false).map((p) => ({
     ...p,
     category: state.productGroups?.[p.id] ?? p.category,
   }))
@@ -504,7 +505,7 @@ function ItemEditor({
   const [image, setImage] = useState(
     state.productImages?.[item?.id ?? ''] ?? item?.image ?? '',
   )
-  const existing = [...catalog, ...state.customProducts].find(
+  const existing = getProducts(state).find(
     (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
   )
   return (

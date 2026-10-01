@@ -97,6 +97,8 @@ export type AppState = {
   preferences?: import('./api/Preferences').Preferences
   productGroups?: Record<string, string>
   productImages?: Record<string, string>
+  productDetails?: Record<string, Product>
+  archivedProductIds?: string[]
   purchasedCoverage?: PlanCoverage
 }
 

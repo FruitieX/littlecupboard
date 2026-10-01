@@ -1,3 +1,5 @@
+import { getProducts } from '../lib/catalog'
+import { deleteRecipe } from '../lib/catalog'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
@@ -12,7 +14,7 @@ import {
   ArrowUpRight,
   BookOpen,
 } from 'lucide-react'
-import { catalog, findProduct } from '../lib/data'
+import { findProduct } from '../lib/data'
 import type { Recipe, Ingredient } from '../lib/data'
 import { useApp } from '../lib/state'
 import { EmptyState, Modal } from './ui'
@@ -303,7 +305,7 @@ export function RecipeDetail({
         <div className="ingredient-list">
           {recipe.ingredients.map((ingredient) => {
             const product =
-              state.customProducts.find(
+              getProducts(state).find(
                 (product) => product.id === ingredient.productId,
               ) ?? findProduct(ingredient.productId)
             return (
@@ -383,19 +385,7 @@ export function RecipeDetail({
                 )
               )
                 return
-              update((s) => ({
-                ...s,
-                recipeBook: s.recipeBook?.filter((r) => r.id !== recipe.id),
-                customRecipes: s.customRecipes.filter(
-                  (r) => r.id !== recipe.id,
-                ),
-                plan: Object.fromEntries(
-                  Object.entries(s.plan).filter(([, id]) => id !== recipe.id),
-                ),
-                favoriteRecipeIds: s.favoriteRecipeIds.filter(
-                  (id) => id !== recipe.id,
-                ),
-              }))
+              update((s) => deleteRecipe(s, recipe.id))
               onClose()
             }}
           >
@@ -407,7 +397,7 @@ export function RecipeDetail({
   )
 }
 
-function RecipeEditor({
+export function RecipeEditor({
   onClose,
   recipe,
 }: {
@@ -440,7 +430,10 @@ function RecipeEditor({
     setUploadCount((count) => Math.max(0, count + (busy ? 1 : -1)))
   const [pictures, setPictures] = useState(state.productImages ?? {})
   const [error, setError] = useState('')
-  const choices = [...catalog, ...products]
+  const knownProducts = getProducts({ ...state, customProducts: products })
+  const choices = knownProducts.filter(
+    (product) => !state.archivedProductIds?.includes(product.id),
+  )
   function addIngredient() {
     if (!ingredientName.trim() || quantity <= 0 || !unit.trim()) return
     let product = choices.find(
@@ -480,7 +473,7 @@ function RecipeEditor({
       onOpenChange={(v) => {
         if (!v) onClose()
       }}
-      title={recipe ? 'Make it even better' : 'Keep a good thing'}
+      title={recipe ? 'Edit recipe' : 'Create recipe'}
       description="Ingredients, method, and recipe notes."
     >
       <form
@@ -671,7 +664,7 @@ function RecipeEditor({
           </button>
           <div className="editable-ingredients">
             {ingredients.map((ingredient) => {
-              const product = choices.find(
+              const product = knownProducts.find(
                 (p) => p.id === ingredient.productId,
               )!
               return (

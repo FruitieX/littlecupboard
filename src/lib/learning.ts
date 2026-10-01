@@ -1,8 +1,8 @@
+import { getProducts } from './catalog'
 import { useEffect, useState } from 'react'
 import { api } from './http'
 import { useApp } from './state'
 import type { AppState, Product, Recipe } from './data'
-import { catalog } from './data'
 import type { HistoryEvent } from './api/HistoryEvent'
 export type Restock = {
   product: Product
@@ -83,9 +83,7 @@ export function recipeScore(
   if (excluded)
     return { score: -1000, reasons: ['Contains an ingredient you avoid'] }
   const products = recipe.ingredients
-    .map((i) =>
-      [...catalog, ...state.customProducts].find((p) => p.id === i.productId),
-    )
+    .map((i) => getProducts(state).find((p) => p.id === i.productId))
     .filter((p): p is Product => !!p)
   const dietary = prefs?.dietary.map((d) => d.toLowerCase()) ?? []
   const incompatible =

@@ -82,6 +82,19 @@ try {
       { FORKBASKET_PORT: '3300', FORKBASKET_API_URL: backendUrl },
     )
   await wait(frontendUrl)
+  const manifest = await (
+    await fetch(`${frontendUrl}/manifest.webmanifest`)
+  ).json()
+  assert.equal(manifest.display, 'standalone')
+  assert.equal(manifest.start_url, '/')
+  for (const edge of [192, 512]) {
+    const icon = await fetch(`${frontendUrl}/icon-${edge}.png`)
+    assert.ok(icon.ok)
+    const png = Buffer.from(await icon.arrayBuffer())
+    assert.equal(png.readUInt32BE(16), edge)
+    assert.equal(png.readUInt32BE(20), edge)
+  }
+  if (production) assert.ok((await fetch(`${frontendUrl}/sw.js`)).ok)
   browser = await launchBrowser()
   const options = {
     viewport: { width: 390, height: 844 },
@@ -282,6 +295,39 @@ try {
   await owner.goto(frontendUrl)
   await settle(owner)
   await owner.getByRole('button', { name: 'Pantry', exact: true }).click()
+  await owner.getByLabel('Pantry item', { exact: true }).fill('Rice')
+  await owner.getByLabel('Quantity', { exact: true }).fill('500')
+  await owner.getByLabel('Unit', { exact: true }).fill('g')
+  await owner
+    .getByRole('button', { name: 'Confirm amount', exact: true })
+    .click()
+  await owner
+    .getByRole('dialog')
+    .getByText(/500 g · Confirmed/)
+    .waitFor()
+  await owner
+    .getByRole('button', { name: 'Remove Rice from pantry', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Remove Rice from pantry', exact: true })
+    .waitFor({ state: 'hidden' })
+  await owner.waitForFunction(
+    async () => !(await (await fetch('/api/state')).json()).state.pantry.rice,
+  )
+  await owner.reload()
+  await settle(owner)
+  await owner.getByRole('button', { name: 'Pantry', exact: true }).click()
+  assert.equal(
+    await owner
+      .getByRole('button', { name: 'Remove Rice from pantry', exact: true })
+      .count(),
+    0,
+  )
+  assert.equal(await owner.getByText(/Review changes/).count(), 0)
+  assert.equal(
+    (await request(wife, '/state', undefined, 'GET')).state.pantry.rice,
+    undefined,
+  )
   await owner.getByLabel('Pantry item', { exact: true }).fill('Rice')
   await owner.getByLabel('Quantity', { exact: true }).fill('500')
   await owner.getByLabel('Unit', { exact: true }).fill('g')
@@ -515,6 +561,7 @@ try {
   await owner
     .getByLabel('Provider base URL', { exact: true })
     .fill('http://127.0.0.1:' + provider.address().port + '/v1')
+  await owner.getByLabel(/^API key/).fill('test-fixture-key')
   await owner.getByLabel('Chat model', { exact: true }).fill('fixture-chat')
   await owner
     .getByRole('button', { name: 'Test connection', exact: true })
@@ -659,6 +706,10 @@ try {
     .getByLabel('Move its items to', { exact: true })
     .selectOption(targetGroup)
   await owner.getByRole('button', { name: 'Delete group', exact: true }).click()
+  await owner
+    .getByRole('dialog', { name: 'Delete group?' })
+    .getByRole('button', { name: 'Delete group', exact: true })
+    .click()
   await settle(owner)
   await owner.getByRole('dialog').waitFor({ state: 'hidden' })
   grouped = (await request(owner, '/state', undefined, 'GET')).state
@@ -935,8 +986,36 @@ try {
     await token.waitFor()
     assert.equal(await token.getAttribute('type'), 'password')
     assert.match(await token.inputValue(), /^[a-f0-9]{64}$/)
+    const originalToken = await token.inputValue()
     await owner
       .getByRole('button', { name: 'Revoke companion access', exact: true })
+      .click()
+    let confirmation = owner.getByRole('dialog', {
+      name: 'Revoke companion access?',
+    })
+    await confirmation.waitFor()
+    await confirmation
+      .getByRole('button', { name: 'Cancel', exact: true })
+      .click()
+    assert.equal(
+      (await request(owner, '/ai/config', undefined, 'GET')).companion.paired,
+      true,
+    )
+    await owner
+      .getByRole('button', { name: 'Replace companion token', exact: true })
+      .click()
+    confirmation = owner.getByRole('dialog', {
+      name: 'Replace companion token?',
+    })
+    await confirmation.waitFor()
+    await owner.keyboard.press('Escape')
+    assert.equal(await token.inputValue(), originalToken)
+    await owner
+      .getByRole('button', { name: 'Revoke companion access', exact: true })
+      .click()
+    await owner
+      .getByRole('dialog', { name: 'Revoke companion access?' })
+      .getByRole('button', { name: 'Revoke access', exact: true })
       .click()
     await owner
       .getByText('Companion access revoked.', { exact: true })
@@ -950,6 +1029,285 @@ try {
   }
   console.log(
     'Companion selection, model/reasoning defaults, masked pairing and revocation passed on mobile/desktop.',
+  )
+  await owner.setViewportSize({ width: 390, height: 844 })
+  await owner.goto(`${frontendUrl}/settings`)
+  await settle(owner)
+  const disconnect = owner.getByRole('button', {
+    name: 'Disconnect and remove credentials',
+    exact: true,
+  })
+  assert.equal(
+    await disconnect.isVisible(),
+    false,
+    'Credential deletion is hidden inside collapsed AI setup',
+  )
+  await owner.getByText('Configure AI assistant', { exact: true }).click()
+  const savedProvider = await request(owner, '/ai/config', undefined, 'GET')
+  const beforeRemoval = (await request(owner, '/state', undefined, 'GET')).state
+  await disconnect.click()
+  let confirmation = owner.getByRole('dialog', {
+    name: 'Disconnect AI assistant?',
+  })
+  await confirmation.waitFor()
+  assert.equal(
+    (await request(owner, '/ai/config', undefined, 'GET')).hasKey,
+    savedProvider.hasKey,
+    'Opening confirmation does not remove credentials',
+  )
+  await confirmation
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click()
+  assert.equal(
+    (await request(owner, '/ai/config', undefined, 'GET')).hasKey,
+    savedProvider.hasKey,
+    'Cancel preserves credentials',
+  )
+  assert.deepEqual(
+    (await request(owner, '/ai/config', undefined, 'GET')).config,
+    savedProvider.config,
+  )
+  await disconnect.click()
+  await owner.keyboard.press('Escape')
+  assert.equal(
+    (await request(owner, '/ai/config', undefined, 'GET')).hasKey,
+    savedProvider.hasKey,
+    'Escape preserves credentials',
+  )
+  await disconnect.click()
+  confirmation = owner.getByRole('dialog', { name: 'Disconnect AI assistant?' })
+  await confirmation.screenshot({
+    path: 'test-results/ai-disconnect-confirmation-mobile.png',
+  })
+  await confirmation
+    .getByRole('button', {
+      name: 'Disconnect and delete credentials',
+      exact: true,
+    })
+    .click()
+  await owner
+    .getByText('Provider configuration and credentials removed.', {
+      exact: true,
+    })
+    .waitFor()
+  assert.equal(
+    (await request(owner, '/ai/config', undefined, 'GET')).hasKey,
+    false,
+  )
+  assert.equal(
+    (await request(owner, '/ai/config', undefined, 'GET')).companion.paired,
+    false,
+  )
+  assert.equal(
+    (await request(owner, '/auth/me', undefined, 'GET')).aiEnabled,
+    false,
+  )
+  assert.deepEqual(
+    (await request(owner, '/state', undefined, 'GET')).state,
+    beforeRemoval,
+    'Deleting AI credentials does not change household data',
+  )
+  await owner.goto(`${frontendUrl}/recipes`)
+  await settle(owner)
+  await owner
+    .getByRole('button', { name: 'Open Imported recipe', exact: true })
+    .waitFor()
+  console.log(
+    'Credential deletion is collapsed, requires explicit confirmation, and preserves recipes; cancel and Escape keep the connection.',
+  )
+  await owner.goto(`${frontendUrl}/settings`)
+  await settle(owner)
+  await owner.getByText('Manage items', { exact: true }).click()
+  await owner.getByLabel('Search managed items', { exact: true }).fill('apples')
+  await owner
+    .getByRole('button', { name: 'Edit catalog item Apples', exact: true })
+    .click()
+  await owner.getByLabel('Item name', { exact: true }).fill('Eating apples')
+  await owner
+    .getByLabel('Search aliases', { exact: true })
+    .fill('crunchy fruit')
+  await owner.getByRole('button', { name: 'Save item', exact: true }).click()
+  await owner
+    .getByRole('button', {
+      name: 'Edit catalog item Eating apples',
+      exact: true,
+    })
+    .waitFor()
+  await owner.waitForFunction(
+    async () =>
+      (await (await fetch('/api/state')).json()).state.productDetails.apples
+        ?.name === 'Eating apples',
+  )
+  await owner
+    .getByRole('button', {
+      name: 'Edit catalog item Eating apples',
+      exact: true,
+    })
+    .click()
+  await owner.getByText('Archive or delete item', { exact: true }).click()
+  await owner.getByRole('button', { name: 'Archive item', exact: true }).click()
+  await owner
+    .getByRole('dialog', { name: 'Archive item?' })
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click()
+  assert.ok(
+    !(
+      await request(owner, '/state', undefined, 'GET')
+    ).state.archivedProductIds.includes('apples'),
+  )
+  await owner.getByRole('button', { name: 'Archive item', exact: true }).click()
+  await owner
+    .getByRole('dialog', { name: 'Archive item?' })
+    .getByRole('button', { name: 'Archive item', exact: true })
+    .click()
+  await owner.getByLabel('Show archived items', { exact: true }).check()
+  await owner
+    .getByRole('button', {
+      name: 'Edit catalog item Eating apples',
+      exact: true,
+    })
+    .click()
+  await owner.getByText('Restore or delete item', { exact: true }).click()
+  await owner.getByRole('button', { name: 'Restore item', exact: true }).click()
+  await owner.getByLabel('Show archived items', { exact: true }).uncheck()
+  await owner.getByRole('button', { name: 'Create item', exact: true }).click()
+  await owner
+    .getByLabel('Item name', { exact: true })
+    .fill('Settings test item')
+  await owner.getByRole('button', { name: 'Save item', exact: true }).click()
+  await owner
+    .getByLabel('Search managed items', { exact: true })
+    .fill('Settings test item')
+  await owner
+    .getByRole('button', {
+      name: 'Edit catalog item Settings test item',
+      exact: true,
+    })
+    .click()
+  await owner.getByText('Archive or delete item', { exact: true }).click()
+  await owner
+    .getByRole('button', { name: 'Delete item permanently', exact: true })
+    .click()
+  await owner
+    .getByRole('dialog', { name: 'Delete item permanently?' })
+    .getByRole('button', { name: 'Delete permanently', exact: true })
+    .click()
+  await owner
+    .getByRole('button', {
+      name: 'Edit catalog item Settings test item',
+      exact: true,
+    })
+    .waitFor({ state: 'hidden' })
+  await owner.getByText('Manage recipes', { exact: true }).click()
+  await owner
+    .getByLabel('Search managed recipes', { exact: true })
+    .fill('Imported recipe')
+  await owner
+    .getByRole('button', {
+      name: 'Edit saved recipe Imported recipe',
+      exact: true,
+    })
+    .click()
+  await owner
+    .getByLabel('Recipe name', { exact: true })
+    .fill('Imported family recipe')
+  await owner
+    .getByRole('button', { name: 'Save to our recipe book', exact: true })
+    .click()
+  await owner
+    .getByLabel('Search managed recipes', { exact: true })
+    .fill('Imported family recipe')
+  await owner
+    .getByRole('button', {
+      name: 'Delete saved recipe Imported family recipe',
+      exact: true,
+    })
+    .click()
+  await owner
+    .getByRole('dialog', { name: 'Delete recipe?' })
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click()
+  const recipeState = (await request(owner, '/state', undefined, 'GET')).state
+  const imported = recipeState.recipeBook.find(
+    (entry) => entry.name === 'Imported family recipe',
+  )
+  assert.ok(imported)
+  const plannedDay =
+    Object.keys(recipeState.plan)[0] ?? new Date().toISOString().slice(0, 10)
+  await request(owner, '/operations', {
+    id: crypto.randomUUID(),
+    operation: {
+      type: 'patch',
+      label: 'Plan managed recipe',
+      changes: [
+        {
+          collection: 'plan',
+          key: plannedDay,
+          field: null,
+          before: recipeState.plan[plannedDay] ?? null,
+          after: imported.id,
+        },
+      ],
+    },
+  })
+  await owner
+    .getByRole('button', {
+      name: 'Delete saved recipe Imported family recipe',
+      exact: true,
+    })
+    .click()
+  await owner
+    .getByRole('dialog', { name: 'Delete recipe?' })
+    .getByRole('button', { name: 'Delete recipe', exact: true })
+    .click()
+  await owner.waitForFunction(
+    async (id) =>
+      !(await (await fetch('/api/state')).json()).state.recipeBook.some(
+        (entry) => entry.id === id,
+      ),
+    imported.id,
+  )
+  const managed = (await request(owner, '/state', undefined, 'GET')).state
+  assert.ok(!Object.values(managed.plan).includes(imported.id))
+  assert.ok(
+    !managed.customProducts.some(
+      (entry) => entry.name === 'Settings test item',
+    ),
+  )
+  await owner.getByRole('button', { name: 'Add store', exact: true }).click()
+  await owner.getByLabel('Store name', { exact: true }).fill('Temporary shop')
+  await owner
+    .getByRole('dialog')
+    .getByRole('button', { name: 'Add store', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Remove Temporary shop', exact: true })
+    .click()
+  await owner
+    .getByRole('dialog', { name: 'Remove shop?' })
+    .getByRole('button', { name: 'Cancel', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Remove Temporary shop', exact: true })
+    .click()
+  await owner
+    .getByRole('dialog', { name: 'Remove shop?' })
+    .getByRole('button', { name: 'Remove shop', exact: true })
+    .click()
+  await owner.waitForFunction(
+    async () =>
+      !(await (await fetch('/api/state')).json()).state.stores.some(
+        (entry) => entry.name === 'Temporary shop',
+      ),
+  )
+  assert.equal(await owner.getByText(/Review changes/).count(), 0)
+  await owner.getByLabel('Search managed items', { exact: true }).fill('apples')
+  await owner
+    .locator('.settings-card')
+    .filter({ hasText: 'Manage items' })
+    .screenshot({ path: 'test-results/settings-management-mobile.png' })
+  console.log(
+    'Settings item edits/archive/restore/delete, recipe editing and planned deletion, and confirmed shop removal passed without sync conflicts.',
   )
   for (const width of [320, 390, 768, 1440]) {
     await owner.setViewportSize({ width, height: 900 })

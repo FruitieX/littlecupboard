@@ -1,4 +1,5 @@
-import { catalog, categories, type AppState } from './data'
+import { getProducts } from './catalog'
+import { categories, type AppState } from './data'
 
 /** Move every category reference in one household operation, retaining aisle order. */
 export function changeGroup(
@@ -22,7 +23,7 @@ export function changeGroup(
         : 'A group with that name already exists.',
     )
   const productGroups = { ...state.productGroups }
-  for (const product of [...catalog, ...state.customProducts])
+  for (const product of getProducts(state))
     if ((productGroups[product.id] ?? product.category) === source)
       productGroups[product.id] = target
   return {
@@ -31,6 +32,14 @@ export function changeGroup(
       ? groups.filter((group) => group !== source)
       : groups.map((group) => (group === source ? target : group)),
     productGroups,
+    productDetails: Object.fromEntries(
+      Object.entries(state.productDetails ?? {}).map(([id, product]) => [
+        id,
+        product.category === source
+          ? { ...product, category: target }
+          : product,
+      ]),
+    ),
     customProducts: state.customProducts.map((product) =>
       product.category === source ? { ...product, category: target } : product,
     ),

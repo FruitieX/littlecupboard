@@ -48,19 +48,35 @@ pub fn totals(values: &[Amount]) -> Vec<Amount> {
         .collect()
 }
 pub fn product(state: &HouseholdState, id: &str) -> Result<Product> {
-    let mut product = seed()
+    let product = seed()
         .catalog
         .into_iter()
         .chain(state.custom_products.iter().cloned())
         .find(|product| product.id == id)
         .ok_or_else(|| ApiError::bad("This product no longer exists."))?;
-    if let Some(image) = state.product_images.get(id) {
+    Ok(customize_product(state, product))
+}
+fn customize_product(state: &HouseholdState, mut product: Product) -> Product {
+    let id = product.id.clone();
+    if let Some(details) = state.product_details.get(&id) {
+        product = details.clone();
+    }
+    if let Some(image) = state.product_images.get(&id) {
         product.image = Some(image.clone());
     }
-    if let Some(group) = state.product_groups.get(id) {
+    if let Some(group) = state.product_groups.get(&id) {
         product.category = group.clone();
     }
-    Ok(product)
+    product
+}
+pub fn products(state: &HouseholdState, include_archived: bool) -> Vec<Product> {
+    seed()
+        .catalog
+        .into_iter()
+        .chain(state.custom_products.iter().cloned())
+        .filter(|entry| include_archived || !state.archived_product_ids.contains(&entry.id))
+        .map(|entry| customize_product(state, entry))
+        .collect()
 }
 fn recipe(state: &HouseholdState, id: &str) -> Option<Recipe> {
     state
@@ -819,7 +835,7 @@ pub fn apply_history_changes(state: &mut HouseholdState, changes: &[Change]) -> 
         if change.collection == "purchases" {
             let map = value["purchases"].as_object_mut().expect("model map");
             let current = map.get(&change.key).cloned().unwrap_or(Value::Null);
-            if current != change.before {
+            if !json_equal(&current, &change.before) {
                 return Err(ApiError::conflict());
             }
             if change.after.is_null() {
@@ -854,8 +870,14 @@ fn patch(state: &mut Value, change: &Change) -> Result<()> {
         "suggestionFeedback",
         "productImages",
         "productGroups",
+        "productDetails",
     ];
-    let scalars = ["groups", "favoriteRecipeIds", "preferences"];
+    let scalars = [
+        "groups",
+        "favoriteRecipeIds",
+        "preferences",
+        "archivedProductIds",
+    ];
     if !lists.contains(&change.collection.as_str())
         && !maps.contains(&change.collection.as_str())
         && !scalars.contains(&change.collection.as_str())
@@ -882,10 +904,10 @@ fn patch(state: &mut Value, change: &Change) -> Result<()> {
             let current = position
                 .map(|index| list[index].clone())
                 .unwrap_or(Value::Null);
-            if current == change.after {
+            if json_equal(&current, &change.after) {
                 return Ok(());
             }
-            if current != change.before {
+            if !json_equal(&current, &change.before) {
                 return Err(ApiError::conflict());
             }
             if change.after.is_null() {
@@ -911,10 +933,10 @@ fn patch(state: &mut Value, change: &Change) -> Result<()> {
             .as_object_mut()
             .ok_or_else(|| ApiError::bad("Invalid map."))?;
         let current = map.get(&change.key).cloned().unwrap_or(Value::Null);
-        if current == change.after {
+        if json_equal(&current, &change.after) {
             return Ok(());
         }
-        if current != change.before {
+        if !json_equal(&current, &change.before) {
             return Err(ApiError::conflict());
         }
         if change.after.is_null() {
@@ -937,11 +959,44 @@ fn patch(state: &mut Value, change: &Change) -> Result<()> {
     }
     Ok(())
 }
+// JavaScript serializes whole f64 quantities as integers. Compare their numeric
+// values recursively without rounding distinct large integers through f64.
+pub fn json_equal(a: &Value, b: &Value) -> bool {
+    match (a, b) {
+        (Value::Number(a), Value::Number(b)) if a.is_f64() != b.is_f64() => {
+            let (float, integer) = if a.is_f64() {
+                (a.as_f64().unwrap(), b)
+            } else {
+                (b.as_f64().unwrap(), a)
+            };
+            if float.fract() != 0.0 {
+                return false;
+            }
+            if let Some(value) = integer.as_i64() {
+                float >= i64::MIN as f64 && float < i64::MAX as f64 && float as i64 == value
+            } else if let Some(value) = integer.as_u64() {
+                float >= 0.0 && float < u64::MAX as f64 && float as u64 == value
+            } else {
+                false
+            }
+        }
+        (Value::Array(a), Value::Array(b)) => {
+            a.len() == b.len() && a.iter().zip(b).all(|(a, b)| json_equal(a, b))
+        }
+        (Value::Object(a), Value::Object(b)) => {
+            a.len() == b.len()
+                && a.iter()
+                    .all(|(key, a)| b.get(key).is_some_and(|b| json_equal(a, b)))
+        }
+        _ => a == b,
+    }
+}
+
 fn replace(current: &mut Value, before: &Value, after: &Value) -> Result<()> {
-    if current == after {
+    if json_equal(current, after) {
         return Ok(());
     }
-    if current != before {
+    if !json_equal(current, before) {
         return Err(ApiError::conflict());
     }
     *current = after.clone();
@@ -977,7 +1032,7 @@ pub fn changes(before: &HouseholdState, after: &HouseholdState) -> Result<Vec<Ch
                 .find(|item| item["id"].as_str() == Some(key))
                 .cloned()
                 .unwrap_or(Value::Null);
-            if before != after {
+            if !json_equal(&before, &after) {
                 result.push(Change {
                     collection: collection.into(),
                     key: key.into(),
@@ -998,6 +1053,7 @@ pub fn changes(before: &HouseholdState, after: &HouseholdState) -> Result<Vec<Ch
         "suggestionFeedback",
         "productImages",
         "productGroups",
+        "productDetails",
         "purchases",
     ] {
         let old = a[collection].as_object().expect("model map");
@@ -1006,7 +1062,7 @@ pub fn changes(before: &HouseholdState, after: &HouseholdState) -> Result<Vec<Ch
         for key in keys {
             let before = old.get(key).cloned().unwrap_or(Value::Null);
             let after = new.get(key).cloned().unwrap_or(Value::Null);
-            if before != after {
+            if !json_equal(&before, &after) {
                 result.push(Change {
                     collection: collection.into(),
                     key: key.into(),
@@ -1017,7 +1073,13 @@ pub fn changes(before: &HouseholdState, after: &HouseholdState) -> Result<Vec<Ch
             }
         }
     }
-    for collection in ["groups", "favoriteRecipeIds", "preferences", "storeId"] {
+    for collection in [
+        "groups",
+        "favoriteRecipeIds",
+        "preferences",
+        "storeId",
+        "archivedProductIds",
+    ] {
         if a[collection] != b[collection] {
             result.push(Change {
                 collection: collection.into(),
@@ -1090,7 +1152,33 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
                 .map(|product| product.id.clone()),
         )
         .collect::<BTreeSet<_>>();
-    for product in &state.custom_products {
+    let built_in_ids: BTreeSet<_> = seed().catalog.into_iter().map(|p| p.id).collect();
+    if state
+        .archived_product_ids
+        .iter()
+        .any(|id| !products.contains(id))
+        || state
+            .archived_product_ids
+            .iter()
+            .collect::<BTreeSet<_>>()
+            .len()
+            != state.archived_product_ids.len()
+        || state
+            .product_details
+            .iter()
+            .any(|(id, p)| id != &p.id || !built_in_ids.contains(id))
+        || state
+            .custom_products
+            .iter()
+            .any(|p| built_in_ids.contains(&p.id))
+    {
+        return Err(ApiError::bad("Invalid catalog customization."));
+    }
+    for product in state
+        .custom_products
+        .iter()
+        .chain(state.product_details.values())
+    {
         if !valid_id(&product.id)
             || product.name.trim().is_empty()
             || !text(&product.name, 100)

@@ -7,6 +7,126 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
+#[test]
+fn pantry_removal_accepts_the_same_whole_number_serialized_by_a_browser() {
+    let mut state = model::fresh_state(false, "UTC".into());
+    state.pantry.insert(
+        "cherry-tomatoes".into(),
+        model::PantryItem {
+            amounts: vec![model::Amount {
+                quantity: 2.0,
+                unit: "pc".into(),
+            }],
+            confirmed: false,
+            observed_at: "2026-10-01T12:00:00+00:00".into(),
+            expires_at: None,
+            note: "".into(),
+        },
+    );
+    let before = json!({"amounts":[{"quantity":2,"unit":"pc"}],"confirmed":false,"observedAt":"2026-10-01T12:00:00+00:00","expiresAt":null,"note":""});
+    let change = model::Change {
+        collection: "pantry".into(),
+        key: "cherry-tomatoes".into(),
+        field: None,
+        before,
+        after: Value::Null,
+    };
+    domain::apply_changes(&mut state, &[change]).unwrap();
+    assert!(!state.pantry.contains_key("cherry-tomatoes"));
+}
+
+#[test]
+fn browser_number_comparison_preserves_actual_conflicts_and_large_integer_precision() {
+    assert!(domain::json_equal(
+        &json!({"quantity": 2.0, "nested":[1.0,0.5]}),
+        &json!({"quantity":2,"nested":[1,0.5]})
+    ));
+    assert!(!domain::json_equal(
+        &json!({"quantity":2.0}),
+        &json!({"quantity":3})
+    ));
+    assert!(!domain::json_equal(
+        &json!(9007199254740993u64),
+        &json!(9007199254740992.0)
+    ));
+    assert!(!domain::json_equal(
+        &json!({"quantity":2}),
+        &json!({"quantity":2,"note":null})
+    ));
+    let mut state = model::fresh_state(false, "UTC".into());
+    state.pantry.insert(
+        "cherry-tomatoes".into(),
+        model::PantryItem {
+            amounts: vec![model::Amount {
+                quantity: 3.0,
+                unit: "pc".into(),
+            }],
+            confirmed: true,
+            observed_at: "2026-10-01T12:00:00+00:00".into(),
+            expires_at: None,
+            note: "".into(),
+        },
+    );
+    let mut before = serde_json::to_value(&state.pantry["cherry-tomatoes"]).unwrap();
+    before["amounts"][0]["quantity"] = json!(2);
+    let changes = [model::Change {
+        collection: "pantry".into(),
+        key: "cherry-tomatoes".into(),
+        field: None,
+        before,
+        after: Value::Null,
+    }];
+    assert!(domain::apply_changes(&mut state, &changes).is_err());
+    assert_eq!(state.pantry["cherry-tomatoes"].amounts[0].quantity, 3.0);
+}
+
+#[tokio::test]
+async fn household_catalog_overrides_are_validated_and_archives_keep_recipe_references() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let mut pasta = model::seed()
+        .catalog
+        .into_iter()
+        .find(|product| product.id == "pasta")
+        .unwrap();
+    pasta.name = "Family pasta".into();
+    pasta.aliases = vec!["family noodles".into()];
+    let details = serde_json::to_value(&pasta).unwrap();
+    let (status, state) = operation(&server, &cookie, json!({"type":"patch","label":"Edit catalog","changes":[{"collection":"productDetails","key":"pasta","field":null,"before":null,"after":details},{"collection":"archivedProductIds","key":"","field":null,"before":[],"after":["pasta"]}]})).await;
+    assert_eq!(status, StatusCode::OK, "{state}");
+    let household: model::HouseholdState = serde_json::from_value(state["state"].clone()).unwrap();
+    assert_eq!(
+        domain::product(&household, "pasta").unwrap().name,
+        "Family pasta"
+    );
+    assert!(
+        !domain::products(&household, false)
+            .iter()
+            .any(|product| product.id == "pasta")
+    );
+    assert!(
+        domain::products(&household, true)
+            .iter()
+            .any(|product| product.id == "pasta")
+    );
+    let invalid = operation(&server,&cookie,json!({"type":"patch","label":"Invalid edit","changes":[{"collection":"productDetails","key":"missing-product","field":null,"before":null,"after":details}]})).await;
+    assert_eq!(invalid.0, StatusCode::BAD_REQUEST);
+    let stale = operation(&server,&cookie,json!({"type":"patch","label":"Stale edit","changes":[{"collection":"productDetails","key":"pasta","field":null,"before":null,"after":null}]})).await;
+    assert_eq!(stale.0, StatusCode::CONFLICT);
+    assert_eq!(
+        request(
+            &server,
+            Method::GET,
+            "/api/state",
+            Value::Null,
+            Some(&cookie)
+        )
+        .await
+        .1["state"]["productDetails"]["pasta"]["name"],
+        "Family pasta"
+    );
+}
+
 fn worker_headers(token: &str) -> axum::http::HeaderMap {
     let mut headers = axum::http::HeaderMap::new();
     headers.insert("authorization", format!("Bearer {token}").parse().unwrap());

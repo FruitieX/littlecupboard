@@ -12,7 +12,8 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useApp } from '../lib/state'
-import { SectionTitle } from './ui'
+import { Modal, SectionTitle } from './ui'
+import { LibrarySettings } from './LibrarySettings'
 import { StoreEditor } from './StoreEditor'
 import type { Store } from '../lib/data'
 import { AccountSettings } from './AccountSettings'
@@ -27,6 +28,7 @@ export function Settings() {
   )
   const [storeId, setStoreId] = useState<string | null>(null)
   const [editor, setEditor] = useState<Store | 'new' | null>(null)
+  const [removeStore, setRemoveStore] = useState<Store | null>(null)
   const store =
     state.stores.find((s) => s.id === (storeId ?? state.storeId)) ??
     state.stores[0]
@@ -143,23 +145,14 @@ export function Settings() {
             {state.stores.length > 1 && (
               <button
                 className="text-button danger remove-store"
-                onClick={() => {
-                  update((s) => ({
-                    ...s,
-                    stores: s.stores.filter((x) => x.id !== store.id),
-                    storeId:
-                      s.storeId === store.id
-                        ? s.stores.find((x) => x.id !== store.id)!.id
-                        : s.storeId,
-                  }))
-                  setStoreId(state.stores.find((x) => x.id !== store.id)!.id)
-                }}
+                onClick={() => setRemoveStore(store)}
               >
                 <Trash2 size={15} />
                 Remove {store.name}
               </button>
             )}
           </section>
+          <LibrarySettings />
         </div>
         <aside>
           <HouseholdSettings />
@@ -177,6 +170,53 @@ export function Settings() {
           }}
         />
       )}
+      <Modal
+        open={!!removeStore}
+        onOpenChange={(open) => {
+          if (!open) setRemoveStore(null)
+        }}
+        title="Remove shop?"
+        description={`Remove ${removeStore?.name ?? 'this shop'} and its aisle order for your family? Shopping items and purchase history are kept.`}
+      >
+        <div className="modal-actions">
+          <button
+            className="secondary-button"
+            autoFocus
+            onClick={() => setRemoveStore(null)}
+          >
+            Cancel
+          </button>
+          <button
+            className="secondary-button danger"
+            disabled={state.stores.length <= 1}
+            onClick={() => {
+              if (!removeStore) return
+              const fallback = state.stores.find(
+                (entry) => entry.id !== removeStore.id,
+              )
+              if (!fallback) return
+              update((current) => {
+                const stores = current.stores.filter(
+                  (entry) => entry.id !== removeStore.id,
+                )
+                if (!stores.length) return current
+                return {
+                  ...current,
+                  stores,
+                  storeId:
+                    current.storeId === removeStore.id
+                      ? stores[0].id
+                      : current.storeId,
+                }
+              })
+              setStoreId(fallback.id)
+              setRemoveStore(null)
+            }}
+          >
+            Remove shop
+          </button>
+        </div>
+      </Modal>
     </>
   )
 }
