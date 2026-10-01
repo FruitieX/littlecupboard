@@ -25,6 +25,10 @@ jobs:
           extra_nix_config: |
             experimental-features = nix-command flakes
       - run: nix develop --command npm ci
+      - name: Verify standalone ChatGPT sign-in protocol
+        run: |
+          nix develop --command npm ci --prefix scripts/siwc-probe --ignore-scripts
+          nix develop --command npm test --prefix scripts/siwc-probe
       - run: nix develop --command npm run typecheck
       - run: nix develop --command npm test
       - run: nix develop --command npm run format:check
