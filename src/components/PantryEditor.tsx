@@ -1,3 +1,4 @@
+import { NumberInput } from './NumberInput'
 import { useState } from 'react'
 import { Check, Pencil, Plus, X } from 'lucide-react'
 import type { AppState, Amount } from '../lib/data'
@@ -69,22 +70,17 @@ export function PantryEditor({
         <div className="pantry-amount-row" key={index}>
           <label>
             Quantity
-            <input
+            <NumberInput
               aria-label={`Pantry quantity ${index + 1}`}
               autoFocus={index === 0}
-              type="number"
               min="0"
               max="1000000"
               step="any"
               required
               value={amount.quantity}
-              onChange={(e) =>
+              onValueChange={(quantity) =>
                 setAmounts((current) =>
-                  current.map((a, i) =>
-                    i === index
-                      ? { ...a, quantity: Number(e.target.value) }
-                      : a,
-                  ),
+                  current.map((a, i) => (i === index ? { ...a, quantity } : a)),
                 )
               }
             />

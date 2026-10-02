@@ -2798,3 +2798,918 @@ async fn pantry_edits_keep_multiple_units_and_notes_and_reject_stale_observation
         "Equivalent queued amounts must not conflict because of device/server clock differences"
     );
 }
+
+#[tokio::test]
+async fn partial_store_routes_are_guarded_validated_and_survive_backup_restore() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let mut snapshot = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    let store = snapshot["state"]["stores"][0].clone();
+    let id = store["id"].clone();
+    let order = json!(["Vegetables", "Fruits"]);
+    let patch = |before: Value, after: Value| json!({"type":"patch","label":"Choose aisles","changes":[{"collection":"stores","key":id,"field":"order","before":before,"after":after}]});
+    let (status, saved) = operation(
+        &server,
+        &cookie,
+        patch(store["order"].clone(), order.clone()),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["state"]["stores"][0]["order"], order);
+    for invalid in [
+        json!(["Fruits", "Fruits"]),
+        json!(["Not a household group"]),
+    ] {
+        assert_eq!(
+            operation(&server, &cookie, patch(order.clone(), invalid))
+                .await
+                .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+    assert_eq!(
+        operation(&server, &cookie, patch(store["order"].clone(), json!([])))
+            .await
+            .0,
+        StatusCode::CONFLICT
+    );
+    let backup = request(
+        &server,
+        Method::GET,
+        "/api/backup",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert_eq!(
+        operation(&server, &cookie, patch(order.clone(), json!([])))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    snapshot = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    let (status, restored, _) = request(
+        &server,
+        Method::POST,
+        "/api/restore",
+        json!({"backup":backup,"expectedRevision":snapshot["revision"]}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{restored}");
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert_eq!(state["state"]["stores"][0]["order"], order);
+    assert_eq!(
+        server
+            .db
+            .lock()
+            .unwrap()
+            .query_row("SELECT MAX(version) FROM schema_migrations", [], |row| row
+                .get::<_, i64>(
+                0
+            ))
+            .unwrap(),
+        9
+    );
+    // Old catalog customizations lacking images inherit new bundled art.
+    let mut household: model::HouseholdState =
+        serde_json::from_value(state["state"].clone()).unwrap();
+    let mut pasta = domain::product(&household, "pasta").unwrap();
+    let original = pasta.image.clone();
+    assert!(original.is_some());
+    pasta.name = "Family pasta".into();
+    pasta.image = None;
+    household.product_details.insert("pasta".into(), pasta);
+    assert_eq!(
+        domain::product(&household, "pasta").unwrap().image,
+        original
+    );
+    household
+        .product_images
+        .insert("pasta".into(), "/api/images/family-photo".into());
+    assert_eq!(
+        domain::product(&household, "pasta")
+            .unwrap()
+            .image
+            .as_deref(),
+        Some("/api/images/family-photo")
+    );
+    for (name, image) in [
+        ("Water", "water"),
+        ("Basil", "basil"),
+        ("Grated Emmental–mozzarella cheese", "grated-cheese"),
+    ] {
+        household.custom_products.push(model::Product {
+            id: "family-alias".into(),
+            name: name.into(),
+            category: "Ingredients".into(),
+            icon: "🛒".into(),
+            image: None,
+            aliases: vec![],
+            interval: None,
+        });
+        let item = domain::product(&household, "family-alias").unwrap();
+        assert_eq!(
+            item.image,
+            Some(format!("/images/catalog/generated/{image}.webp"))
+        );
+        assert!(!icon_jobs::missing_icon(&item));
+        household.custom_products.pop();
+    }
+}
+
+#[tokio::test]
+async fn store_map_vision_is_private_validated_review_only_and_companion_compatible() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let snapshot = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    let household: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT id FROM households", [], |row| row.get(0))
+        .unwrap();
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::ImageRgba8(image::RgbaImage::from_pixel(
+        24,
+        24,
+        image::Rgba([10, 80, 10, 255]),
+    ))
+    .write_to(&mut png, image::ImageFormat::Png)
+    .unwrap();
+    let image_id = uuid::Uuid::new_v4().to_string();
+    let foreign_id = uuid::Uuid::new_v4().to_string();
+    {
+        let conn = server.db.lock().unwrap();
+        conn.execute(
+            "INSERT INTO households(id,name,state) VALUES('map-other','Other',?1)",
+            [snapshot["state"].to_string()],
+        )
+        .unwrap();
+        for (id, owner) in [(&image_id, household.as_str()), (&foreign_id, "map-other")] {
+            conn.execute("INSERT INTO uploads(id,household_id,mime,bytes,created_at,source) VALUES(?1,?2,'image/png',?3,?4,1)", rusqlite::params![id, owner, png.get_ref(), chrono::Utc::now().to_rfc3339()]).unwrap();
+        }
+    }
+    let suggestion = json!({"message":"Produce first, then dairy. Other aisles are not shown clearly.","order":["Fruits","Vegetables","Milk & eggs"]});
+    let returned = std::sync::Arc::new(std::sync::Mutex::new(suggestion.clone()));
+    let calls = std::sync::Arc::new(std::sync::Mutex::new(Vec::<Value>::new()));
+    let fixture_returned = returned.clone();
+    let fixture_calls = calls.clone();
+    let fixture = Router::new().route(
+        "/v1/chat/completions",
+        post(move |Json(body): Json<Value>| {
+            fixture_calls.lock().unwrap().push(body);
+            let content = fixture_returned.lock().unwrap().to_string();
+            async move { Json(json!({"choices":[{"message":{"content":content}}]})) }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let task = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"gpt-6-luna","reasoningEffort":"xhigh","imageModel":"","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit"});
+    assert_eq!(
+        request(
+            &server,
+            Method::PUT,
+            "/api/ai/config",
+            json!({"config":config,"apiKey":"map-fixture-key"}),
+            Some(&cookie)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let input = json!({"name":"Local shop","location":"Corner","order":snapshot["state"]["stores"][0]["order"],"images":[format!("/api/images/{image_id}")],"prompt":"Entrance at bottom left."});
+    assert_eq!(
+        request(
+            &server,
+            Method::POST,
+            "/api/ai/store-layout",
+            input.clone(),
+            None
+        )
+        .await
+        .0,
+        StatusCode::UNAUTHORIZED
+    );
+    for images in [
+        json!([]),
+        json!(["https://example.test/map.png"]),
+        json!([format!("/api/images/{foreign_id}")]),
+        json!([
+            format!("/api/images/{image_id}"),
+            format!("/api/images/{image_id}")
+        ]),
+        json!(vec![format!("/api/images/{image_id}"); 5]),
+    ] {
+        let mut invalid = input.clone();
+        invalid["images"] = images;
+        assert_eq!(
+            request(
+                &server,
+                Method::POST,
+                "/api/ai/store-layout",
+                invalid,
+                Some(&cookie)
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+    assert!(
+        calls.lock().unwrap().is_empty(),
+        "Invalid or foreign maps never reach a provider"
+    );
+    let (status, proposal, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/store-layout",
+        input.clone(),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{proposal}");
+    assert_eq!(proposal, suggestion);
+    let body = calls.lock().unwrap()[0].clone();
+    assert_eq!(body["model"], "gpt-6-luna");
+    assert_eq!(body["reasoning_effort"], "xhigh");
+    assert_eq!(
+        body["response_format"]["json_schema"]["name"],
+        "littlecupboard_store_layout"
+    );
+    assert!(
+        body["messages"][1]["content"][1]["image_url"]["url"]
+            .as_str()
+            .unwrap()
+            .starts_with("data:image/")
+    );
+    assert!(!body.to_string().contains("map-fixture-key"));
+    for invalid in [
+        json!({"message":"Invented","order":["Nonexistent aisle"]}),
+        json!({"message":"Duplicate","order":["Fruits","Fruits"]}),
+        json!({"message":"","order":[]}),
+        json!({"message":"Wrong shape","order":"Fruits"}),
+    ] {
+        *returned.lock().unwrap() = invalid;
+        assert_eq!(
+            request(
+                &server,
+                Method::POST,
+                "/api/ai/store-layout",
+                input.clone(),
+                Some(&cookie)
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+    // The personal companion gets the same vision contract and reasoning choice.
+    let pairing = ai::provision_companion(&server, &household, "gpt-6-luna", "xhigh").unwrap();
+    let headers = worker_headers(pairing["token"].as_str().unwrap());
+    let _ = companion::heartbeat(axum::extract::State(server.clone()), headers.clone())
+        .await
+        .unwrap();
+    let waiting_server = server.clone();
+    let waiting_cookie = cookie.clone();
+    let waiting = tokio::spawn(async move {
+        request(
+            &waiting_server,
+            Method::POST,
+            "/api/ai/store-layout",
+            input,
+            Some(&waiting_cookie),
+        )
+        .await
+    });
+    let mut job = Value::Null;
+    for _ in 0..100 {
+        job = companion::claim(axum::extract::State(server.clone()), headers.clone())
+            .await
+            .unwrap()
+            .0["job"]
+            .clone();
+        if !job.is_null() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    assert_eq!(job["path"], "chat/completions");
+    assert_eq!(job["body"]["reasoning_effort"], "xhigh");
+    assert_eq!(
+        job["body"]["messages"][1]["content"][1]["type"],
+        "image_url"
+    );
+    let _ = companion::complete(
+        axum::extract::State(server.clone()),
+        headers,
+        Json(companion::Completion {
+            id: job["id"].as_str().unwrap().into(),
+            lease: job["lease"].as_str().unwrap().into(),
+            failed: false,
+            result: Some(json!({"choices":[{"message":{"content":suggestion.to_string()}}]})),
+        }),
+    )
+    .await
+    .unwrap();
+    assert_eq!(waiting.await.unwrap().0, StatusCode::OK);
+    assert_eq!(
+        request(
+            &server,
+            Method::GET,
+            "/api/state",
+            Value::Null,
+            Some(&cookie)
+        )
+        .await
+        .1,
+        snapshot,
+        "Suggestions never change the shop before review and save"
+    );
+    task.abort();
+}
+
+fn batch_sheet(grid: u32) -> Vec<u8> {
+    let mut sheet = image::RgbaImage::new(256, 256);
+    let edge = 256 / grid;
+    for row in 0..grid {
+        for col in 0..grid {
+            let cell = row * grid + col;
+            let color = image::Rgba([20 + (cell * 13) as u8, 60, 170, 255]);
+            for y in row * edge + edge / 4..(row + 1) * edge - edge / 4 {
+                for x in col * edge + edge / 4..(col + 1) * edge - edge / 4 {
+                    sheet.put_pixel(x, y, color);
+                }
+            }
+        }
+    }
+    let mut png = std::io::Cursor::new(vec![]);
+    image::DynamicImage::ImageRgba8(sheet)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    png.into_inner()
+}
+
+#[test]
+fn icon_sheets_keep_row_major_subjects_alpha_and_padding_and_reject_invalid_output() {
+    for count in [2usize, 3, 7, 16] {
+        let grid = (count as f64).sqrt().ceil() as u32;
+        let images = crate::icon_batch::split(&batch_sheet(grid), count, grid).unwrap();
+        assert_eq!(images.len(), count);
+        for (index, image) in images.into_iter().enumerate() {
+            let icon = image::load_from_memory(&image.bytes).unwrap().to_rgba8();
+            assert_eq!(icon.dimensions(), (256, 256));
+            assert_eq!(icon.get_pixel(128, 128)[0], 20 + (index * 13) as u8);
+            assert_eq!(icon.get_pixel(0, 0)[3], 0);
+            assert!(icon.pixels().filter(|p| p[3] > 200).count() > 20_000);
+        }
+    }
+    let mut png = std::io::Cursor::new(vec![]);
+    image::DynamicImage::new_rgb8(256, 256)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    assert!(
+        crate::icon_batch::split(png.get_ref(), 4, 2).is_err(),
+        "Opaque sheets must not become photo-like square tiles"
+    );
+    assert!(
+        crate::icon_batch::split(&batch_sheet(1), 4, 2).is_err(),
+        "Missing cell subjects fail the whole sheet"
+    );
+}
+
+#[tokio::test]
+async fn icon_batches_use_one_request_keep_private_drafts_and_group_durable_jobs() {
+    use axum::{Json, routing::post};
+    use base64::Engine;
+    let calls = Arc::new(Mutex::new(vec![]));
+    let received = calls.clone();
+    let block = Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let started = Arc::new(tokio::sync::Notify::new());
+    let release = Arc::new(tokio::sync::Notify::new());
+    let gate = release.clone();
+    let begin = started.clone();
+    let blocking = block.clone();
+    let fixture = Router::new().route("/v1/images/generations",post(move |Json(body):Json<Value>| {
+        let grid = body["prompt"].as_str().unwrap().split("Required icon-sheet layout: ").nth(1).map(|s| s.split(' ').next().unwrap().parse::<u32>().unwrap()).unwrap_or(1);
+        received.lock().unwrap().push(body);
+        let wait = blocking.swap(false,std::sync::atomic::Ordering::SeqCst);
+        let (gate,begin) = (gate.clone(),begin.clone());
+        async move {
+            if wait { begin.notify_one(); gate.notified().await; }
+            Json(json!({"data":[{"b64_json":base64::engine::general_purpose::STANDARD.encode(batch_sheet(grid))}]}))
+        }
+    }));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let task = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    assert_eq!(request(&server,Method::PUT,"/api/ai/config",json!({"apiKey":"fixture","config":{"enabled":true,"autoItemIcons":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture","imageModel":"gpt-image-2","imageSize":"1024x1024","responseFormat":"json","tokenParameter":"omit"}}),Some(&owner)).await.0,StatusCode::OK);
+    let items = json!([{"id":"draft-one","name":"Millet flakes","category":"Grain products"},{"id":"draft-two","name":"Orange blossom water","category":"Ingredients"}]);
+    assert_eq!(
+        request(
+            &server,
+            Method::POST,
+            "/api/ai/icon-batch",
+            json!({"items":items}),
+            None
+        )
+        .await
+        .0,
+        StatusCode::UNAUTHORIZED
+    );
+    for invalid in [
+        json!([]),
+        json!([items[0], items[0]]),
+        json!([{"id":"bad","name":"Thing","category":"Not a group"}]),
+        Value::Array(
+            (0..17)
+                .map(|i| json!({"id":format!("draft-{i}"),"name":"Thing","category":"Fruits"}))
+                .collect(),
+        ),
+    ] {
+        assert_eq!(
+            request(
+                &server,
+                Method::POST,
+                "/api/ai/icon-batch",
+                json!({"items":invalid}),
+                Some(&owner)
+            )
+            .await
+            .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+    let before = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    let (status, draft, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/icon-batch",
+        json!({"items":items}),
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{draft}");
+    assert_eq!(draft["icons"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        request(
+            &server,
+            Method::GET,
+            "/api/state",
+            Value::Null,
+            Some(&owner)
+        )
+        .await
+        .1,
+        before,
+        "Draft generation cannot silently add products or update the household"
+    );
+    for (index, icon) in draft["icons"].as_array().unwrap().iter().enumerate() {
+        assert_eq!(icon["id"], items[index]["id"]);
+        let url = icon["url"].as_str().unwrap();
+        assert_eq!(
+            request(&server, Method::GET, url, Value::Null, None)
+                .await
+                .0,
+            StatusCode::UNAUTHORIZED
+        );
+        let conn = server.db.lock().unwrap();
+        let bytes: Vec<u8> = conn
+            .query_row(
+                "SELECT bytes FROM uploads WHERE id=?1",
+                [url.strip_prefix("/api/images/").unwrap()],
+                |r| r.get(0),
+            )
+            .unwrap();
+        let image = image::load_from_memory(&bytes).unwrap().to_rgba8();
+        assert_eq!(image.get_pixel(128, 128)[0], 20 + (index * 13) as u8);
+    }
+    let changes: Vec<_> = (0..17).map(|i|json!({"collection":"customProducts","key":format!("new-batch-{i:02}"),"field":null,"before":null,"after":{"id":format!("new-batch-{i:02}"),"name":format!("New batch item {i}"),"category":"Ingredients","icon":"🛒"}})).collect();
+    assert_eq!(
+        operation(
+            &server,
+            &owner,
+            json!({"type":"patch","label":"Save recipe items","changes":changes})
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(
+            &server,
+            Method::GET,
+            "/api/ai/item-icons",
+            Value::Null,
+            Some(&owner)
+        )
+        .await
+        .1["queued"],
+        17
+    );
+    block.store(true, std::sync::atomic::Ordering::SeqCst);
+    let runner = server.clone();
+    let batch = tokio::spawn(async move { crate::icon_jobs::run_one(&runner).await.unwrap() });
+    tokio::time::timeout(std::time::Duration::from_secs(5), started.notified())
+        .await
+        .unwrap();
+    assert_eq!(
+        request(
+            &server,
+            Method::GET,
+            "/api/ai/item-icons",
+            Value::Null,
+            Some(&owner)
+        )
+        .await
+        .1["running"],
+        16
+    );
+    assert_eq!(operation(&server,&owner,json!({"type":"patch","label":"Choose an icon during batch","changes":[{"collection":"productImages","key":"new-batch-00","field":null,"before":null,"after":"/images/pasta.jpg"}]})).await.0,StatusCode::OK);
+    release.notify_one();
+    assert!(batch.await.unwrap());
+    let (_, jobs, _) = request(
+        &server,
+        Method::GET,
+        "/api/ai/item-icons",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(
+        jobs["completed"], 15,
+        "A chosen icon in the running sheet is skipped without losing other crops"
+    );
+    assert_eq!(jobs["skipped"], 1);
+    assert_eq!(jobs["queued"], 1);
+    assert!(crate::icon_jobs::run_one(&server).await.unwrap());
+    assert!(!crate::icon_jobs::run_one(&server).await.unwrap());
+    let shared = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert_eq!(
+        shared["state"]["productImages"].as_object().unwrap().len(),
+        17
+    );
+    assert_eq!(
+        shared["state"]["productImages"]["new-batch-00"],
+        "/images/pasta.jpg"
+    );
+    assert_eq!(
+        server
+            .db
+            .lock()
+            .unwrap()
+            .query_row("SELECT count(*) FROM item_icon_attempts", [], |r| r
+                .get::<_, u32>(0))
+            .unwrap(),
+        2,
+        "The hourly budget counts provider requests, not crops"
+    );
+    let calls = calls.lock().unwrap();
+    assert_eq!(calls.len(), 3);
+    assert_eq!(calls[0]["size"], "1024x1024");
+    assert_eq!(calls[1]["size"], "1024x1024");
+    assert_eq!(calls[2]["size"], "816x816");
+    assert!(
+        calls[1]["prompt"]
+            .as_str()
+            .unwrap()
+            .contains("4 rows and 4 columns")
+    );
+    assert!(
+        calls.iter().all(|c| c["background"] == "transparent"
+            && c["prompt"].as_str().unwrap().contains("Twemoji"))
+    );
+    task.abort();
+}
+
+#[tokio::test]
+async fn companion_icon_sheets_keep_the_personal_transport_style_and_private_crops() {
+    use base64::Engine;
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let household: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT id FROM households", [], |r| r.get(0))
+        .unwrap();
+    let pairing = ai::provision_companion(&server, &household, "gpt-6-luna", "xhigh").unwrap();
+    let headers = worker_headers(pairing["token"].as_str().unwrap());
+    let _ = companion::heartbeat(axum::extract::State(server.clone()), headers.clone())
+        .await
+        .unwrap();
+    let renderer = server.clone();
+    let cookie = owner.clone();
+    let waiting = tokio::spawn(async move {
+        request(&renderer,Method::POST,"/api/ai/icon-batch",json!({"items":[{"id":"new-a","name":"Millet flakes","category":"Ingredients"},{"id":"new-b","name":"Juniper berries","category":"Spices"}]}),Some(&cookie)).await
+    });
+    let mut job = Value::Null;
+    for _ in 0..100 {
+        job = companion::claim(axum::extract::State(server.clone()), headers.clone())
+            .await
+            .unwrap()
+            .0["job"]
+            .clone();
+        if !job.is_null() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    assert_eq!(job["path"], "images/generations");
+    assert_eq!(job["body"]["size"], "1024x1024");
+    assert_eq!(job["body"]["background"], "transparent");
+    assert_eq!(job["body"]["model"], "gpt-image-2-medium");
+    assert!(
+        job["body"]["reference_images"][0]
+            .as_str()
+            .unwrap()
+            .starts_with("data:image/png;base64,")
+    );
+    assert!(
+        job["body"]["prompt"]
+            .as_str()
+            .unwrap()
+            .contains("2 rows and 2 columns")
+    );
+    let _ = companion::complete(axum::extract::State(server.clone()),headers,Json(companion::Completion {
+        id:job["id"].as_str().unwrap().into(),lease:job["lease"].as_str().unwrap().into(),failed:false,
+        result:Some(json!({"data":[{"b64_json":base64::engine::general_purpose::STANDARD.encode(batch_sheet(2))}]})),
+    })).await.unwrap();
+    let (status, result, _) = waiting.await.unwrap();
+    assert_eq!(status, StatusCode::OK, "{result}");
+    assert_eq!(result["icons"].as_array().unwrap().len(), 2);
+    for icon in result["icons"].as_array().unwrap() {
+        assert_eq!(
+            request(
+                &server,
+                Method::GET,
+                icon["url"].as_str().unwrap(),
+                Value::Null,
+                None
+            )
+            .await
+            .0,
+            StatusCode::UNAUTHORIZED
+        );
+    }
+}
+
+#[tokio::test]
+async fn library_only_recipes_block_new_plans_preserve_existing_meals_and_survive_backup() {
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let mut dessert = serde_json::to_value(&model::seed().recipes[0]).unwrap();
+    dessert["id"] = json!("family-dessert");
+    dessert["name"] = json!("Berry pudding");
+    dessert["tag"] = json!("Desserts");
+    dessert["tags"] = json!(["Desserts"]);
+    dessert["mealPlanEligible"] = json!(false);
+    assert_eq!(operation(&server,&owner,json!({"type":"patch","label":"Add dessert","changes":[{"collection":"recipeBook","key":"family-dessert","field":null,"before":null,"after":dessert}]})).await.0,StatusCode::OK);
+    let before = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    let day = "2026-10-08";
+    let old = &before["state"]["plan"][day];
+    let plan = json!({"type":"patch","label":"Plan dessert","changes":[{"collection":"plan","key":day,"field":null,"before":old,"after":"family-dessert"}]});
+    let (status, error) = operation(&server, &owner, plan.clone()).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(
+        error["message"]
+            .as_str()
+            .unwrap()
+            .contains("excluded from meal planning")
+    );
+    assert_eq!(
+        request(
+            &server,
+            Method::GET,
+            "/api/state",
+            Value::Null,
+            Some(&owner)
+        )
+        .await
+        .1,
+        before,
+        "Rejected schedule changes are atomic"
+    );
+    assert_eq!(operation(&server,&owner,json!({"type":"patch","label":"Enable dessert planning","changes":[{"collection":"recipeBook","key":"family-dessert","field":"mealPlanEligible","before":false,"after":true}]})).await.0,StatusCode::OK);
+    assert_eq!(operation(&server, &owner, plan).await.0, StatusCode::OK);
+    assert_eq!(operation(&server,&owner,json!({"type":"patch","label":"Exclude from future planning","changes":[{"collection":"recipeBook","key":"family-dessert","field":"mealPlanEligible","before":true,"after":false}]})).await.0,StatusCode::OK);
+    let saved = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert_eq!(
+        saved["state"]["plan"][day], "family-dessert",
+        "Existing deliberate meals remain intact"
+    );
+    let (_, backup, _) = request(
+        &server,
+        Method::GET,
+        "/api/backup",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(
+        backup["state"]["recipeBook"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["id"] == "family-dessert")
+            .unwrap()["mealPlanEligible"],
+        false
+    );
+    assert_eq!(
+        request(
+            &server,
+            Method::POST,
+            "/api/restore",
+            json!({"backup":backup,"expectedRevision":saved["revision"]}),
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let restored = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert_eq!(restored["state"]["plan"][day], "family-dessert");
+    assert_eq!(
+        restored["state"]["recipeBook"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|r| r["id"] == "family-dessert")
+            .unwrap()["mealPlanEligible"],
+        false
+    );
+}
+
+#[tokio::test]
+async fn assistant_keeps_dessert_drafts_in_the_library_and_rejects_excluded_schedules() {
+    use axum::{Json, routing::post};
+    let reply = Arc::new(Mutex::new(Value::Null));
+    let received = Arc::new(Mutex::new(vec![]));
+    let (output, calls) = (reply.clone(), received.clone());
+    let fixture = Router::new().route(
+        "/v1/chat/completions",
+        post(move |Json(body): Json<Value>| {
+            calls.lock().unwrap().push(body);
+            let content = output.lock().unwrap().to_string();
+            async move { Json(json!({"choices":[{"message":{"content":content}}]})) }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let task = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    assert_eq!(request(&server,Method::PUT,"/api/ai/config",json!({"apiKey":"fixture","config":{"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture","imageModel":"","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit"}}),Some(&owner)).await.0,StatusCode::OK);
+    let dessert = json!({"name":"Berry pudding","subtitle":"Serve chilled.","minutes":10,"servings":4,"tags":["Desserts"],"mealPlanEligible":false,"ingredients":[{"name":"Strawberries","productId":"strawberries","category":null,"quantity":250,"unit":"g","note":""}],"steps":["Chill the berries."]});
+    *reply.lock().unwrap() = json!({"message":"A dessert for your recipe collection.","shopping":[],"plan":[],"recipes":[dessert]});
+    let (status, proposal, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/assistant",
+        json!({"prompt":"Suggest a berry dessert"}),
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{proposal}");
+    assert_eq!(proposal["recipes"][0]["mealPlanEligible"], false);
+    assert_eq!(operation(&server,&owner,json!({"type":"applyProposal","proposalId":proposal["id"],"recipeIds":[proposal["recipes"][0]["id"]],"shoppingIndices":[],"days":[]})).await.0,StatusCode::OK);
+    let snapshot = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    let state: model::HouseholdState = serde_json::from_value(snapshot["state"].clone()).unwrap();
+    let day = domain::today(&state);
+    for plan in [
+        json!([{"day":day,"recipeId":null,"draftIndex":0,"servings":4}]),
+        json!([{"day":day,"recipeId":proposal["recipes"][0]["id"],"draftIndex":null,"servings":4}]),
+    ] {
+        *reply.lock().unwrap() = json!({"message":"Invalid dessert schedule.","shopping":[],"plan":plan,"recipes":[dessert]});
+        let (status, error, _) = request(
+            &server,
+            Method::POST,
+            "/api/ai/assistant",
+            json!({"prompt":"Plan lunches"}),
+            Some(&owner),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{error}");
+        assert!(
+            error["message"]
+                .as_str()
+                .unwrap()
+                .contains("excluded from meal planning")
+        );
+        assert_eq!(
+            request(
+                &server,
+                Method::GET,
+                "/api/state",
+                Value::Null,
+                Some(&owner)
+            )
+            .await
+            .1,
+            snapshot
+        );
+    }
+    let seen = received.lock().unwrap();
+    assert!(
+        seen[0]["messages"][0]["content"]
+            .as_str()
+            .unwrap()
+            .contains("Never schedule recipes whose mealPlanEligible is false")
+    );
+    assert_eq!(
+        seen[0]["response_format"]["json_schema"]["schema"]["properties"]["recipes"]["items"]["properties"]
+            ["mealPlanEligible"]["type"],
+        "boolean"
+    );
+    assert!(
+        seen[1]["messages"][1]["content"]
+            .as_str()
+            .unwrap()
+            .contains("\"mealPlanEligible\":false")
+    );
+    task.abort();
+}

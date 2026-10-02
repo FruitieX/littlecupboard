@@ -47,6 +47,22 @@ async function hold(page, button) {
   })
   await touch.detach()
 }
+async function replaceNumber(field, value) {
+  await field.focus()
+  await field.press('ControlOrMeta+A')
+  await field.press('Backspace')
+  assert.equal(
+    await field.inputValue(),
+    '',
+    'Backspace must leave an empty numeric draft',
+  )
+  await field.pressSequentially(value)
+  assert.equal(
+    await field.inputValue(),
+    value,
+    'Typing must not prefix a forced zero',
+  )
+}
 async function dismissRecovery(page) {
   await page
     .getByRole('button', { name: 'I saved my code', exact: true })
@@ -251,11 +267,29 @@ try {
     wife.getByRole('button', { name: 'Check Avocado', exact: true }),
   )
   await wife.getByLabel('A little more detail').fill('Ripe · for lunch')
+  const shoppingQuantity = wife.getByLabel('Quantity', { exact: true })
+  await shoppingQuantity.focus()
+  await shoppingQuantity.press('ControlOrMeta+A')
+  await shoppingQuantity.press('Backspace')
+  assert.equal(await shoppingQuantity.inputValue(), '')
+  await wife.getByRole('button', { name: 'Save details', exact: true }).click()
+  assert.equal(
+    await wife.getByRole('dialog').count(),
+    1,
+    'Blank quantities cannot save the previous amount',
+  )
+  await replaceNumber(shoppingQuantity, '2')
   await wife.getByRole('button', { name: 'Save details', exact: true }).click()
   await owner
     .getByRole('button', { name: 'Check Avocado', exact: true })
     .filter({ hasText: 'Ripe' })
     .waitFor()
+  assert.match(
+    await owner
+      .getByRole('button', { name: 'Check Avocado', exact: true })
+      .innerText(),
+    /2 pc/,
+  )
   console.log(
     'Independent household sessions, SSE check/restore, and touch editing passed.',
   )
@@ -313,7 +347,7 @@ try {
   await settle(owner)
   await owner.getByRole('button', { name: 'Pantry', exact: true }).click()
   await owner.getByLabel('Pantry item', { exact: true }).fill('Rice')
-  await owner.getByLabel('Quantity', { exact: true }).fill('500')
+  await replaceNumber(owner.getByLabel('Quantity', { exact: true }), '500')
   await owner.getByLabel('Unit', { exact: true }).fill('g')
   await owner
     .getByRole('button', { name: 'Confirm amount', exact: true })
@@ -330,7 +364,10 @@ try {
   await owner
     .getByRole('button', { name: 'Edit Rice in pantry', exact: true })
     .click()
-  await owner.getByLabel('Pantry quantity 1', { exact: true }).fill('750')
+  await replaceNumber(
+    owner.getByLabel('Pantry quantity 1', { exact: true }),
+    '750',
+  )
   await owner
     .getByLabel('Pantry notes', { exact: true })
     .fill('Opened cupboard pack')
@@ -500,10 +537,40 @@ try {
     .getByLabel('Ingredient', { exact: true })
     .fill('Special family seasoning')
   await owner
+    .getByRole('option', {
+      name: 'Add new ingredient “Special family seasoning”',
+      exact: true,
+    })
+    .click()
+  await owner
     .getByRole('button', { name: 'Add ingredient', exact: true })
     .click()
   await owner.getByLabel('Ingredient', { exact: true }).fill('Rice')
-  await owner.getByLabel('Quantity', { exact: true }).fill('300')
+  assert.equal(
+    await owner
+      .getByRole('option')
+      .filter({ has: owner.locator('strong', { hasText: /^Rice$/ }) })
+      .locator('img')
+      .count(),
+    1,
+    'Existing ingredient suggestions display their artwork',
+  )
+  await owner.getByLabel('Ingredient', { exact: true }).press('ArrowDown')
+  await owner.getByLabel('Ingredient', { exact: true }).press('Enter')
+  const ingredientQuantity = owner.getByLabel('Quantity', { exact: true })
+  await ingredientQuantity.focus()
+  await ingredientQuantity.press('ControlOrMeta+A')
+  await ingredientQuantity.press('Backspace')
+  assert.equal(await ingredientQuantity.inputValue(), '')
+  await owner
+    .getByRole('button', { name: 'Add ingredient', exact: true })
+    .click()
+  assert.equal(
+    await owner.locator('.editable-ingredients summary').count(),
+    1,
+    'A blank ingredient quantity cannot reuse stale numeric state',
+  )
+  await replaceNumber(ingredientQuantity, '300')
   await owner.getByLabel('Unit', { exact: true }).fill('g')
   await owner
     .getByRole('button', { name: 'Add ingredient', exact: true })
@@ -558,11 +625,69 @@ try {
     .getByLabel('Recipe name', { exact: true })
     .fill('Family rice bowl')
   await owner
+    .locator('.editable-ingredients summary')
+    .filter({ hasText: 'Rice' })
+    .click()
+  await owner
+    .getByRole('combobox', { name: 'Ingredient name for Rice', exact: true })
+    .fill('Barley')
+  assert.equal(
+    await owner
+      .getByRole('option', { name: /^Barley/ })
+      .locator('img')
+      .count(),
+    1,
+  )
+  await owner
+    .getByRole('combobox', { name: 'Ingredient name for Rice', exact: true })
+    .press('ArrowDown')
+  await owner
+    .getByRole('combobox', { name: 'Ingredient name for Rice', exact: true })
+    .press('Enter')
+  await owner
+    .getByLabel('Details for Rice', { exact: true })
+    .fill('Rinse thoroughly')
+  await owner
+    .locator('.editable-ingredients summary')
+    .filter({ hasText: 'Special family seasoning' })
+    .click()
+  await owner
+    .getByRole('combobox', {
+      name: 'Ingredient name for Special family seasoning',
+      exact: true,
+    })
+    .fill('Heirloom family seasoning')
+  await owner
+    .getByRole('option', {
+      name: 'Add new ingredient “Heirloom family seasoning”',
+      exact: true,
+    })
+    .waitFor()
+  await owner
     .getByRole('button', { name: 'Save to our recipe book', exact: true })
     .click()
   await owner
     .getByRole('button', { name: 'Open Family rice bowl', exact: true })
     .waitFor()
+  const editedRecipeState = (await request(owner, '/state', undefined, 'GET'))
+    .state
+  const editedRecipe = editedRecipeState.recipeBook.find(
+    (recipe) => recipe.name === 'Family rice bowl',
+  )
+  assert.deepEqual(
+    editedRecipe.ingredients.find((i) => i.productId === 'barley'),
+    { productId: 'barley', quantity: 300, unit: 'g', note: 'Rinse thoroughly' },
+  )
+  assert.ok(
+    editedRecipeState.customProducts.some(
+      (p) => p.name === 'Heirloom family seasoning',
+    ),
+  )
+  assert.equal(
+    editedRecipeState.productDetails?.rice?.name ?? 'Rice',
+    'Rice',
+    'Recipe ingredient replacement never renames the shared catalog product',
+  )
   await wife.goto(frontendUrl + '/recipes')
   await settle(wife)
   await wife
@@ -582,7 +707,19 @@ try {
   await owner.goto(frontendUrl + '/week')
   await settle(owner)
   await owner.getByRole('button', { name: 'Next week', exact: true }).click()
-  await owner.getByLabel('Servings for Monday', { exact: true }).fill('6')
+  const mondayServings = owner.getByLabel('Servings for Monday', {
+    exact: true,
+  })
+  await replaceNumber(mondayServings, '6')
+  await mondayServings.press('ControlOrMeta+A')
+  await mondayServings.press('Backspace')
+  assert.equal(await mondayServings.inputValue(), '')
+  await mondayServings.press('Tab')
+  assert.equal(
+    await mondayServings.inputValue(),
+    '6',
+    'Autosaved fields restore the last valid amount on blur',
+  )
   await wife.goto(frontendUrl)
   await settle(wife)
   await wife
@@ -659,6 +796,29 @@ try {
     await readFile('public/images/food/1f34e.svg', 'utf8'),
   )
   const providerRequests = []
+  const sheetFixtures = await owner.evaluate(async (encoded) => {
+    const image = new Image()
+    image.src = 'data:image/png;base64,' + encoded
+    await image.decode()
+    return Object.fromEntries(
+      [2, 3, 4].map((grid) => {
+        const canvas = document.createElement('canvas')
+        canvas.width = canvas.height = 1024
+        const ctx = canvas.getContext('2d')
+        const edge = 1024 / grid
+        for (let row = 0; row < grid; row++)
+          for (let col = 0; col < grid; col++)
+            ctx.drawImage(
+              image,
+              col * edge + edge * 0.15,
+              row * edge + edge * 0.15,
+              edge * 0.7,
+              edge * 0.7,
+            )
+        return [grid, canvas.toDataURL('image/png').split(',')[1]]
+      }),
+    )
+  }, iconFixture)
   let imageDelay = 0
   let imageFailures = 0
   provider = createServer(async (req, res) => {
@@ -676,68 +836,98 @@ try {
         res.end(JSON.stringify({ error: 'Fixture image failure' }))
         return
       }
-      res.end(JSON.stringify({ data: [{ b64_json: iconFixture }] }))
+      const grid = input.prompt?.match(/Required icon-sheet layout: (\d+)/)?.[1]
+      res.end(
+        JSON.stringify({
+          data: [{ b64_json: sheetFixtures[grid] ?? iconFixture }],
+        }),
+      )
       return
     }
     const hasImages = input.messages?.some((message) =>
       Array.isArray(message.content),
     )
-    const content = hasImages
+    const isStoreMap = input.messages?.[0]?.content?.includes(
+      'Required store-map protocol:',
+    )
+    const content = isStoreMap
       ? JSON.stringify({
-          message: 'Recipe transcribed. Review all quantities before saving.',
-          shopping: [],
-          plan: [],
-          recipes: [
-            {
-              name: 'Imported recipe',
-              subtitle:
-                '## Notes\n\n**Keep chilled**.\n\n- Serve fresh\n- Stir gently',
-              minutes: 10,
-              servings: 4,
-              tags: ['Imported'],
-              ingredients: [
+          message:
+            'Start at produce, then dairy. Review the remaining aisles before saving.',
+          order: ['Fruits', 'Vegetables', 'Milk & eggs'],
+        })
+      : hasImages
+        ? JSON.stringify({
+            message: 'Recipe transcribed. Review all quantities before saving.',
+            shopping: [],
+            plan: [],
+            recipes: [
+              {
+                name: 'Imported recipe',
+                subtitle:
+                  '## Notes\n\n**Keep chilled**.\n\n- Serve fresh\n- Stir gently',
+                minutes: 10,
+                servings: 4,
+                tags: ['Imported'],
+                ingredients: [
+                  {
+                    name: 'Apples',
+                    productId: 'apples',
+                    category: null,
+                    quantity: 4,
+                    unit: 'pc',
+                    note: '',
+                  },
+                  {
+                    name: 'Bergamot powder',
+                    productId: null,
+                    category: null,
+                    quantity: 1,
+                    unit: 'g',
+                    note: 'Check the original',
+                  },
+                  {
+                    name: 'Calamansi peel',
+                    productId: null,
+                    category: null,
+                    quantity: 1,
+                    unit: 'g',
+                    note: '',
+                  },
+                  {
+                    name: 'Cassia buds',
+                    productId: null,
+                    category: null,
+                    quantity: 1,
+                    unit: 'g',
+                    note: '',
+                  },
+                ],
+                steps: [
+                  'Wash the apples.',
+                  'Stir in **bergamot**.',
+                  'Serve fresh.',
+                ],
+              },
+            ],
+          })
+        : input.messages?.[0]?.role === 'user'
+          ? 'Connected'
+          : JSON.stringify({
+              message: 'Pick up a little fruit for lunch.',
+              shopping: [
                 {
                   name: 'Apples',
                   productId: 'apples',
                   category: null,
                   quantity: 4,
                   unit: 'pc',
-                  note: '',
-                },
-                {
-                  name: 'Bergamot powder',
-                  productId: null,
-                  category: null,
-                  quantity: 1,
-                  unit: 'g',
-                  note: 'Check the original',
+                  note: 'Crisp',
                 },
               ],
-              steps: [
-                'Wash the apples.',
-                'Stir in **bergamot**.',
-                'Serve fresh.',
-              ],
-            },
-          ],
-        })
-      : input.messages?.[0]?.role === 'user'
-        ? 'Connected'
-        : JSON.stringify({
-            message: 'Pick up a little fruit for lunch.',
-            shopping: [
-              {
-                name: 'Apples',
-                productId: 'apples',
-                category: null,
-                quantity: 4,
-                unit: 'pc',
-                note: 'Crisp',
-              },
-            ],
-            recipes: [],
-            plan: [],
-          })
+              recipes: [],
+              plan: [],
+            })
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({ choices: [{ message: { content } }] }))
   })
@@ -837,7 +1027,9 @@ try {
   const placeholderArtwork = catalog
     .filter(
       (product) =>
-        product.icon === '🛒' && !iconState.productImages[product.id],
+        product.icon === '🛒' &&
+        !product.image &&
+        !iconState.productImages[product.id],
     )
     .map((product) => ({
       collection: 'productImages',
@@ -1110,6 +1302,7 @@ try {
     .fill('Renamed Neighborhood Market')
   await owner
     .getByRole('button', { name: 'Generate icon', exact: true })
+    .first()
     .click()
   await owner.waitForFunction(() =>
     document
@@ -1131,6 +1324,191 @@ try {
   assert.equal(editedShop.name, 'Renamed Neighborhood Market')
   assert.deepEqual(editedShop.order, selectedShop.order)
   assert.ok(editedShop.image.startsWith('/api/images/'))
+  for (const [id, name, category, image] of [
+    ['existing-water-art', 'Water', 'Beverages', 'water'],
+    ['existing-basil-art', 'Basil', 'Vegetables', 'basil'],
+    [
+      'existing-cheese-art',
+      'Grated Emmental–mozzarella cheese',
+      'Cheese',
+      'grated-cheese',
+    ],
+  ]) {
+    await request(owner, '/operations', {
+      id: crypto.randomUUID(),
+      operation: {
+        type: 'patch',
+        label: 'Existing family icon fixture',
+        changes: [
+          {
+            collection: 'customProducts',
+            key: id,
+            field: null,
+            before: null,
+            after: { id, name, category, icon: '🛒', aliases: [] },
+          },
+        ],
+      },
+    })
+    await request(owner, '/operations', {
+      id: crypto.randomUUID(),
+      operation: {
+        type: 'addItem',
+        productId: id,
+        quantity: 1,
+        unit: 'pc',
+        note: '',
+        accumulate: false,
+      },
+    })
+    // Simulate an older saved list item that has no image association yet.
+    const item = (
+      await request(owner, '/state', undefined, 'GET')
+    ).state.items.find((item) => item.id === id)
+    await request(owner, '/operations', {
+      id: crypto.randomUUID(),
+      operation: {
+        type: 'patch',
+        label: 'Legacy icon fixture',
+        changes: [
+          {
+            collection: 'items',
+            key: id,
+            field: 'image',
+            before: item.image,
+            after: null,
+          },
+        ],
+      },
+    })
+    await wife.goto(frontendUrl)
+    await settle(wife)
+    await eventually(
+      async () =>
+        (await wife
+          .getByRole('button', { name: `Check ${name}`, exact: true })
+          .locator('img')
+          .getAttribute('src')) === `/images/catalog/generated/${image}.webp`,
+    )
+  }
+  console.log(
+    'Known pre-existing custom items inherit appropriate default art, including legacy unpictured shopping entries.',
+  )
+  await owner.getByRole('button', { name: 'Edit shop', exact: true }).click()
+  await owner
+    .getByLabel('Upload store map', { exact: true })
+    .setInputFiles('public/images/pasta.jpg')
+  await owner
+    .getByRole('button', { name: 'Suggest aisle order', exact: true })
+    .waitFor({ state: 'visible' })
+  await owner
+    .getByRole('button', { name: 'Suggest aisle order', exact: true })
+    .click()
+  const mapProposal = owner.getByRole('region', {
+    name: 'Suggested aisle order',
+    exact: true,
+  })
+  await mapProposal.waitFor()
+  assert.deepEqual(
+    (await request(owner, '/state', undefined, 'GET')).state.stores.find(
+      (store) => store.id === selectedShop.id,
+    ).order,
+    selectedShop.order,
+    'Reading a map does not save a route',
+  )
+  for (const width of [320, 390, 1440]) {
+    await owner.setViewportSize({ width, height: 900 })
+    assert.ok(
+      await owner
+        .getByRole('dialog')
+        .evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth + 1),
+      `Store map review fits at ${width}px`,
+    )
+    await owner
+      .getByRole('dialog')
+      .screenshot({ path: `test-results/store-map-review-${width}.png` })
+  }
+  await owner.setViewportSize({ width: 390, height: 844 })
+  await mapProposal
+    .getByRole('button', { name: 'Use this order', exact: true })
+    .click()
+  assert.deepEqual(
+    (await request(owner, '/state', undefined, 'GET')).state.stores.find(
+      (store) => store.id === selectedShop.id,
+    ).order,
+    selectedShop.order,
+    'Accepting fills the editor draft; Save shop persists it',
+  )
+  await owner.getByText('Aisles in this shop · 3', { exact: true }).click()
+  await owner
+    .getByRole('button', { name: 'Move Vegetables up', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Remove Milk & eggs from shop', exact: true })
+    .click()
+  await owner.getByText('Add aisles', { exact: true }).click()
+  await owner.getByLabel('Find an item group', { exact: true }).fill('milk')
+  await owner
+    .getByRole('button', { name: 'Add Milk & eggs to shop', exact: true })
+    .click()
+  await owner.getByRole('button', { name: 'Save shop', exact: true }).click()
+  await eventually(
+    async () =>
+      JSON.stringify(
+        (await request(wife, '/state', undefined, 'GET')).state.stores.find(
+          (store) => store.id === selectedShop.id,
+        ).order,
+      ) === JSON.stringify(['Vegetables', 'Fruits', 'Milk & eggs']),
+  )
+  await owner.goto(frontendUrl)
+  await settle(owner)
+  const partialList = (
+    await request(owner, '/state', undefined, 'GET')
+  ).state.items.filter((item) => !item.checked)
+  const visibleItems = await owner
+    .locator('.item-grid .tile-check strong')
+    .allTextContents()
+  assert.deepEqual(
+    [...visibleItems].sort(),
+    partialList.map((item) => item.name).sort(),
+    'Omitted aisles never hide groceries',
+  )
+  const positions = visibleItems.map((name) => {
+    const item = partialList.find((item) => item.name === name)
+    const position = ['Vegetables', 'Fruits', 'Milk & eggs'].indexOf(
+      item.category,
+    )
+    return position < 0 ? 3 : position
+  })
+  assert.ok(
+    positions.every((position, i) => i === 0 || position >= positions[i - 1]),
+    'Unconfigured groups sort after the shop route',
+  )
+  await owner.goto(`${frontendUrl}/settings/stores`)
+  await settle(owner)
+  await owner
+    .locator('.store-option')
+    .filter({ hasText: 'Renamed Neighborhood Market' })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Remove Milk & eggs from shop', exact: true })
+    .click()
+  await owner.getByText('Add aisles', { exact: true }).click()
+  await owner
+    .getByRole('button', { name: 'Add Milk & eggs to shop', exact: true })
+    .click()
+  await owner.reload()
+  await settle(owner)
+  await owner
+    .locator('.store-option')
+    .filter({ hasText: 'Renamed Neighborhood Market' })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Remove Milk & eggs from shop', exact: true })
+    .waitFor()
+  console.log(
+    'Private store-map review, editable aisle subsets, SSE persistence, omitted-item visibility and responsive controls passed.',
+  )
   await owner
     .getByRole('link', { name: 'Manage item groups', exact: true })
     .click()
@@ -1234,8 +1612,10 @@ try {
       (recipe) => recipe.name === 'Imported recipe',
     ),
   )
-  const visionRequest = providerRequests.find((request) =>
-    request.messages?.some((message) => Array.isArray(message.content)),
+  const visionRequest = providerRequests.find(
+    (request) =>
+      request.messages?.some((message) => Array.isArray(message.content)) &&
+      !request.messages?.[0]?.content?.includes('Required store-map protocol:'),
   )
   assert.equal(
     visionRequest.messages[1].content.filter(
@@ -1260,10 +1640,44 @@ try {
   await owner.locator('.proposal-dish-photo').waitFor()
   await owner
     .getByRole('button', { name: 'Generate icon', exact: true })
+    .first()
     .click()
   await owner
     .getByRole('button', { name: 'Regenerate icon', exact: true })
     .waitFor()
+  const firstDraftIcon = await owner
+    .locator('.proposal-products img')
+    .first()
+    .getAttribute('src')
+  const beforeBatchRequests = providerRequests.filter(
+    (request) => request.background === 'transparent',
+  ).length
+  await owner
+    .getByRole('button', { name: 'Generate missing icons (2)', exact: true })
+    .click()
+  await owner.waitForFunction(
+    () =>
+      [...document.querySelectorAll('.proposal-products img')].filter((img) =>
+        img.getAttribute('src')?.startsWith('/api/images/'),
+      ).length === 3,
+  )
+  assert.equal(
+    providerRequests.filter((request) => request.background === 'transparent')
+      .length,
+    beforeBatchRequests + 1,
+    'Two draft icons share one provider request',
+  )
+  assert.equal(
+    await owner.locator('.proposal-products img').first().getAttribute('src'),
+    firstDraftIcon,
+    'Batch generation preserves an existing chosen icon',
+  )
+  assert.ok(
+    !(
+      await request(owner, '/state', undefined, 'GET')
+    ).state.customProducts.some((product) => product.name === 'Cassia buds'),
+    'Generated icon drafts await review/save',
+  )
   const iconRequest = providerRequests.find(
     (request) => request.background === 'transparent',
   )
@@ -1371,6 +1785,180 @@ try {
   )
   await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
   await wife.goto(`${frontendUrl}/settings`)
+  await owner.getByRole('button', { name: 'All recipes', exact: true }).click()
+  await owner.getByRole('button', { name: 'Add recipe', exact: true }).click()
+  await owner
+    .getByLabel('Recipe name', { exact: true })
+    .fill('Batch icon recipe')
+  await owner
+    .getByRole('combobox', { name: 'Tags', exact: true })
+    .fill('Desserts')
+  await owner
+    .getByRole('option', { name: 'Create “Desserts”', exact: true })
+    .click()
+  await owner
+    .getByRole('checkbox', { name: 'Include in meal planning', exact: true })
+    .uncheck()
+  for (const name of [
+    'Family saffron petals',
+    'Family juniper pollen',
+    'Rice',
+  ]) {
+    await owner
+      .getByRole('combobox', { name: 'Ingredient', exact: true })
+      .fill(name)
+    await owner
+      .getByRole('button', { name: 'Add ingredient', exact: true })
+      .click()
+  }
+  await owner
+    .getByLabel('How to make it', { exact: true })
+    .fill('Cook, season and serve.')
+  const recipeBatchRequests = providerRequests.filter(
+    (request) => request.background === 'transparent',
+  ).length
+  await owner
+    .getByRole('button', {
+      name: 'Generate missing ingredient icons',
+      exact: true,
+    })
+    .click()
+  await owner.waitForFunction(
+    () =>
+      [
+        ...document.querySelectorAll('.editable-ingredients summary img'),
+      ].filter((img) => img.getAttribute('src')?.startsWith('/api/images/'))
+        .length === 2,
+  )
+  assert.equal(
+    providerRequests.filter((request) => request.background === 'transparent')
+      .length,
+    recipeBatchRequests + 1,
+  )
+  assert.ok(
+    !(
+      await request(owner, '/state', undefined, 'GET')
+    ).state.customProducts.some((p) => p.name === 'Family saffron petals'),
+  )
+  assert.ok(
+    (
+      await owner
+        .locator('.editable-ingredients summary')
+        .filter({ hasText: 'Rice' })
+        .locator('img')
+        .getAttribute('src')
+    ).startsWith('/images/'),
+  )
+  await owner
+    .getByRole('combobox', { name: 'Ingredient', exact: true })
+    .fill('Oat')
+  for (const width of [320, 390, 1440]) {
+    await owner.setViewportSize({ width, height: 844 })
+    await owner
+      .getByRole('combobox', { name: 'Ingredient', exact: true })
+      .focus()
+    await owner
+      .getByRole('dialog')
+      .screenshot({ path: `test-results/ingredient-picker-batch-${width}.png` })
+    assert.equal(
+      await owner.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      true,
+    )
+  }
+  await owner
+    .getByRole('combobox', { name: 'Ingredient', exact: true })
+    .fill('')
+  await owner.setViewportSize({ width: 390, height: 844 })
+  await owner
+    .getByRole('button', { name: 'Save to our recipe book', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Open Batch icon recipe', exact: true })
+    .waitFor()
+  const batchRecipeState = (await request(owner, '/state', undefined, 'GET'))
+    .state
+  const batchIngredients = batchRecipeState.customProducts.filter((p) =>
+    ['Family saffron petals', 'Family juniper pollen'].includes(p.name),
+  )
+  assert.equal(batchIngredients.length, 2)
+  for (const ingredient of batchIngredients) {
+    const image = batchRecipeState.productImages[ingredient.id]
+    assert.ok(image?.startsWith('/api/images/'))
+    assert.equal((await wife.request.get(frontendUrl + image)).status(), 200)
+    assert.equal((await fetch(backendUrl + image)).status, 401)
+  }
+  console.log(
+    'Recipe ingredient icon autocomplete, local replacement, batch draft review and shared private crops passed.',
+  )
+  await owner
+    .getByRole('button', { name: 'Filter by tag Desserts', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Open Batch icon recipe', exact: true })
+    .waitFor()
+  assert.equal(
+    batchRecipeState.recipeBook.find(
+      (recipe) => recipe.name === 'Batch icon recipe',
+    ).mealPlanEligible,
+    false,
+  )
+  await owner.goto(`${frontendUrl}/week`)
+  await settle(owner)
+  await owner.locator('.unplanned-button, .planned-meal').first().click()
+  assert.equal(
+    await owner
+      .getByRole('dialog')
+      .getByRole('button', { name: /Batch icon recipe/ })
+      .count(),
+    0,
+  )
+  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await owner
+    .getByRole('button', { name: 'Suggest lunches', exact: true })
+    .click()
+  assert.equal(
+    await owner
+      .getByRole('dialog')
+      .getByText('Batch icon recipe', { exact: true })
+      .count(),
+    0,
+  )
+  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await wife.goto(`${frontendUrl}/recipes`)
+  await settle(wife)
+  await wife
+    .getByRole('button', { name: 'Filter by tag Desserts', exact: true })
+    .click()
+  await wife
+    .getByRole('button', { name: 'Open Batch icon recipe', exact: true })
+    .click()
+  await wife.getByRole('button', { name: 'Edit recipe', exact: true }).click()
+  assert.equal(
+    await wife
+      .getByRole('checkbox', { name: 'Include in meal planning', exact: true })
+      .isChecked(),
+    false,
+  )
+  await wife
+    .getByRole('checkbox', { name: 'Include in meal planning', exact: true })
+    .check()
+  await wife
+    .getByRole('button', { name: 'Save to our recipe book', exact: true })
+    .click()
+  await owner.reload()
+  await settle(owner)
+  await owner.locator('.unplanned-button, .planned-meal').first().click()
+  await owner
+    .getByRole('dialog')
+    .getByRole('button', { name: /Batch icon recipe/ })
+    .waitFor()
+  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await wife.goto(`${frontendUrl}/settings`)
+  console.log(
+    'User-created dessert collections, planning exclusion, lunch suggestion filtering and shared re-enabling passed.',
+  )
   await settle(wife)
   assert.equal(
     await wife.getByText('Configure AI assistant', { exact: true }).count(),
@@ -1849,9 +2437,19 @@ try {
   await owner
     .getByRole('checkbox', { name: 'Set consumption rate', exact: true })
     .check()
-  await owner.getByLabel('Consumption quantity', { exact: true }).fill('6')
+  await replaceNumber(
+    owner.getByLabel('Consumption quantity', { exact: true }),
+    '0.5',
+  )
+  await replaceNumber(
+    owner.getByLabel('Consumption quantity', { exact: true }),
+    '6',
+  )
   await owner.getByLabel('Consumption unit', { exact: true }).fill('pc')
-  await owner.getByLabel('Consumption period (days)', { exact: true }).fill('7')
+  await replaceNumber(
+    owner.getByLabel('Consumption period (days)', { exact: true }),
+    '7',
+  )
   for (const width of [320, 390, 1440]) {
     await owner.setViewportSize({ width, height: 900 })
     const bounds = await owner

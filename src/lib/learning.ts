@@ -74,6 +74,8 @@ export function recipeScore(
   state: AppState,
   now = Date.now(),
 ): { score: number; reasons: string[] } {
+  if (recipe.mealPlanEligible === false)
+    return { score: -1000, reasons: ['Excluded from meal planning'] }
   let score = 0
   const reasons: string[] = []
   const prefs = state.preferences

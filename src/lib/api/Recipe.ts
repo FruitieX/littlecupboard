@@ -2,4 +2,4 @@
 import type { Ingredient } from "./Ingredient";
 import type { SourceImage } from "./SourceImage";
 
-export type Recipe = { id: string, name: string, subtitle: string, image: string, minutes: number, tag: string, servings: number, ingredients: Array<Ingredient>, steps: Array<string>, tags: Array<string>, sourceImages?: Array<SourceImage>, favorite?: boolean, };
+export type Recipe = { id: string, name: string, subtitle: string, image: string, minutes: number, tag: string, servings: number, ingredients: Array<Ingredient>, steps: Array<string>, tags: Array<string>, sourceImages?: Array<SourceImage>, favorite?: boolean, mealPlanEligible?: boolean, };

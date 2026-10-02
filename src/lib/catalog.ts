@@ -1,4 +1,5 @@
 import { catalog, type AppState, type Product } from './data'
+import { defaultCatalogImage } from './catalog-artwork'
 
 export function getProducts(
   state: AppState,
@@ -14,7 +15,11 @@ export function getProducts(
       return {
         ...current,
         category: state.productGroups?.[product.id] ?? current.category,
-        image: state.productImages?.[product.id] ?? current.image,
+        image:
+          state.productImages?.[product.id] ??
+          current.image ??
+          product.image ??
+          defaultCatalogImage(product.id, current.name, current.icon),
       }
     })
 }

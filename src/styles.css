@@ -2138,11 +2138,15 @@ svg {
 .aisle-list strong {
   font-size: 12px;
   font-weight: 400;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  flex: 1;
 }
 .aisle-list li > div {
   margin-left: auto;
   display: flex;
   gap: 5px;
+  flex-shrink: 0;
 }
 .aisle-list .icon-button {
   min-width: 33px;
@@ -3843,6 +3847,7 @@ svg {
   margin-bottom: 0.6rem;
 }
 .image-field-actions label {
+  flex-direction: row;
   position: relative;
   cursor: pointer;
 }
@@ -4151,4 +4156,130 @@ svg {
   .filter-chips button {
     flex: none;
   }
+}
+
+.aisle-add,
+.store-aisle-details {
+  margin-top: 16px;
+}
+.aisle-add summary,
+.store-aisle-details summary {
+  cursor: pointer;
+  color: #34503b;
+  font-weight: 600;
+}
+.aisle-add summary svg {
+  vertical-align: middle;
+  margin-right: 5px;
+}
+.aisle-add label {
+  display: grid;
+  gap: 8px;
+  margin: 14px 0;
+}
+.aisle-add .group-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+.store-map-assistant {
+  border: 1px solid #dde4d7;
+  border-radius: 14px;
+  padding: 14px;
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+.store-map-assistant legend {
+  font-weight: 600;
+  padding: 0 6px;
+}
+.store-map-assistant figure {
+  margin: 0;
+}
+.store-map-assistant figure img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #f5f4ec;
+}
+.store-map-assistant figcaption {
+  margin-top: 6px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.store-map-proposal {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: #f4f6eb;
+  border-radius: 10px;
+  font-size: 14px;
+}
+.store-map-proposal ol {
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 0;
+  padding-left: 24px;
+}
+.store-map-proposal .modal-actions {
+  flex-wrap: wrap;
+}
+
+.ingredient-picker {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.ingredient-combobox {
+  position: relative;
+  min-width: 0;
+}
+.ingredient-combobox input {
+  width: 100%;
+}
+.ingredient-suggestions {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 144px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface, #fff);
+  box-shadow: 0 12px 32px #0002;
+}
+.ingredient-suggestions button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  text-align: left;
+}
+.ingredient-suggestions button:hover,
+.ingredient-suggestions button[aria-selected='true'] {
+  background: #eaf0df;
+}
+.ingredient-suggestions .food-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+}
+.ingredient-suggestions span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.ingredient-suggestions strong,
+.ingredient-suggestions small {
+  display: block;
+}
+.ingredient-suggestions small {
+  font-size: 11px;
+  opacity: 0.7;
 }

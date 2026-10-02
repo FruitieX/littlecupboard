@@ -5,28 +5,32 @@
       "name": "Avocado",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥑"
+      "icon": "🥑",
+      "image": "/images/food/1f951.svg"
     },
     {
       "id": "broccoli",
       "name": "Broccoli",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥦"
+      "icon": "🥦",
+      "image": "/images/food/1f966.svg"
     },
     {
       "id": "cucumber",
       "name": "Cucumber",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥒"
+      "icon": "🥒",
+      "image": "/images/food/1f952.svg"
     },
     {
       "id": "cherry-tomatoes",
       "name": "Cherry tomatoes",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🍅"
+      "icon": "🍅",
+      "image": "/images/food/1f345.svg"
     },
     {
       "id": "carrots",
@@ -35,14 +39,16 @@
       "aliases": [
         "porkkana"
       ],
-      "icon": "🥕"
+      "icon": "🥕",
+      "image": "/images/food/1f955.svg"
     },
     {
       "id": "spinach",
       "name": "Spinach",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/spinach.webp"
     },
     {
       "id": "potatoes",
@@ -51,112 +57,128 @@
       "aliases": [
         "peruna"
       ],
-      "icon": "🥔"
+      "icon": "🥔",
+      "image": "/images/food/1f954.svg"
     },
     {
       "id": "sweet-potatoes",
       "name": "Sweet potatoes",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/sweet-potatoes.webp"
     },
     {
       "id": "red-onion",
       "name": "Red onion",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🧅"
+      "icon": "🧅",
+      "image": "/images/catalog/generated/red-onion.webp"
     },
     {
       "id": "onion",
       "name": "Onion",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🧅"
+      "icon": "🧅",
+      "image": "/images/food/1f9c5.svg"
     },
     {
       "id": "garlic",
       "name": "Garlic",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🧄"
+      "icon": "🧄",
+      "image": "/images/food/1f9c4.svg"
     },
     {
       "id": "bell-pepper",
       "name": "Bell pepper",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🫑"
+      "icon": "🫑",
+      "image": "/images/food/1fad1.svg"
     },
     {
       "id": "zucchini",
       "name": "Zucchini",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/zucchini.webp"
     },
     {
       "id": "mushrooms",
       "name": "Mushrooms",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🍄"
+      "icon": "🍄",
+      "image": "/images/food/1f344.svg"
     },
     {
       "id": "lettuce",
       "name": "Lettuce",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/food/1f96c.svg"
     },
     {
       "id": "cauliflower",
       "name": "Cauliflower",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/cauliflower.webp"
     },
     {
       "id": "peas",
       "name": "Peas",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/peas.webp"
     },
     {
       "id": "cabbage",
       "name": "Cabbage",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/food/1f96c.svg"
     },
     {
       "id": "celery",
       "name": "Celery",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/celery.webp"
     },
     {
       "id": "asparagus",
       "name": "Asparagus",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/asparagus.webp"
     },
     {
       "id": "beetroot",
       "name": "Beetroot",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/beetroot.webp"
     },
     {
       "id": "pumpkin",
       "name": "Pumpkin",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/pumpkin.webp"
     },
     {
       "id": "bananas",
@@ -165,7 +187,8 @@
       "aliases": [
         "banaani"
       ],
-      "icon": "🍌"
+      "icon": "🍌",
+      "image": "/images/food/1f34c.svg"
     },
     {
       "id": "apples",
@@ -174,112 +197,128 @@
       "aliases": [
         "omena"
       ],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/food/1f34e.svg"
     },
     {
       "id": "lemon",
       "name": "Lemon",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍋"
+      "icon": "🍋",
+      "image": "/images/food/1f34b.svg"
     },
     {
       "id": "lime",
       "name": "Lime",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/lime.webp"
     },
     {
       "id": "oranges",
       "name": "Oranges",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍊"
+      "icon": "🍊",
+      "image": "/images/food/1f34a.svg"
     },
     {
       "id": "strawberries",
       "name": "Strawberries",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍓"
+      "icon": "🍓",
+      "image": "/images/food/1f353.svg"
     },
     {
       "id": "blueberries",
       "name": "Blueberries",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🫐"
+      "icon": "🫐",
+      "image": "/images/food/1fad0.svg"
     },
     {
       "id": "raspberries",
       "name": "Raspberries",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/raspberries.webp"
     },
     {
       "id": "grapes",
       "name": "Grapes",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍇"
+      "icon": "🍇",
+      "image": "/images/food/1f347.svg"
     },
     {
       "id": "pears",
       "name": "Pears",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/food/1f350.svg"
     },
     {
       "id": "mango",
       "name": "Mango",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/mango.webp"
     },
     {
       "id": "kiwi",
       "name": "Kiwi",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/food/1f95d.svg"
     },
     {
       "id": "watermelon",
       "name": "Watermelon",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/food/1f349.svg"
     },
     {
       "id": "fresh-basil",
       "name": "Fresh basil",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/basil.webp"
     },
     {
       "id": "parsley",
       "name": "Parsley",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/parsley.webp"
     },
     {
       "id": "dill",
       "name": "Dill",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/dill.webp"
     },
     {
       "id": "sourdough-bread",
       "name": "Sourdough bread",
       "category": "Bread",
       "aliases": [],
-      "icon": "🍞"
+      "icon": "🍞",
+      "image": "/images/food/1f35e.svg"
     },
     {
       "id": "rye-bread",
@@ -288,14 +327,16 @@
       "aliases": [
         "ruisleipä"
       ],
-      "icon": "🍞"
+      "icon": "🍞",
+      "image": "/images/food/1f35e.svg"
     },
     {
       "id": "toast-bread",
       "name": "Toast bread",
       "category": "Bread",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/food/1f35e.svg"
     },
     {
       "id": "bread-rolls",
@@ -304,42 +345,48 @@
       "aliases": [
         "sämpylä"
       ],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/catalog/generated/bread-rolls.webp"
     },
     {
       "id": "bagels",
       "name": "Bagels",
       "category": "Bread",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/food/1f96f.svg"
     },
     {
       "id": "croissants",
       "name": "Croissants",
       "category": "Pastries",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/food/1f950.svg"
     },
     {
       "id": "tortillas",
       "name": "Tortillas",
       "category": "Bread",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/catalog/generated/tortillas.webp"
     },
     {
       "id": "pita-bread",
       "name": "Pita bread",
       "category": "Bread",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/catalog/generated/pita.webp"
     },
     {
       "id": "cinnamon-buns",
       "name": "Cinnamon buns",
       "category": "Pastries",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/catalog/generated/cinnamon-buns.webp"
     },
     {
       "id": "oat-milk",
@@ -348,7 +395,8 @@
       "aliases": [
         "kauramaito"
       ],
-      "icon": "🥛"
+      "icon": "🥛",
+      "image": "/images/catalog/generated/oat-milk.webp"
     },
     {
       "id": "milk",
@@ -357,21 +405,24 @@
       "aliases": [
         "maito"
       ],
-      "icon": "🥛"
+      "icon": "🥛",
+      "image": "/images/catalog/generated/milk-carton.webp"
     },
     {
       "id": "greek-yogurt",
       "name": "Greek yogurt",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🥣"
+      "icon": "🥣",
+      "image": "/images/catalog/generated/yogurt.webp"
     },
     {
       "id": "yogurt",
       "name": "Yogurt",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🥛"
+      "icon": "🥛",
+      "image": "/images/catalog/generated/yogurt.webp"
     },
     {
       "id": "eggs",
@@ -380,77 +431,88 @@
       "aliases": [
         "kananmuna"
       ],
-      "icon": "🥚"
+      "icon": "🥚",
+      "image": "/images/food/1f95a.svg"
     },
     {
       "id": "butter",
       "name": "Butter",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🧈"
+      "icon": "🧈",
+      "image": "/images/food/1f9c8.svg"
     },
     {
       "id": "cream",
       "name": "Cream",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🥛"
+      "icon": "🥛",
+      "image": "/images/catalog/generated/cream.webp"
     },
     {
       "id": "sour-cream",
       "name": "Sour cream",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🥛"
+      "icon": "🥛",
+      "image": "/images/catalog/generated/sour-cream.webp"
     },
     {
       "id": "cottage-cheese",
       "name": "Cottage cheese",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🥛"
+      "icon": "🥛",
+      "image": "/images/catalog/generated/cottage-cheese.webp"
     },
     {
       "id": "cheddar",
       "name": "Cheddar",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/food/1f9c0.svg"
     },
     {
       "id": "mozzarella",
       "name": "Mozzarella",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/catalog/generated/mozzarella.webp"
     },
     {
       "id": "parmesan",
       "name": "Parmesan",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/food/1f9c0.svg"
     },
     {
       "id": "feta",
       "name": "Feta",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/catalog/generated/feta.webp"
     },
     {
       "id": "cream-cheese",
       "name": "Cream cheese",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🥛"
+      "icon": "🥛",
+      "image": "/images/catalog/generated/cream-cheese.webp"
     },
     {
       "id": "salmon",
       "name": "Salmon",
       "category": "Fish",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/catalog/generated/salmon.webp"
     },
     {
       "id": "chicken-breast",
@@ -459,91 +521,104 @@
       "aliases": [
         "kana"
       ],
-      "icon": "🍗"
+      "icon": "🍗",
+      "image": "/images/catalog/generated/chicken.webp"
     },
     {
       "id": "chicken-thighs",
       "name": "Chicken thighs",
       "category": "Meat",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/catalog/generated/chicken-thighs.webp"
     },
     {
       "id": "minced-beef",
       "name": "Minced beef",
       "category": "Meat",
       "aliases": [],
-      "icon": "🥩"
+      "icon": "🥩",
+      "image": "/images/catalog/generated/minced-meat.webp"
     },
     {
       "id": "minced-turkey",
       "name": "Minced turkey",
       "category": "Meat",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/catalog/generated/minced-meat.webp"
     },
     {
       "id": "pork-chops",
       "name": "Pork chops",
       "category": "Meat",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/catalog/generated/pork-chops.webp"
     },
     {
       "id": "bacon",
       "name": "Bacon",
       "category": "Meat",
       "aliases": [],
-      "icon": "🥓"
+      "icon": "🥓",
+      "image": "/images/food/1f953.svg"
     },
     {
       "id": "sausages",
       "name": "Sausages",
       "category": "Meat",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/catalog/generated/sausages.webp"
     },
     {
       "id": "ham",
       "name": "Ham",
       "category": "Meat",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/catalog/generated/ham.webp"
     },
     {
       "id": "tuna",
       "name": "Tuna",
       "category": "Fish",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/food/1f41f.svg"
     },
     {
       "id": "cod",
       "name": "Cod",
       "category": "Meat",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/catalog/generated/fish-fillet.webp"
     },
     {
       "id": "prawns",
       "name": "Prawns",
       "category": "Meat",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/food/1f990.svg"
     },
     {
       "id": "smoked-salmon",
       "name": "Smoked salmon",
       "category": "Fish",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/catalog/generated/salmon.webp"
     },
     {
       "id": "pasta",
       "name": "Pasta",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/dry-pasta.webp"
     },
     {
       "id": "rice",
@@ -552,455 +627,520 @@
       "aliases": [
         "riisi"
       ],
-      "icon": "🍚"
+      "icon": "🍚",
+      "image": "/images/food/1f35a.svg"
     },
     {
       "id": "couscous",
       "name": "Couscous",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/grain.webp"
     },
     {
       "id": "quinoa",
       "name": "Quinoa",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/grain.webp"
     },
     {
       "id": "oats",
       "name": "Oats",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/oats.webp"
     },
     {
       "id": "flour",
       "name": "Flour",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/flour.webp"
     },
     {
       "id": "noodles",
       "name": "Noodles",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/noodles.webp"
     },
     {
       "id": "granola",
       "name": "Granola",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/granola.webp"
     },
     {
       "id": "cereal",
       "name": "Cereal",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/cereal.webp"
     },
     {
       "id": "breadcrumbs",
       "name": "Breadcrumbs",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/breadcrumbs.webp"
     },
     {
       "id": "barley",
       "name": "Barley",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/grain.webp"
     },
     {
       "id": "semolina",
       "name": "Semolina",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🍝"
+      "icon": "🍝",
+      "image": "/images/catalog/generated/grain.webp"
     },
     {
       "id": "chickpeas",
       "name": "Chickpeas",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/chickpeas.webp"
     },
     {
       "id": "lentils",
       "name": "Lentils",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/red-lentils.webp"
     },
     {
       "id": "black-beans",
       "name": "Black beans",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/black-beans.webp"
     },
     {
       "id": "kidney-beans",
       "name": "Kidney beans",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/kidney-beans.webp"
     },
     {
       "id": "chopped-tomatoes",
       "name": "Chopped tomatoes",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/tomatoes-can.webp"
     },
     {
       "id": "tomato-paste",
       "name": "Tomato paste",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/tomato-paste.webp"
     },
     {
       "id": "coconut-milk",
       "name": "Coconut milk",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/coconut-can.webp"
     },
     {
       "id": "vegetable-stock",
       "name": "Vegetable stock",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/stock.webp"
     },
     {
       "id": "chicken-stock",
       "name": "Chicken stock",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/stock.webp"
     },
     {
       "id": "olive-oil",
       "name": "Olive oil",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫒"
+      "icon": "🫒",
+      "image": "/images/catalog/generated/oil.webp"
     },
     {
       "id": "rapeseed-oil",
       "name": "Rapeseed oil",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/oil.webp"
     },
     {
       "id": "soy-sauce",
       "name": "Soy sauce",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/soy-sauce.webp"
     },
     {
       "id": "vinegar",
       "name": "Vinegar",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/vinegar.webp"
     },
     {
       "id": "honey",
       "name": "Honey",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🍯"
+      "icon": "🍯",
+      "image": "/images/food/1f36f.svg"
     },
     {
       "id": "sugar",
       "name": "Sugar",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/sugar.webp"
     },
     {
       "id": "salt",
       "name": "Salt",
       "category": "Spices",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/food/1f9c2.svg"
     },
     {
       "id": "black-pepper",
       "name": "Black pepper",
       "category": "Spices",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/black-pepper.webp"
     },
     {
       "id": "paprika",
       "name": "Paprika",
       "category": "Spices",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/red-spice.webp"
     },
     {
       "id": "cumin",
       "name": "Cumin",
       "category": "Spices",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/cumin.webp"
     },
     {
       "id": "cinnamon",
       "name": "Cinnamon",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/cinnamon.webp"
     },
     {
       "id": "curry-powder",
       "name": "Curry powder",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/gold-spice.webp"
     },
     {
       "id": "oregano",
       "name": "Oregano",
       "category": "Spices",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/herb-jar.webp"
     },
     {
       "id": "baking-powder",
       "name": "Baking powder",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/baking-powder.webp"
     },
     {
       "id": "yeast",
       "name": "Yeast",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/yeast.webp"
     },
     {
       "id": "peanut-butter",
       "name": "Peanut butter",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/peanut-butter.webp"
     },
     {
       "id": "jam",
       "name": "Jam",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/jam.webp"
     },
     {
       "id": "pesto",
       "name": "Pesto",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/pesto.webp"
     },
     {
       "id": "mustard",
       "name": "Mustard",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/mustard.webp"
     },
     {
       "id": "ketchup",
       "name": "Ketchup",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/ketchup.webp"
     },
     {
       "id": "mayonnaise",
       "name": "Mayonnaise",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🫙"
+      "icon": "🫙",
+      "image": "/images/catalog/generated/mayonnaise.webp"
     },
     {
       "id": "frozen-peas",
       "name": "Frozen peas",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🧊"
+      "icon": "🧊",
+      "image": "/images/catalog/generated/peas.webp"
     },
     {
       "id": "frozen-berries",
       "name": "Frozen berries",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🧊"
+      "icon": "🧊",
+      "image": "/images/catalog/generated/berries.webp"
     },
     {
       "id": "frozen-vegetables",
       "name": "Frozen vegetables",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🧊"
+      "icon": "🧊",
+      "image": "/images/catalog/generated/vegetables.webp"
     },
     {
       "id": "ice-cream",
       "name": "Ice cream",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🧊"
+      "icon": "🧊",
+      "image": "/images/food/1f368.svg"
     },
     {
       "id": "frozen-pizza",
       "name": "Frozen pizza",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🧊"
+      "icon": "🧊",
+      "image": "/images/catalog/generated/frozen-pizza.webp"
     },
     {
       "id": "fish-fingers",
       "name": "Fish fingers",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🧊"
+      "icon": "🧊",
+      "image": "/images/catalog/generated/fish-fingers.webp"
     },
     {
       "id": "frozen-spinach",
       "name": "Frozen spinach",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🧊"
+      "icon": "🧊",
+      "image": "/images/catalog/generated/frozen-spinach.webp"
     },
     {
       "id": "ready-made-soup",
       "name": "Ready-made soup",
       "category": "Convenience",
       "aliases": [],
-      "icon": "🥡"
+      "icon": "🥡",
+      "image": "/images/catalog/generated/soup.webp"
     },
     {
       "id": "dumplings",
       "name": "Dumplings",
       "category": "Convenience",
       "aliases": [],
-      "icon": "🥡"
+      "icon": "🥡",
+      "image": "/images/catalog/generated/frozen-dumplings.webp"
     },
     {
       "id": "falafel",
       "name": "Falafel",
       "category": "Convenience",
       "aliases": [],
-      "icon": "🥡"
+      "icon": "🥡",
+      "image": "/images/catalog/generated/falafel.webp"
     },
     {
       "id": "tofu",
       "name": "Tofu",
       "category": "Convenience",
       "aliases": [],
-      "icon": "🥡"
+      "icon": "🥡",
+      "image": "/images/catalog/generated/tofu.webp"
     },
     {
       "id": "hummus",
       "name": "Hummus",
       "category": "Convenience",
       "aliases": [],
-      "icon": "🥡"
+      "icon": "🥡",
+      "image": "/images/catalog/generated/hummus.webp"
     },
     {
       "id": "pizza-dough",
       "name": "Pizza dough",
       "category": "Convenience",
       "aliases": [],
-      "icon": "🥡"
+      "icon": "🥡",
+      "image": "/images/catalog/generated/pizza-dough.webp"
     },
     {
       "id": "ready-made-salad",
       "name": "Ready-made salad",
       "category": "Convenience",
       "aliases": [],
-      "icon": "🥡"
+      "icon": "🥡",
+      "image": "/images/catalog/generated/salad.webp"
     },
     {
       "id": "chocolate",
       "name": "Chocolate",
       "category": "Sweets",
       "aliases": [],
-      "icon": "🍫"
+      "icon": "🍫",
+      "image": "/images/food/1f36b.svg"
     },
     {
       "id": "crisps",
       "name": "Crisps",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🍿"
+      "icon": "🍿",
+      "image": "/images/catalog/generated/crisps.webp"
     },
     {
       "id": "popcorn",
       "name": "Popcorn",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🍿"
+      "icon": "🍿",
+      "image": "/images/food/1f37f.svg"
     },
     {
       "id": "crackers",
       "name": "Crackers",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🍿"
+      "icon": "🍿",
+      "image": "/images/catalog/generated/crispbread.webp"
     },
     {
       "id": "biscuits",
       "name": "Biscuits",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🍿"
+      "icon": "🍿",
+      "image": "/images/food/1f36a.svg"
     },
     {
       "id": "nuts",
       "name": "Nuts",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🍿"
+      "icon": "🍿",
+      "image": "/images/catalog/generated/nuts.webp"
     },
     {
       "id": "dried-fruit",
       "name": "Dried fruit",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🍿"
+      "icon": "🍿",
+      "image": "/images/catalog/generated/dried-fruit.webp"
     },
     {
       "id": "candy",
       "name": "Candy",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🍿"
+      "icon": "🍿",
+      "image": "/images/food/1f36c.svg"
     },
     {
       "id": "rice-cakes",
       "name": "Rice cakes",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🍿"
+      "icon": "🍿",
+      "image": "/images/catalog/generated/rice-cakes.webp"
     },
     {
       "id": "protein-bars",
       "name": "Protein bars",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🍿"
+      "icon": "🍿",
+      "image": "/images/catalog/generated/protein-bar.webp"
     },
     {
       "id": "coffee",
@@ -1009,49 +1149,56 @@
       "aliases": [
         "kahvi"
       ],
-      "icon": "☕"
+      "icon": "☕",
+      "image": "/images/food/2615.svg"
     },
     {
       "id": "tea",
       "name": "Tea",
       "category": "Beverages",
       "aliases": [],
-      "icon": "☕"
+      "icon": "☕",
+      "image": "/images/catalog/generated/tea.webp"
     },
     {
       "id": "sparkling-water",
       "name": "Sparkling water",
       "category": "Beverages",
       "aliases": [],
-      "icon": "☕"
+      "icon": "☕",
+      "image": "/images/catalog/generated/water.webp"
     },
     {
       "id": "juice",
       "name": "Juice",
       "category": "Beverages",
       "aliases": [],
-      "icon": "☕"
+      "icon": "☕",
+      "image": "/images/catalog/generated/juice.webp"
     },
     {
       "id": "lemonade",
       "name": "Lemonade",
       "category": "Beverages",
       "aliases": [],
-      "icon": "☕"
+      "icon": "☕",
+      "image": "/images/catalog/generated/lemonade.webp"
     },
     {
       "id": "hot-chocolate",
       "name": "Hot chocolate",
       "category": "Beverages",
       "aliases": [],
-      "icon": "☕"
+      "icon": "☕",
+      "image": "/images/food/2615.svg"
     },
     {
       "id": "mineral-water",
       "name": "Mineral water",
       "category": "Beverages",
       "aliases": [],
-      "icon": "☕"
+      "icon": "☕",
+      "image": "/images/catalog/generated/water.webp"
     },
     {
       "id": "toilet-paper",
@@ -1060,1302 +1207,1488 @@
       "aliases": [
         "wc-paperi"
       ],
-      "icon": "🧻"
+      "icon": "🧻",
+      "image": "/images/food/1f9fb.svg"
     },
     {
       "id": "kitchen-paper",
       "name": "Kitchen paper",
       "category": "Household",
       "aliases": [],
-      "icon": "🧻"
+      "icon": "🧻",
+      "image": "/images/catalog/generated/kitchen-paper.webp"
     },
     {
       "id": "dish-soap",
       "name": "Dish soap",
       "category": "Household",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/food/1f9f4.svg"
     },
     {
       "id": "dishwasher-tablets",
       "name": "Dishwasher tablets",
       "category": "Household",
       "aliases": [],
-      "icon": "🧻"
+      "icon": "🧻",
+      "image": "/images/catalog/generated/dishwasher-tablets.webp"
     },
     {
       "id": "laundry-detergent",
       "name": "Laundry detergent",
       "category": "Household",
       "aliases": [],
-      "icon": "🧻"
+      "icon": "🧻",
+      "image": "/images/catalog/generated/laundry-liquid.webp"
     },
     {
       "id": "bin-bags",
       "name": "Bin bags",
       "category": "Household",
       "aliases": [],
-      "icon": "🧻"
+      "icon": "🧻",
+      "image": "/images/catalog/generated/bin-bags.webp"
     },
     {
       "id": "sponges",
       "name": "Sponges",
       "category": "Household",
       "aliases": [],
-      "icon": "🧻"
+      "icon": "🧻",
+      "image": "/images/catalog/generated/sponges.webp"
     },
     {
       "id": "baking-paper",
       "name": "Baking paper",
       "category": "Household",
       "aliases": [],
-      "icon": "🧻"
+      "icon": "🧻",
+      "image": "/images/catalog/generated/baking-paper.webp"
     },
     {
       "id": "aluminium-foil",
       "name": "Aluminium foil",
       "category": "Household",
       "aliases": [],
-      "icon": "🧻"
+      "icon": "🧻",
+      "image": "/images/catalog/generated/foil.webp"
     },
     {
       "id": "cleaning-spray",
       "name": "Cleaning spray",
       "category": "Household",
       "aliases": [],
-      "icon": "🧻"
+      "icon": "🧻",
+      "image": "/images/catalog/generated/cleaning-spray.webp"
     },
     {
       "id": "shampoo",
       "name": "Shampoo",
       "category": "Care",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/food/1f9f4.svg"
     },
     {
       "id": "conditioner",
       "name": "Conditioner",
       "category": "Care",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/food/1f9f4.svg"
     },
     {
       "id": "toothpaste",
       "name": "Toothpaste",
       "category": "Care",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/catalog/generated/toothpaste.webp"
     },
     {
       "id": "toothbrush",
       "name": "Toothbrush",
       "category": "Care",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/catalog/generated/toothbrush.webp"
     },
     {
       "id": "hand-soap",
       "name": "Hand soap",
       "category": "Care",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/catalog/generated/soap.webp"
     },
     {
       "id": "shower-gel",
       "name": "Shower gel",
       "category": "Care",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/food/1f9f4.svg"
     },
     {
       "id": "deodorant",
       "name": "Deodorant",
       "category": "Care",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/catalog/generated/deodorant.webp"
     },
     {
       "id": "sunscreen",
       "name": "Sunscreen",
       "category": "Care",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/catalog/generated/sunscreen.webp"
     },
     {
       "id": "plasters",
       "name": "Plasters",
       "category": "Health",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/food/1fa79.svg"
     },
     {
       "id": "vitamins",
       "name": "Vitamins",
       "category": "Health",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/food/1f48a.svg"
     },
     {
       "id": "tissues",
       "name": "Tissues",
       "category": "Care",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/catalog/generated/tissues.webp"
     },
     {
       "id": "nappies",
       "name": "Nappies",
       "category": "Care",
       "aliases": [],
-      "icon": "🧴"
+      "icon": "🧴",
+      "image": "/images/catalog/generated/nappies.webp"
     },
     {
       "id": "cat-food",
       "name": "Cat food",
       "category": "Pet supplies",
       "aliases": [],
-      "icon": "🐾"
+      "icon": "🐾",
+      "image": "/images/catalog/generated/cat-food.webp"
     },
     {
       "id": "dog-food",
       "name": "Dog food",
       "category": "Pet supplies",
       "aliases": [],
-      "icon": "🐾"
+      "icon": "🐾",
+      "image": "/images/catalog/generated/dog-food.webp"
     },
     {
       "id": "cat-litter",
       "name": "Cat litter",
       "category": "Pet supplies",
       "aliases": [],
-      "icon": "🐾"
+      "icon": "🐾",
+      "image": "/images/catalog/generated/cat-litter.webp"
     },
     {
       "id": "pet-treats",
       "name": "Pet treats",
       "category": "Pet supplies",
       "aliases": [],
-      "icon": "🐾"
+      "icon": "🐾",
+      "image": "/images/catalog/generated/pet-treats.webp"
     },
     {
       "id": "batteries",
       "name": "Batteries",
       "category": "Home",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/food/1f50b.svg"
     },
     {
       "id": "light-bulbs",
       "name": "Light bulbs",
       "category": "Home",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/food/1f4a1.svg"
     },
     {
       "id": "candles",
       "name": "Candles",
       "category": "Home",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/food/1f56f.svg"
     },
     {
       "id": "potting-soil",
       "name": "Potting soil",
       "category": "Garden",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/catalog/generated/soil.webp"
     },
     {
       "id": "plant-food",
       "name": "Plant food",
       "category": "Garden",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/catalog/generated/plant-food.webp"
     },
     {
       "id": "apricots",
       "name": "Apricots",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/catalog/generated/apricots.webp"
     },
     {
       "id": "peaches",
       "name": "Peaches",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/food/1f351.svg"
     },
     {
       "id": "nectarines",
       "name": "Nectarines",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/food/1f351.svg"
     },
     {
       "id": "plums",
       "name": "Plums",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/catalog/generated/plums.webp"
     },
     {
       "id": "pineapple",
       "name": "Pineapple",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/food/1f34d.svg"
     },
     {
       "id": "clementines",
       "name": "Clementines",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/food/1f34a.svg"
     },
     {
       "id": "cherries",
       "name": "Cherries",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/food/1f352.svg"
     },
     {
       "id": "dates",
       "name": "Dates",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/catalog/generated/dates.webp"
     },
     {
       "id": "figs",
       "name": "Figs",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/catalog/generated/figs.webp"
     },
     {
       "id": "pomegranate",
       "name": "Pomegranate",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/catalog/generated/pomegranate.webp"
     },
     {
       "id": "grapefruit",
       "name": "Grapefruit",
       "category": "Fruits",
       "aliases": [],
-      "icon": "🍎"
+      "icon": "🍎",
+      "image": "/images/catalog/generated/grapefruit.webp"
     },
     {
       "id": "leeks",
       "name": "Leeks",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/leeks.webp"
     },
     {
       "id": "kale",
       "name": "Kale",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/food/1f96c.svg"
     },
     {
       "id": "radishes",
       "name": "Radishes",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/radishes.webp"
     },
     {
       "id": "turnips",
       "name": "Turnips",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/turnips.webp"
     },
     {
       "id": "parsnips",
       "name": "Parsnips",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/parsnips.webp"
     },
     {
       "id": "green-beans",
       "name": "Green beans",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/green-beans.webp"
     },
     {
       "id": "aubergine",
       "name": "Aubergine",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/food/1f346.svg"
     },
     {
       "id": "brussels-sprouts",
       "name": "Brussels sprouts",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/brussels-sprouts.webp"
     },
     {
       "id": "pak-choi",
       "name": "Pak choi",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/pak-choi.webp"
     },
     {
       "id": "spring-onions",
       "name": "Spring onions",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/spring-onions.webp"
     },
     {
       "id": "artichokes",
       "name": "Artichokes",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/artichokes.webp"
     },
     {
       "id": "chilli-peppers",
       "name": "Chilli peppers",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/food/1f336.svg"
     },
     {
       "id": "fennel",
       "name": "Fennel",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/fennel.webp"
     },
     {
       "id": "butternut-squash",
       "name": "Butternut squash",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/butternut-squash.webp"
     },
     {
       "id": "coriander",
       "name": "Coriander",
       "category": "Vegetables",
       "aliases": [],
-      "icon": "🥬"
+      "icon": "🥬",
+      "image": "/images/catalog/generated/coriander.webp"
     },
     {
       "id": "whole-milk",
       "name": "Whole milk",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/milk-carton.webp"
     },
     {
       "id": "skimmed-milk",
       "name": "Skimmed milk",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/milk-carton.webp"
     },
     {
       "id": "lactose-free-milk",
       "name": "Lactose-free milk",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/milk-carton.webp"
     },
     {
       "id": "soy-milk",
       "name": "Soy milk",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/soy-milk.webp"
     },
     {
       "id": "almond-milk",
       "name": "Almond milk",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/almond-milk.webp"
     },
     {
       "id": "coconut-yogurt",
       "name": "Coconut yogurt",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/coconut-yogurt.webp"
     },
     {
       "id": "cr-me-fra-che",
       "name": "Crème fraîche",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/sour-cream.webp"
     },
     {
       "id": "quark",
       "name": "Quark",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/yogurt.webp"
     },
     {
       "id": "kefir",
       "name": "Kefir",
       "category": "Milk & eggs",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/kefir.webp"
     },
     {
       "id": "halloumi",
       "name": "Halloumi",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/catalog/generated/feta.webp"
     },
     {
       "id": "gouda",
       "name": "Gouda",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/food/1f9c0.svg"
     },
     {
       "id": "brie",
       "name": "Brie",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/catalog/generated/brie.webp"
     },
     {
       "id": "goat-cheese",
       "name": "Goat cheese",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/catalog/generated/goat-cheese.webp"
     },
     {
       "id": "ricotta",
       "name": "Ricotta",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/catalog/generated/cottage-cheese.webp"
     },
     {
       "id": "emmental",
       "name": "Emmental",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/food/1f9c0.svg"
     },
     {
       "id": "blue-cheese",
       "name": "Blue cheese",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/catalog/generated/blue-cheese.webp"
     },
     {
       "id": "vegan-cheese",
       "name": "Vegan cheese",
       "category": "Cheese",
       "aliases": [],
-      "icon": "🧀"
+      "icon": "🧀",
+      "image": "/images/food/1f9c0.svg"
     },
     {
       "id": "turkey",
       "name": "Turkey",
       "category": "Meat",
       "aliases": [],
-      "icon": "🥩"
+      "icon": "🥩",
+      "image": "/images/catalog/generated/turkey.webp"
     },
     {
       "id": "lamb",
       "name": "Lamb",
       "category": "Meat",
       "aliases": [],
-      "icon": "🥩"
+      "icon": "🥩",
+      "image": "/images/catalog/generated/lamb.webp"
     },
     {
       "id": "beef-steak",
       "name": "Beef steak",
       "category": "Meat",
       "aliases": [],
-      "icon": "🥩"
+      "icon": "🥩",
+      "image": "/images/food/1f969.svg"
     },
     {
       "id": "meatballs",
       "name": "Meatballs",
       "category": "Meat",
       "aliases": [],
-      "icon": "🥩"
+      "icon": "🥩",
+      "image": "/images/catalog/generated/meatballs.webp"
     },
     {
       "id": "tuna-steak",
       "name": "Tuna steak",
       "category": "Fish",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/catalog/generated/tuna.webp"
     },
     {
       "id": "herring",
       "name": "Herring",
       "category": "Fish",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/food/1f41f.svg"
     },
     {
       "id": "mussels",
       "name": "Mussels",
       "category": "Fish",
       "aliases": [],
-      "icon": "🐟"
+      "icon": "🐟",
+      "image": "/images/catalog/generated/mussels.webp"
     },
     {
       "id": "red-lentils",
       "name": "Red lentils",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/red-lentils.webp"
     },
     {
       "id": "green-lentils",
       "name": "Green lentils",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/green-lentils.webp"
     },
     {
       "id": "white-beans",
       "name": "White beans",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/white-beans.webp"
     },
     {
       "id": "tempeh",
       "name": "Tempeh",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/tempeh.webp"
     },
     {
       "id": "coconut-cream",
       "name": "Coconut cream",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/coconut-can.webp"
     },
     {
       "id": "tahini",
       "name": "Tahini",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/tahini.webp"
     },
     {
       "id": "sesame-oil",
       "name": "Sesame oil",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/oil.webp"
     },
     {
       "id": "balsamic-vinegar",
       "name": "Balsamic vinegar",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/balsamic.webp"
     },
     {
       "id": "rice-vinegar",
       "name": "Rice vinegar",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/vinegar.webp"
     },
     {
       "id": "passata",
       "name": "Passata",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/passata.webp"
     },
     {
       "id": "capers",
       "name": "Capers",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/capers.webp"
     },
     {
       "id": "olives",
       "name": "Olives",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/food/1fad2.svg"
     },
     {
       "id": "cornflour",
       "name": "Cornflour",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/cornflour.webp"
     },
     {
       "id": "gelatine",
       "name": "Gelatine",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/gelatine.webp"
     },
     {
       "id": "vanilla-extract",
       "name": "Vanilla extract",
       "category": "Ingredients",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/vanilla.webp"
     },
     {
       "id": "turmeric",
       "name": "Turmeric",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/gold-spice.webp"
     },
     {
       "id": "cardamom",
       "name": "Cardamom",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/cardamom.webp"
     },
     {
       "id": "nutmeg",
       "name": "Nutmeg",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/nutmeg.webp"
     },
     {
       "id": "cayenne-pepper",
       "name": "Cayenne pepper",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/red-spice.webp"
     },
     {
       "id": "chilli-flakes",
       "name": "Chilli flakes",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/chilli-flakes.webp"
     },
     {
       "id": "coriander-seeds",
       "name": "Coriander seeds",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/coriander-seeds.webp"
     },
     {
       "id": "dried-basil",
       "name": "Dried basil",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/herb-jar.webp"
     },
     {
       "id": "rosemary",
       "name": "Rosemary",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/rosemary.webp"
     },
     {
       "id": "thyme",
       "name": "Thyme",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/thyme.webp"
     },
     {
       "id": "bay-leaves",
       "name": "Bay leaves",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/bay-leaves.webp"
     },
     {
       "id": "allspice",
       "name": "Allspice",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/allspice.webp"
     },
     {
       "id": "star-anise",
       "name": "Star anise",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/star-anise.webp"
     },
     {
       "id": "smoked-paprika",
       "name": "Smoked paprika",
       "category": "Spices",
       "aliases": [],
-      "icon": "🧂"
+      "icon": "🧂",
+      "image": "/images/catalog/generated/red-spice.webp"
     },
     {
       "id": "bulgur",
       "name": "Bulgur",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/grain.webp"
     },
     {
       "id": "polenta",
       "name": "Polenta",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/grain.webp"
     },
     {
       "id": "buckwheat",
       "name": "Buckwheat",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/grain.webp"
     },
     {
       "id": "wholegrain-pasta",
       "name": "Wholegrain pasta",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/dry-pasta.webp"
     },
     {
       "id": "rice-noodles",
       "name": "Rice noodles",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/noodles.webp"
     },
     {
       "id": "lasagne-sheets",
       "name": "Lasagne sheets",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/lasagne.webp"
     },
     {
       "id": "rye-flour",
       "name": "Rye flour",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/flour.webp"
     },
     {
       "id": "muesli",
       "name": "Muesli",
       "category": "Grain products",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/granola.webp"
     },
     {
       "id": "pretzels",
       "name": "Pretzels",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/food/1f968.svg"
     },
     {
       "id": "trail-mix",
       "name": "Trail mix",
       "category": "Snacks",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/nuts.webp"
     },
     {
       "id": "gummy-sweets",
       "name": "Gummy sweets",
       "category": "Sweets",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/gummy-sweets.webp"
     },
     {
       "id": "liquorice",
       "name": "Liquorice",
       "category": "Sweets",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/liquorice.webp"
     },
     {
       "id": "marshmallows",
       "name": "Marshmallows",
       "category": "Sweets",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/marshmallows.webp"
     },
     {
       "id": "dark-chocolate",
       "name": "Dark chocolate",
       "category": "Sweets",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/food/1f36b.svg"
     },
     {
       "id": "wafer-biscuits",
       "name": "Wafer biscuits",
       "category": "Sweets",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/wafer.webp"
     },
     {
       "id": "apple-juice",
       "name": "Apple juice",
       "category": "Beverages",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/apple-juice.webp"
     },
     {
       "id": "orange-juice",
       "name": "Orange juice",
       "category": "Beverages",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/juice.webp"
     },
     {
       "id": "herbal-tea",
       "name": "Herbal tea",
       "category": "Beverages",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/tea.webp"
     },
     {
       "id": "black-tea",
       "name": "Black tea",
       "category": "Beverages",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/tea.webp"
     },
     {
       "id": "green-tea",
       "name": "Green tea",
       "category": "Beverages",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/green-tea.webp"
     },
     {
       "id": "cocoa-powder",
       "name": "Cocoa powder",
       "category": "Beverages",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/cocoa.webp"
     },
     {
       "id": "alcohol-free-beer",
       "name": "Alcohol-free beer",
       "category": "Beverages",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/food/1f37a.svg"
     },
     {
       "id": "laundry-powder",
       "name": "Laundry powder",
       "category": "Household",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/laundry-powder.webp"
     },
     {
       "id": "fabric-softener",
       "name": "Fabric softener",
       "category": "Household",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/laundry-liquid.webp"
     },
     {
       "id": "dishwasher-salt",
       "name": "Dishwasher salt",
       "category": "Household",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/laundry-powder.webp"
     },
     {
       "id": "rinse-aid",
       "name": "Rinse aid",
       "category": "Household",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/rinse-aid.webp"
     },
     {
       "id": "floor-cleaner",
       "name": "Floor cleaner",
       "category": "Household",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/floor-cleaner.webp"
     },
     {
       "id": "toilet-cleaner",
       "name": "Toilet cleaner",
       "category": "Household",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/toilet-cleaner.webp"
     },
     {
       "id": "glass-cleaner",
       "name": "Glass cleaner",
       "category": "Household",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/cleaning-spray.webp"
     },
     {
       "id": "rubber-gloves",
       "name": "Rubber gloves",
       "category": "Household",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/rubber-gloves.webp"
     },
     {
       "id": "bin-liners",
       "name": "Bin liners",
       "category": "Household",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/bin-bags.webp"
     },
     {
       "id": "microfibre-cloths",
       "name": "Microfibre cloths",
       "category": "Household",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/cloths.webp"
     },
     {
       "id": "lip-balm",
       "name": "Lip balm",
       "category": "Care",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/lip-balm.webp"
     },
     {
       "id": "hand-cream",
       "name": "Hand cream",
       "category": "Care",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/hand-cream.webp"
     },
     {
       "id": "body-lotion",
       "name": "Body lotion",
       "category": "Care",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/lotion.webp"
     },
     {
       "id": "face-wash",
       "name": "Face wash",
       "category": "Care",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/face-wash.webp"
     },
     {
       "id": "razors",
       "name": "Razors",
       "category": "Care",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/razors.webp"
     },
     {
       "id": "shaving-foam",
       "name": "Shaving foam",
       "category": "Care",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/shaving-foam.webp"
     },
     {
       "id": "cotton-pads",
       "name": "Cotton pads",
       "category": "Care",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/cotton-pads.webp"
     },
     {
       "id": "sanitary-pads",
       "name": "Sanitary pads",
       "category": "Care",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/sanitary-pads.webp"
     },
     {
       "id": "tampons",
       "name": "Tampons",
       "category": "Care",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/tampons.webp"
     },
     {
       "id": "pain-relief",
       "name": "Pain relief",
       "category": "Health",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/pain-relief.webp"
     },
     {
       "id": "thermometer",
       "name": "Thermometer",
       "category": "Health",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/food/1f321.svg"
     },
     {
       "id": "first-aid-tape",
       "name": "First aid tape",
       "category": "Health",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/first-aid-tape.webp"
     },
     {
       "id": "disinfectant",
       "name": "Disinfectant",
       "category": "Health",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/disinfectant.webp"
     },
     {
       "id": "cough-drops",
       "name": "Cough drops",
       "category": "Health",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/cough-drops.webp"
     },
     {
       "id": "contact-lens-solution",
       "name": "Contact lens solution",
       "category": "Health",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/contact-solution.webp"
     },
     {
       "id": "dog-treats",
       "name": "Dog treats",
       "category": "Pet supplies",
       "aliases": [],
-      "icon": "🐾"
+      "icon": "🐾",
+      "image": "/images/catalog/generated/pet-treats.webp"
     },
     {
       "id": "cat-treats",
       "name": "Cat treats",
       "category": "Pet supplies",
       "aliases": [],
-      "icon": "🐾"
+      "icon": "🐾",
+      "image": "/images/catalog/generated/cat-treats.webp"
     },
     {
       "id": "bird-seed",
       "name": "Bird seed",
       "category": "Pet supplies",
       "aliases": [],
-      "icon": "🐾"
+      "icon": "🐾",
+      "image": "/images/catalog/generated/bird-seed.webp"
     },
     {
       "id": "rabbit-food",
       "name": "Rabbit food",
       "category": "Pet supplies",
       "aliases": [],
-      "icon": "🐾"
+      "icon": "🐾",
+      "image": "/images/catalog/generated/rabbit-food.webp"
     },
     {
       "id": "pet-shampoo",
       "name": "Pet shampoo",
       "category": "Pet supplies",
       "aliases": [],
-      "icon": "🐾"
+      "icon": "🐾",
+      "image": "/images/catalog/generated/pet-shampoo.webp"
     },
     {
       "id": "matches",
       "name": "Matches",
       "category": "Home",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/catalog/generated/matches.webp"
     },
     {
       "id": "led-bulbs",
       "name": "LED bulbs",
       "category": "Home",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/food/1f4a1.svg"
     },
     {
       "id": "storage-boxes",
       "name": "Storage boxes",
       "category": "Home",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/catalog/generated/storage-boxes.webp"
     },
     {
       "id": "kitchen-towels",
       "name": "Kitchen towels",
       "category": "Home",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/catalog/generated/cloths.webp"
     },
     {
       "id": "seeds",
       "name": "Seeds",
       "category": "Garden",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/catalog/generated/seeds.webp"
     },
     {
       "id": "compost",
       "name": "Compost",
       "category": "Garden",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/catalog/generated/soil.webp"
     },
     {
       "id": "garden-gloves",
       "name": "Garden gloves",
       "category": "Garden",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/catalog/generated/garden-gloves.webp"
     },
     {
       "id": "plant-pots",
       "name": "Plant pots",
       "category": "Garden",
       "aliases": [],
-      "icon": "🪴"
+      "icon": "🪴",
+      "image": "/images/catalog/generated/plant-pots.webp"
     },
     {
       "id": "baguette",
       "name": "Baguette",
       "category": "Bread",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/food/1f956.svg"
     },
     {
       "id": "flatbread",
       "name": "Flatbread",
       "category": "Bread",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/catalog/generated/tortillas.webp"
     },
     {
       "id": "crispbread",
       "name": "Crispbread",
       "category": "Bread",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/catalog/generated/crispbread.webp"
     },
     {
       "id": "wholegrain-bread",
       "name": "Wholegrain bread",
       "category": "Bread",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/food/1f35e.svg"
     },
     {
       "id": "gluten-free-bread",
       "name": "Gluten-free bread",
       "category": "Bread",
       "aliases": [],
-      "icon": "🥖"
+      "icon": "🥖",
+      "image": "/images/food/1f35e.svg"
     },
     {
       "id": "muffins",
       "name": "Muffins",
       "category": "Pastries",
       "aliases": [],
-      "icon": "🥐"
+      "icon": "🥐",
+      "image": "/images/catalog/generated/muffins.webp"
     },
     {
       "id": "doughnuts",
       "name": "Doughnuts",
       "category": "Pastries",
       "aliases": [],
-      "icon": "🥐"
+      "icon": "🥐",
+      "image": "/images/food/1f369.svg"
     },
     {
       "id": "scones",
       "name": "Scones",
       "category": "Pastries",
       "aliases": [],
-      "icon": "🥐"
+      "icon": "🥐",
+      "image": "/images/catalog/generated/scones.webp"
     },
     {
       "id": "puff-pastry",
       "name": "Puff pastry",
       "category": "Pastries",
       "aliases": [],
-      "icon": "🥐"
+      "icon": "🥐",
+      "image": "/images/catalog/generated/pastry.webp"
     },
     {
       "id": "shortcrust-pastry",
       "name": "Shortcrust pastry",
       "category": "Pastries",
       "aliases": [],
-      "icon": "🥐"
+      "icon": "🥐",
+      "image": "/images/catalog/generated/pastry.webp"
     },
     {
       "id": "frozen-mango",
       "name": "Frozen mango",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/mango.webp"
     },
     {
       "id": "frozen-chips",
       "name": "Frozen chips",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/frozen-chips.webp"
     },
     {
       "id": "frozen-dumplings",
       "name": "Frozen dumplings",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/frozen-dumplings.webp"
     },
     {
       "id": "ice-lollies",
       "name": "Ice lollies",
       "category": "Frozen",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/ice-lollies.webp"
     },
     {
       "id": "sandwiches",
       "name": "Sandwiches",
       "category": "Convenience",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/food/1f96a.svg"
     },
     {
       "id": "instant-noodles",
       "name": "Instant noodles",
       "category": "Convenience",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/instant-noodles.webp"
     },
     {
       "id": "vegetable-burgers",
       "name": "Vegetable burgers",
       "category": "Convenience",
       "aliases": [],
-      "icon": "🛒"
+      "icon": "🛒",
+      "image": "/images/catalog/generated/vegetable-burger.webp"
     }
   ],
   "recipes": [
@@ -2605,5 +2938,16 @@
     "Pastries",
     "Frozen",
     "Convenience"
-  ]
+  ],
+  "artworkAliases": {
+    "Water": "/images/catalog/generated/water.webp",
+    "Basil": "/images/catalog/generated/basil.webp",
+    "Grated cheese": "/images/catalog/generated/grated-cheese.webp",
+    "Shredded cheese": "/images/catalog/generated/grated-cheese.webp",
+    "Grated Emmental–mozzarella cheese": "/images/catalog/generated/grated-cheese.webp",
+    "Grated Emmental-mozzarella cheese": "/images/catalog/generated/grated-cheese.webp",
+    "Grated Emmental": "/images/catalog/generated/grated-cheese.webp",
+    "Grated mozzarella": "/images/catalog/generated/grated-cheese.webp",
+    "Grated cheddar": "/images/catalog/generated/grated-cheese.webp"
+  }
 }

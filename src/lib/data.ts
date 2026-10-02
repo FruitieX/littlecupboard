@@ -1,3 +1,5 @@
+import { catalogArtwork } from './catalog-artwork.ts'
+
 export const categories = [
   'Fruits',
   'Vegetables',
@@ -67,6 +69,7 @@ export type Recipe = {
   favorite?: boolean
   tags?: string[]
   sourceImages?: import('./api/SourceImage').SourceImage[]
+  mealPlanEligible?: boolean
 }
 export type Store = {
   id: string
@@ -765,6 +768,7 @@ export const catalog: Product[] = productGroups
       category: detailedGroup(name, category),
       aliases: groceryAliases[name] ?? [],
       icon: icons[name] ?? icon,
+      image: catalogArtwork[productId(name)],
     })),
   )
   // Keep shared names represented by a single catalog identity.

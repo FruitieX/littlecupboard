@@ -1,6 +1,7 @@
+import { NumberInput } from './NumberInput'
 import { getProducts } from '../lib/catalog'
 import { deleteRecipe } from '../lib/catalog'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   Search,
@@ -13,6 +14,8 @@ import {
   Minus,
   ArrowUpRight,
   BookOpen,
+  Sparkles,
+  LoaderCircle,
 } from 'lucide-react'
 import { findProduct } from '../lib/data'
 import type { Recipe, Ingredient } from '../lib/data'
@@ -30,6 +33,9 @@ import {
 } from '../lib/recipe-tags'
 import { RecipeTagsInput } from './RecipeTagsInput'
 import { RecipeSources } from './RecipeSources'
+import { IngredientPicker } from './IngredientPicker'
+import { replaceRecipeIngredients } from '../lib/recipe-ingredients'
+import { generateIconBatches, needsItemIcon } from '../lib/icon-batches'
 
 export function Recipes() {
   const { state, update, allRecipes } = useApp()
@@ -444,7 +450,7 @@ export function RecipeEditor({
   onClose: () => void
   recipe?: Recipe
 }) {
-  const { state, update, groups, allRecipes } = useApp()
+  const { state, update, groups, allRecipes, session, status } = useApp()
   const [name, setName] = useState(recipe?.name ?? '')
   const [subtitle, setSubtitle] = useState(recipe?.subtitle ?? '')
   const [minutes, setMinutes] = useState(recipe?.minutes ?? 20)
@@ -452,12 +458,22 @@ export function RecipeEditor({
     recipe?.servings ?? state.preferences?.servings ?? 4,
   )
   const [steps, setSteps] = useState(recipe?.steps.join('\n') ?? '')
+  const [mealPlanEligible, setMealPlanEligible] = useState(
+    recipe?.mealPlanEligible !== false,
+  )
   const [ingredients, setIngredients] = useState<Ingredient[]>(
     recipe?.ingredients ?? [],
   )
   const [ingredientName, setIngredientName] = useState('')
+  const [ingredientNames, setIngredientNames] = useState<
+    Record<string, string>
+  >({})
+  const [ingredientGroups, setIngredientGroups] = useState<
+    Record<string, string>
+  >({})
   const [group, setGroup] = useState(groups[0])
   const [quantity, setQuantity] = useState(1)
+  const ingredientQuantityInput = useRef<HTMLInputElement>(null)
   const [unit, setUnit] = useState('pc')
   const [note, setNote] = useState('')
   const [image, setImage] = useState(recipe?.image ?? '')
@@ -468,15 +484,68 @@ export function RecipeEditor({
   const [sources, setSources] = useState(recipe?.sourceImages ?? [])
   const [products, setProducts] = useState(state.customProducts)
   const [uploadCount, setUploadCount] = useState(0)
+  const [batchBusy, setBatchBusy] = useState(false)
   const pictureBusy = (busy: boolean) =>
     setUploadCount((count) => Math.max(0, count + (busy ? 1 : -1)))
-  const [pictures, setPictures] = useState(state.productImages ?? {})
+  const [pictures, setPictures] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
-  const knownProducts = getProducts({ ...state, customProducts: products })
+  const knownProducts = getProducts({
+    ...state,
+    customProducts: products,
+    productImages: { ...state.productImages, ...pictures },
+  })
   const choices = knownProducts.filter(
     (product) => !state.archivedProductIds?.includes(product.id),
   )
+  const missingIcons = ingredients
+    .map((i) => knownProducts.find((p) => p.id === i.productId)!)
+    .filter(needsItemIcon)
+  async function generateMissingIcons() {
+    if (uploadCount) return
+    setError('')
+    let resolved: ReturnType<typeof replaceRecipeIngredients>
+    try {
+      resolved = replaceRecipeIngredients(
+        ingredients,
+        knownProducts,
+        ingredientNames,
+        ingredientGroups,
+      )
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : 'Check ingredient names.',
+      )
+      return
+    }
+    const nextProducts = [...knownProducts, ...resolved.created]
+    const missing = resolved.ingredients
+      .map((i) => nextProducts.find((p) => p.id === i.productId)!)
+      .filter(needsItemIcon)
+    setProducts((current) => [...current, ...resolved.created])
+    setIngredients(resolved.ingredients)
+    setIngredientNames({})
+    setBatchBusy(true)
+    pictureBusy(true)
+    try {
+      await generateIconBatches(missing, (icons) =>
+        setPictures((current) => ({
+          ...current,
+          ...Object.fromEntries(icons.map((icon) => [icon.id, icon.url])),
+        })),
+      )
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'The icons could not be generated.',
+      )
+    } finally {
+      setBatchBusy(false)
+      pictureBusy(false)
+    }
+  }
   function addIngredient() {
+    if (!ingredientQuantityInput.current?.reportValidity()) return
     if (!ingredientName.trim() || quantity <= 0 || !unit.trim()) return
     let product = choices.find(
       (p) => p.name.toLowerCase() === ingredientName.trim().toLowerCase(),
@@ -513,7 +582,7 @@ export function RecipeEditor({
     <Modal
       open
       onOpenChange={(v) => {
-        if (!v) onClose()
+        if (!v && uploadCount === 0) onClose()
       }}
       title={recipe ? 'Edit recipe' : 'Create recipe'}
       description="Ingredients, method, and recipe notes."
@@ -524,6 +593,22 @@ export function RecipeEditor({
           event.preventDefault()
           if (!ingredients.length) {
             setError('Add at least one ingredient.')
+            return
+          }
+          let resolved: ReturnType<typeof replaceRecipeIngredients>
+          try {
+            resolved = replaceRecipeIngredients(
+              ingredients,
+              knownProducts,
+              ingredientNames,
+              ingredientGroups,
+            )
+          } catch (error) {
+            setError(
+              error instanceof Error
+                ? error.message
+                : 'Check ingredient names.',
+            )
             return
           }
           const savedTags = normalizeTags(tags, knownTags)
@@ -543,8 +628,9 @@ export function RecipeEditor({
             servings,
             tag: savedTags[0] || 'Our recipe',
             tags: savedTags,
+            mealPlanEligible,
             ...(sources.length ? { sourceImages: sources } : {}),
-            ingredients,
+            ingredients: resolved.ingredients,
             steps: steps
               .split('\n')
               .map((t) => t.trim())
@@ -552,10 +638,10 @@ export function RecipeEditor({
           }
           update((s) => ({
             ...s,
-            productImages: pictures,
+            productImages: { ...s.productImages, ...pictures },
             customProducts: [
               ...s.customProducts,
-              ...products.filter(
+              ...[...products, ...resolved.created].filter(
                 (p) => !s.customProducts.some((x) => x.id === p.id),
               ),
             ],
@@ -603,28 +689,39 @@ export function RecipeEditor({
         <div className="form-row">
           <label>
             Minutes
-            <input
-              type="number"
+            <NumberInput
               min={1}
               max={1440}
               required
               value={minutes}
-              onChange={(e) => setMinutes(Number(e.target.value))}
+              onValueChange={setMinutes}
             />
           </label>
           <label>
             Servings
-            <input
-              type="number"
+            <NumberInput
               min={1}
               max={100}
               required
               value={servings}
-              onChange={(e) => setServings(Number(e.target.value))}
+              onValueChange={setServings}
             />
           </label>
         </div>
         <RecipeTagsInput value={tags} onChange={setTags} options={knownTags} />
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={mealPlanEligible}
+            onChange={(event) => setMealPlanEligible(event.target.checked)}
+          />
+          Include in meal planning
+        </label>
+        <small>
+          Turn off for desserts, snacks and other recipes you want to keep
+          outside the weekly lunch plan. Tags create collections in your recipe
+          library.
+        </small>
         <RecipeSources sources={sources} onChange={setSources} />
         <ImageField
           value={image}
@@ -632,24 +729,37 @@ export function RecipeEditor({
           subject={name}
           onBusyChange={pictureBusy}
         />
-        <fieldset className="ingredient-editor">
+        <fieldset className="ingredient-editor" disabled={batchBusy}>
           <legend>Ingredients</legend>
-          <label>
-            Ingredient
-            <input
-              aria-label="Ingredient"
-              list="recipe-products"
-              value={ingredientName}
-              onChange={(e) => setIngredientName(e.target.value)}
-              placeholder="Search or name a new ingredient"
-              maxLength={100}
-            />
-            <datalist id="recipe-products">
-              {choices.map((p) => (
-                <option key={p.id} value={p.name} />
-              ))}
-            </datalist>
-          </label>
+          {session.imageEnabled &&
+            (missingIcons.length > 1 ||
+              Object.keys(ingredientNames).length > 1) && (
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={uploadCount > 0 || status === 'offline'}
+                onClick={() => void generateMissingIcons()}
+              >
+                {batchBusy ? (
+                  <LoaderCircle size={16} className="spin" />
+                ) : (
+                  <Sparkles size={16} />
+                )}
+                {batchBusy
+                  ? 'Generating ingredient icons…'
+                  : 'Generate missing ingredient icons'}
+              </button>
+            )}
+          {batchBusy && (
+            <p role="status">
+              Creating icon sheets. Review the previews before saving.
+            </p>
+          )}
+          <IngredientPicker
+            value={ingredientName}
+            onChange={setIngredientName}
+            products={choices}
+          />
           {!choices.some(
             (p) => p.name.toLowerCase() === ingredientName.toLowerCase(),
           ) &&
@@ -669,12 +779,13 @@ export function RecipeEditor({
           <div className="form-row">
             <label>
               Quantity
-              <input
-                type="number"
+              <NumberInput
+                ref={ingredientQuantityInput}
+                required={!!ingredientName.trim()}
                 min="0.01"
                 step="any"
                 value={quantity}
-                onChange={(e) => setQuantity(Number(e.target.value))}
+                onValueChange={setQuantity}
               />
             </label>
             <label>
@@ -721,22 +832,90 @@ export function RecipeEditor({
                     </span>
                   </summary>
                   <div className="editor-form">
+                    <IngredientPicker
+                      label={`Ingredient name for ${product.name}`}
+                      required
+                      value={ingredientNames[product.id] ?? product.name}
+                      onChange={(name) =>
+                        setIngredientNames((current) => ({
+                          ...current,
+                          [product.id]: name,
+                        }))
+                      }
+                      products={choices}
+                    />
+                    {ingredientNames[product.id] !== undefined &&
+                      ingredientNames[product.id] !== product.name && (
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => {
+                            try {
+                              const resolved = replaceRecipeIngredients(
+                                ingredients,
+                                knownProducts,
+                                ingredientNames,
+                                ingredientGroups,
+                              )
+                              setProducts((current) => [
+                                ...current,
+                                ...resolved.created,
+                              ])
+                              setIngredients(resolved.ingredients)
+                              setIngredientNames({})
+                              setError('')
+                            } catch (error) {
+                              setError(
+                                error instanceof Error
+                                  ? error.message
+                                  : 'Check ingredient names.',
+                              )
+                            }
+                          }}
+                        >
+                          Use ingredient
+                        </button>
+                      )}
+                    {ingredientNames[product.id]?.trim() &&
+                      !choices.some(
+                        (p) =>
+                          p.name.toLowerCase() ===
+                          ingredientNames[product.id].trim().toLowerCase(),
+                      ) && (
+                        <label>
+                          New group for {product.name}
+                          <select
+                            value={
+                              ingredientGroups[product.id] ?? product.category
+                            }
+                            onChange={(event) =>
+                              setIngredientGroups((current) => ({
+                                ...current,
+                                [product.id]: event.target.value,
+                              }))
+                            }
+                          >
+                            {groups.map((group) => (
+                              <option key={group}>{group}</option>
+                            ))}
+                          </select>
+                        </label>
+                      )}
                     <div className="form-row">
                       <label>
                         Amount of {product.name}
-                        <input
-                          type="number"
+                        <NumberInput
                           min="0.01"
                           step="any"
                           required
                           value={ingredient.quantity}
-                          onChange={(event) =>
+                          onValueChange={(quantity) =>
                             setIngredients((list) =>
                               list.map((i) =>
                                 i.productId === product.id
                                   ? {
                                       ...i,
-                                      quantity: Number(event.target.value),
+                                      quantity,
                                     }
                                   : i,
                               ),

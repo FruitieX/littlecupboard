@@ -228,6 +228,7 @@ pub async fn mutate(
                 .clone();
         }
         domain::validate(&snapshot.state)?;
+        domain::validate_plan_additions(&before, &snapshot.state)?;
         let old_sources = before
             .recipe_book
             .iter()

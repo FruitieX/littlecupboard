@@ -18,6 +18,27 @@ const state = (): AppState => ({
   },
 })
 describe('household meal suggestions', () => {
+  it('keeps library-only recipes out of schedules and discovery while older recipes stay eligible', () => {
+    const dessert = {
+      ...recipes[0],
+      id: 'dessert',
+      name: 'Berry pudding',
+      tags: ['Desserts'],
+      mealPlanEligible: false,
+    }
+    const household = state()
+    household.favoriteRecipeIds = [dessert.id]
+    expect(suggestWeek([dessert], household)).toEqual([])
+    expect(discovery([dessert], household)).toBeNull()
+    expect(
+      suggestWeek([dessert, recipes[1]], household).every(
+        (recipe) => recipe.id === recipes[1].id,
+      ),
+    ).toBe(true)
+    expect(recipeScore(dessert, household).reasons).toContain(
+      'Excluded from meal planning',
+    )
+  })
   it('honors avoided ingredients and excludes them from schedules', () => {
     const household = state()
     household.preferences!.avoid = ['pasta']

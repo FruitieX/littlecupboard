@@ -3,6 +3,20 @@ import { catalog, categories, initialState } from './data'
 import { changeGroup } from './groups'
 
 describe('group edits', () => {
+  it('preserves a partial shop route when merging into an omitted group', () => {
+    const state = initialState()
+    state.groups = [...categories]
+    state.stores[0].order = ['Vegetables', 'Fruits', 'Meat']
+    const result = changeGroup(state, 'Fruits', 'Milk & eggs', true)
+    expect(result.stores[0].order).toEqual([
+      'Vegetables',
+      'Milk & eggs',
+      'Meat',
+    ])
+    expect(
+      changeGroup(result, 'Meat', 'Milk & eggs', true).stores[0].order,
+    ).toEqual(['Vegetables', 'Milk & eggs'])
+  })
   it('renames built-in groups without losing assignments or aisle order', () => {
     const state = initialState()
     state.groups = [...categories]

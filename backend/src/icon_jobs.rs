@@ -219,11 +219,16 @@ struct Job {
     run_id: String,
 }
 
-fn claim(server: &Server) -> Result<Option<Job>> {
+fn claim(server: &Server) -> Result<Vec<Job>> {
     let mut conn = server.db.lock()?;
     let tx = conn.transaction()?;
     let candidates: Vec<(String,String,String)> = tx.prepare("SELECT household_id,product_id,source FROM item_icon_jobs WHERE status='queued' ORDER BY created_at,product_id")?.query_map([],|row|Ok((row.get(0)?,row.get(1)?,row.get(2)?)))?.collect::<std::result::Result<_,_>>()?;
+    let mut jobs: Vec<Job> = vec![];
+    let run_id = Uuid::new_v4().to_string();
     for (household, id, source) in candidates {
+        if jobs.first().is_some_and(|job| job.household != household) {
+            continue;
+        }
         let Some(config) = config_for(&tx, &household)? else {
             continue;
         };
@@ -247,26 +252,31 @@ fn claim(server: &Server) -> Result<Option<Job>> {
         if recent >= 20 {
             continue;
         }
-        let run_id = Uuid::new_v4().to_string();
+        tx.execute("UPDATE item_icon_jobs SET status='running',run_id=?3,started_at=unixepoch(),error=NULL WHERE household_id=?1 AND product_id=?2",params![household,id,run_id])?;
+        jobs.push(Job {
+            household,
+            product,
+            run_id: run_id.clone(),
+        });
+        if jobs.len() == crate::icon_batch::MAX_BATCH {
+            break;
+        }
+    }
+    if let Some(job) = jobs.first() {
         tx.execute(
             "DELETE FROM item_icon_attempts WHERE started_at<unixepoch()-86400",
             [],
         )?;
         tx.execute(
             "INSERT INTO item_icon_attempts(id,household_id) VALUES(?1,?2)",
-            params![run_id, household],
+            params![run_id, job.household],
         )?;
-        tx.execute("UPDATE item_icon_jobs SET status='running',run_id=?3,started_at=unixepoch(),error=NULL WHERE household_id=?1 AND product_id=?2",params![household,id,run_id])?;
-        tx.commit()?;
-        server.notify(&household);
-        return Ok(Some(Job {
-            household,
-            product,
-            run_id,
-        }));
     }
     tx.commit()?;
-    Ok(None)
+    if let Some(job) = jobs.first() {
+        server.notify(&job.household);
+    }
+    Ok(jobs)
 }
 
 fn finish(server: &Server, job: &Job, image: Result<api::StoredImage>) -> Result<()> {
@@ -334,20 +344,26 @@ fn finish(server: &Server, job: &Job, image: Result<api::StoredImage>) -> Result
 }
 
 pub async fn run_one(server: &Server) -> Result<bool> {
-    let Some(job) = claim(server)? else {
+    let jobs = claim(server)?;
+    let Some(first) = jobs.first() else {
         return Ok(false);
     };
-    let image = ai::render_image(
-        server,
-        &job.household,
-        ai::ImageKind::Item,
-        &format!("{}; item group: {}", job.product.name, job.product.category),
-    )
-    .await;
-    if let Err(error) = finish(server, &job, image) {
-        server.db.lock()?.execute("UPDATE item_icon_jobs SET status='failed',error='The icon could not be saved. Try again.',run_id=NULL WHERE household_id=?1 AND product_id=?2 AND run_id=?3",params![job.household,job.product.id,job.run_id])?;
-        server.notify(&job.household);
-        return Err(error);
+    let products: Vec<_> = jobs.iter().map(|job| job.product.clone()).collect();
+    let images = crate::icon_batch::render(server, &first.household, &products).await;
+    let results = match images {
+        Ok(images) => images.into_iter().map(Ok).collect::<Vec<_>>(),
+        Err(error) => jobs
+            .iter()
+            .map(|_| Err(crate::error::ApiError(error.0, error.1.clone())))
+            .collect(),
+    };
+    for (job, image) in jobs.iter().zip(results) {
+        if let Err(error) = finish(server, job, image) {
+            // Release every remaining lease if persistence fails mid-batch.
+            server.db.lock()?.execute("UPDATE item_icon_jobs SET status='failed',error='The icon could not be saved. Try again.',run_id=NULL WHERE household_id=?1 AND run_id=?2 AND status='running'",params![job.household,job.run_id])?;
+            server.notify(&job.household);
+            return Err(error);
+        }
     }
     Ok(true)
 }

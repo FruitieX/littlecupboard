@@ -1,3 +1,4 @@
+import { NumberInput } from './NumberInput'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
@@ -18,6 +19,9 @@ import { recipeScore, suggestWeek } from '../lib/learning'
 
 export function Week() {
   const { state, update, action, allRecipes } = useApp()
+  const planningRecipes = allRecipes.filter(
+    (recipe) => recipe.mealPlanEligible !== false,
+  )
   const [offset, setOffset] = useState(0)
   const [pickDay, setPickDay] = useState<Date | null>(null)
   const [suggestOpen, setSuggestOpen] = useState(false)
@@ -161,9 +165,9 @@ export function Week() {
                 <div className="meal-feedback">
                   <label>
                     Servings
-                    <input
+                    <NumberInput
                       aria-label={`Servings for ${day.toLocaleDateString('en-GB', { weekday: 'long' })}`}
-                      type="number"
+
                       min={1}
                       max={100}
                       value={
@@ -172,8 +176,8 @@ export function Week() {
                         recipe.servings
                       }
                       disabled={!!state.mealFeedback?.[key]}
-                      onChange={(e) => {
-                        const value = Number(e.target.value)
+                      revertInvalidOnBlur
+                      onValueChange={(value) => {
                         if (value > 0 && value <= 100)
                           update((s) => ({
                             ...s,
@@ -208,7 +212,7 @@ export function Week() {
         description="Something quick, something cozy, something everyone loves."
       >
         <div className="recipe-picker">
-          {allRecipes.map((recipe) => (
+          {planningRecipes.map((recipe) => (
             <button
               key={recipe.id}
               onClick={() => {
@@ -235,6 +239,12 @@ export function Week() {
               <ArrowUpRight size={18} />
             </button>
           ))}
+          {!planningRecipes.length && (
+            <p>
+              No recipes included in meal planning. Enable a recipe in its
+              editor to add it here.
+            </p>
+          )}
         </div>
         {pickDay && state.plan[dateKey(pickDay)] && (
           <button
@@ -318,7 +328,7 @@ export function Week() {
           <EmptyState
             icon="📖"
             title="Start with a recipe"
-            text="Add a few recipes to get lunch suggestions."
+            text="Add recipes and enable Include in meal planning in their editor to get lunch suggestions."
           />
         )}
       </Modal>

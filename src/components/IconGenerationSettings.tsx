@@ -86,14 +86,17 @@ export function IconGenerationSettings() {
       {pending > 0 && (
         <p role="status" className="settings-description">
           <LoaderCircle size={15} className="spin" />{' '}
-          {jobs?.running ? 'Generating an icon.' : 'Waiting for the next icon.'}{' '}
+          {jobs?.running
+            ? `Generating ${jobs.running} icons.`
+            : 'Waiting for the next icon sheet.'}{' '}
           {jobs?.queued} queued · {jobs?.completed} generated · {jobs?.failed}{' '}
           failed.
         </p>
       )}
       <small>
-        Uses the saved provider. One at a time, up to 20 background icons per
-        hour; remaining items stay queued. You can close the app while it works.
+        Uses the saved provider. Up to 16 icons share one image request, with up
+        to 20 background requests per hour. Remaining items stay queued. You can
+        close the app while it works.
         {!jobs?.ready && ' Enable the assistant and save an image model first.'}
       </small>
       {!!jobs?.failed && (

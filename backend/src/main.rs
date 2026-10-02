@@ -5,6 +5,7 @@ mod companion;
 mod db;
 mod domain;
 mod error;
+mod icon_batch;
 mod icon_jobs;
 mod insights;
 mod model;
@@ -119,7 +120,9 @@ pub fn app(server: Server) -> Router {
         .route("/api/ai/models", get(ai::models))
         .route("/api/ai/test", post(ai::test))
         .route("/api/ai/assistant", post(ai::assistant))
+        .route("/api/ai/store-layout", post(ai::store_layout))
         .route("/api/ai/image", post(ai::generate_image))
+        .route("/api/ai/icon-batch", post(icon_batch::generate))
         .route(
             "/api/ai/item-icons",
             get(icon_jobs::status).post(icon_jobs::manage),

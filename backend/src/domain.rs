@@ -59,10 +59,21 @@ pub fn product(state: &HouseholdState, id: &str) -> Result<Product> {
 fn customize_product(state: &HouseholdState, mut product: Product) -> Product {
     let id = product.id.clone();
     if let Some(details) = state.product_details.get(&id) {
+        let default_image = product.image.clone();
         product = details.clone();
+        if product.image.is_none() {
+            product.image = default_image;
+        }
     }
     if let Some(image) = state.product_images.get(&id) {
         product.image = Some(image.clone());
+    }
+    if product.image.is_none() && matches!(product.icon.trim(), "" | "🛒") {
+        product.image = seed()
+            .artwork_aliases
+            .into_iter()
+            .find(|(name, _)| name.eq_ignore_ascii_case(product.name.trim()))
+            .map(|(_, image)| image);
     }
     if let Some(group) = state.product_groups.get(&id) {
         product.category = group.clone();
@@ -329,6 +340,23 @@ fn adjust_stock(state: &mut HouseholdState, id: &str, amounts: &[Amount], direct
     item.amounts = totals(&merged);
     item.confirmed = false;
     item.observed_at = Utc::now().to_rfc3339();
+}
+
+pub fn validate_plan_additions(before: &HouseholdState, after: &HouseholdState) -> Result<()> {
+    for (day, id) in &after.plan {
+        if before.plan.get(day) != Some(id)
+            && after
+                .recipe_book
+                .iter()
+                .chain(&after.custom_recipes)
+                .any(|recipe| recipe.id == *id && recipe.meal_plan_eligible == Some(false))
+        {
+            return Err(ApiError::bad(
+                "This recipe is excluded from meal planning. Enable it in the recipe editor first.",
+            ));
+        }
+    }
+    Ok(())
 }
 
 pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> Result<Value> {
@@ -1231,11 +1259,11 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
                 .image
                 .as_ref()
                 .is_some_and(|image| !valid_image(image))
-            || store.order.iter().collect::<BTreeSet<_>>() != groups
-            || store.order.len() != groups.len()
+            || store.order.iter().collect::<BTreeSet<_>>().len() != store.order.len()
+            || store.order.iter().any(|group| !groups.contains(group))
         {
             return Err(ApiError::bad(
-                "Each shop must contain every group exactly once.",
+                "Shop aisles must be unique existing item groups.",
             ));
         }
     }

@@ -1,0 +1,734 @@
+[
+  [
+    [
+      "sweet-potatoes",
+      "sweet potato with an orange sliced end",
+      "Sweet potatoes"
+    ],
+    ["zucchini", "dark green zucchini", "Zucchini"],
+    ["cauliflower", "white cauliflower with green leaves", "Cauliflower"],
+    ["peas", "open pea pod with green peas", "Peas|Frozen peas"],
+    ["celery", "bunch of celery stalks", "Celery"],
+    ["asparagus", "bundle of green asparagus spears", "Asparagus"],
+    ["beetroot", "purple beetroot with leaves", "Beetroot"],
+    ["pumpkin", "round orange pumpkin", "Pumpkin"],
+    ["raspberries", "three red raspberries", "Raspberries"],
+    ["mango", "yellow-orange mango with sliced flesh", "Mango|Frozen mango"],
+    ["apricots", "orange apricot and half showing brown stone", "Apricots"],
+    ["plums", "purple plum and half", "Plums"],
+    ["dates", "three brown dates", "Dates"],
+    ["figs", "purple fig cut open showing pink flesh", "Figs"],
+    ["pomegranate", "red pomegranate cut open showing seeds", "Pomegranate"],
+    ["leeks", "long white and green leek", "Leeks"]
+  ],
+  [
+    ["radishes", "three red radishes with white tips and leaves", "Radishes"],
+    [
+      "turnips",
+      "round white turnip with purple shoulder and leaves",
+      "Turnips"
+    ],
+    ["parsnips", "two pale cream parsnip roots", "Parsnips"],
+    ["green-beans", "three slender green bean pods", "Green beans"],
+    [
+      "brussels-sprouts",
+      "three round small green Brussels sprouts",
+      "Brussels sprouts"
+    ],
+    [
+      "pak-choi",
+      "pak choi with broad white stems and dark green leaves",
+      "Pak choi"
+    ],
+    [
+      "spring-onions",
+      "three spring onions with thin white bulbs and green stalks",
+      "Spring onions"
+    ],
+    ["artichokes", "one green globe artichoke", "Artichokes"],
+    ["fennel", "white fennel bulb with wispy green tops", "Fennel"],
+    [
+      "butternut-squash",
+      "tan pear-shaped butternut squash cut open showing orange flesh",
+      "Butternut squash"
+    ],
+    ["dill", "small bundle of delicate feathery dill fronds", "Dill"],
+    ["rosemary", "two rosemary sprigs with needle-like leaves", "Rosemary"],
+    ["thyme", "two thyme sprigs with tiny oval leaves", "Thyme"],
+    ["bay-leaves", "three dried olive green bay leaves", "Bay leaves"],
+    [
+      "berries",
+      "small mixed pile of red raspberries and blue blueberries",
+      "Frozen berries"
+    ],
+    [
+      "vegetables",
+      "mixed carrot slices, broccoli and peas",
+      "Frozen vegetables"
+    ]
+  ],
+  [
+    [
+      "milk-carton",
+      "plain white milk carton with blue band, no text",
+      "Milk|Whole milk|Skimmed milk|Lactose-free milk"
+    ],
+    [
+      "oat-milk",
+      "cream milk carton with small oat stalk symbol, no text",
+      "Oat milk"
+    ],
+    ["soy-milk", "milk carton with green soy bean symbol, no text", "Soy milk"],
+    [
+      "almond-milk",
+      "milk carton with brown almond symbol, no text",
+      "Almond milk"
+    ],
+    [
+      "yogurt",
+      "small yogurt cup with peeled foil lid and white yogurt",
+      "Yogurt|Greek yogurt|Quark"
+    ],
+    [
+      "coconut-yogurt",
+      "yogurt cup with coconut symbol, no text",
+      "Coconut yogurt"
+    ],
+    ["cream", "small cream carton with cream-colored band, no text", "Cream"],
+    [
+      "sour-cream",
+      "round white sour cream tub with spoon",
+      "Sour cream|Cr\u00e8me fra\u00eeche"
+    ],
+    [
+      "cottage-cheese",
+      "small bowl of white curds with spoon",
+      "Cottage cheese|Ricotta"
+    ],
+    ["kefir", "white kefir bottle with blue cap, no text", "Kefir"],
+    ["mozzarella", "two smooth white mozzarella balls", "Mozzarella"],
+    ["feta", "white feta block with a few small cubes", "Feta|Halloumi"],
+    ["brie", "triangular pale brie wedge with white rind", "Brie"],
+    [
+      "goat-cheese",
+      "short white goat cheese log and a cut slice",
+      "Goat cheese"
+    ],
+    ["blue-cheese", "pale cheese wedge with blue-green veins", "Blue cheese"],
+    [
+      "cream-cheese",
+      "open cream cheese tub with spreading knife",
+      "Cream cheese"
+    ]
+  ],
+  [
+    ["bread-rolls", "two round golden bread rolls", "Bread rolls"],
+    ["tortillas", "stack of soft round wheat tortillas", "Tortillas|Flatbread"],
+    ["pita", "round pita bread cut open showing pocket", "Pita bread"],
+    [
+      "cinnamon-buns",
+      "round cinnamon bun with visible brown spiral",
+      "Cinnamon buns"
+    ],
+    [
+      "crispbread",
+      "three rectangular brown crispbread crackers with small holes",
+      "Crispbread|Crackers"
+    ],
+    ["muffins", "golden muffin in brown paper wrapper", "Muffins"],
+    ["scones", "two round golden scones", "Scones"],
+    [
+      "pastry",
+      "folded square sheets of pale pastry dough",
+      "Puff pastry|Shortcrust pastry"
+    ],
+    ["pizza-dough", "round pale ball of pizza dough", "Pizza dough"],
+    [
+      "minced-meat",
+      "tray of pink minced meat strands",
+      "Minced beef|Minced turkey"
+    ],
+    [
+      "pork-chops",
+      "raw pink pork chop with curved white fat edge and small bone",
+      "Pork chops"
+    ],
+    ["sausages", "two brown sausages", "Sausages"],
+    ["ham", "three thin folded pink ham slices", "Ham"],
+    ["meatballs", "three round brown meatballs", "Meatballs"],
+    [
+      "salmon",
+      "orange salmon fillet with simple cream-colored stripes",
+      "Salmon|Smoked salmon"
+    ],
+    [
+      "fish-fingers",
+      "three rectangular golden breaded fish fingers",
+      "Fish fingers"
+    ]
+  ],
+  [
+    [
+      "flour",
+      "cream paper flour bag with wheat stalk symbol, no text",
+      "Flour|Rye flour"
+    ],
+    ["oats", "small bowl of beige rolled oat flakes", "Oats"],
+    [
+      "granola",
+      "bowl of golden granola clusters and raisins",
+      "Granola|Muesli"
+    ],
+    ["cereal", "bowl of yellow corn flakes with white milk", "Cereal"],
+    [
+      "grain",
+      "small bowl of beige fine grain",
+      "Couscous|Quinoa|Bulgur|Barley|Semolina|Polenta|Buckwheat"
+    ],
+    ["noodles", "nest of dry pale noodles", "Noodles|Rice noodles"],
+    ["dry-pasta", "three yellow penne pasta tubes", "Pasta|Wholegrain pasta"],
+    [
+      "lasagne",
+      "three rectangular yellow lasagne sheets with wavy edges",
+      "Lasagne sheets"
+    ],
+    ["breadcrumbs", "small bag with pile of golden breadcrumbs", "Breadcrumbs"],
+    ["chickpeas", "small bowl of round beige chickpeas", "Chickpeas"],
+    ["red-lentils", "small bowl of orange-red lentils", "Lentils|Red lentils"],
+    ["green-lentils", "small bowl of green-brown lentils", "Green lentils"],
+    ["black-beans", "small bowl of black beans", "Black beans"],
+    ["kidney-beans", "small bowl of red kidney beans", "Kidney beans"],
+    ["white-beans", "small bowl of white beans", "White beans"],
+    ["tofu", "white rectangular tofu block with a few cubes", "Tofu"]
+  ],
+  [
+    [
+      "tempeh",
+      "beige tempeh block showing packed soy beans and a slice",
+      "Tempeh"
+    ],
+    [
+      "tomatoes-can",
+      "open tin can filled with chopped red tomatoes, no text",
+      "Chopped tomatoes"
+    ],
+    [
+      "tomato-paste",
+      "small red tomato paste tube beside a small dollop, no text",
+      "Tomato paste"
+    ],
+    [
+      "passata",
+      "glass bottle of smooth red tomato sauce with tomato symbol, no text",
+      "Passata"
+    ],
+    [
+      "coconut-can",
+      "white tin can with coconut symbol and blue band, no text",
+      "Coconut milk|Coconut cream"
+    ],
+    [
+      "stock",
+      "two golden stock cubes with small foil wrapper",
+      "Vegetable stock|Chicken stock"
+    ],
+    [
+      "oil",
+      "glass bottle of golden cooking oil with cork, no text",
+      "Olive oil|Rapeseed oil|Sesame oil"
+    ],
+    [
+      "soy-sauce",
+      "small glass soy sauce bottle filled dark brown with red cap, no text",
+      "Soy sauce"
+    ],
+    [
+      "vinegar",
+      "clear glass bottle of pale golden vinegar with green cap, no text",
+      "Vinegar|Rice vinegar"
+    ],
+    [
+      "balsamic",
+      "short dark glass bottle of balsamic vinegar, no text",
+      "Balsamic vinegar"
+    ],
+    [
+      "sugar",
+      "cream sugar bag beside three white sugar cubes, no text",
+      "Sugar"
+    ],
+    [
+      "baking-powder",
+      "small baking powder tub beside spoon of white powder, no text",
+      "Baking powder"
+    ],
+    [
+      "yeast",
+      "small sachet of yeast with a pile of beige granules, no text",
+      "Yeast"
+    ],
+    [
+      "peanut-butter",
+      "open jar of tan peanut butter with peanut symbol, no text",
+      "Peanut butter"
+    ],
+    ["jam", "jar of red berry jam with checked cloth lid, no text", "Jam"],
+    ["pesto", "open glass jar of green pesto with basil leaf, no text", "Pesto"]
+  ],
+  [
+    ["mustard", "small yellow mustard squeeze bottle, no text", "Mustard"],
+    [
+      "ketchup",
+      "red ketchup squeeze bottle with white cap, no text",
+      "Ketchup"
+    ],
+    [
+      "mayonnaise",
+      "cream-colored mayonnaise squeeze bottle with blue cap, no text",
+      "Mayonnaise"
+    ],
+    [
+      "capers",
+      "small open jar filled with tiny round olive green capers, no text",
+      "Capers"
+    ],
+    [
+      "vanilla",
+      "small brown vanilla extract bottle beside two dark vanilla pods, no text",
+      "Vanilla extract"
+    ],
+    [
+      "black-pepper",
+      "wooden pepper mill beside a few black peppercorns",
+      "Black pepper"
+    ],
+    [
+      "red-spice",
+      "small spice jar of red paprika powder with red cap, no text",
+      "Paprika|Cayenne pepper|Smoked paprika"
+    ],
+    [
+      "gold-spice",
+      "small spice jar of golden yellow powder with yellow cap, no text",
+      "Turmeric|Curry powder"
+    ],
+    ["cinnamon", "three brown cinnamon sticks", "Cinnamon"],
+    [
+      "herb-jar",
+      "small glass jar of dry green herb flakes with green lid, no text",
+      "Oregano|Dried basil"
+    ],
+    [
+      "cardamom",
+      "three pale green cardamom pods with a few black seeds",
+      "Cardamom"
+    ],
+    ["nutmeg", "two brown oval nutmeg seeds, one cut open", "Nutmeg"],
+    ["chilli-flakes", "small bowl of red dried chilli flakes", "Chilli flakes"],
+    [
+      "coriander-seeds",
+      "small bowl of round pale tan coriander seeds",
+      "Coriander seeds"
+    ],
+    ["allspice", "small pile of round brown allspice berries", "Allspice"],
+    ["star-anise", "two brown eight-pointed star anise pods", "Star anise"]
+  ],
+  [
+    ["crisps", "open bag with several golden potato crisps, no text", "Crisps"],
+    [
+      "nuts",
+      "small mixed pile of almonds, cashews and walnuts",
+      "Nuts|Trail mix"
+    ],
+    [
+      "dried-fruit",
+      "small pile of golden dried apricots and brown raisins",
+      "Dried fruit"
+    ],
+    [
+      "rice-cakes",
+      "stack of three round white puffed rice cakes",
+      "Rice cakes"
+    ],
+    [
+      "protein-bar",
+      "rectangular chocolate-coated protein bar in torn wrapper, no text",
+      "Protein bars"
+    ],
+    ["gummy-sweets", "three colorful gummy bear sweets", "Gummy sweets"],
+    [
+      "liquorice",
+      "black liquorice spiral and two short black twists",
+      "Liquorice"
+    ],
+    ["marshmallows", "three puffy white and pink marshmallows", "Marshmallows"],
+    ["wafer", "two rectangular layered wafer biscuits", "Wafer biscuits"],
+    [
+      "water",
+      "clear bottle of drinking water with blue cap and blue band, no text",
+      "Mineral water|Sparkling water"
+    ],
+    [
+      "juice",
+      "orange juice carton with orange fruit symbol, no text",
+      "Juice|Orange juice"
+    ],
+    [
+      "apple-juice",
+      "apple juice carton with green apple symbol, no text",
+      "Apple juice"
+    ],
+    [
+      "lemonade",
+      "clear bottle of pale yellow lemonade with lemon symbol, no text",
+      "Lemonade"
+    ],
+    [
+      "tea",
+      "white cup of amber tea with tea bag tag, no text",
+      "Tea|Black tea|Herbal tea"
+    ],
+    [
+      "green-tea",
+      "white cup of pale green tea with green tea leaf",
+      "Green tea"
+    ],
+    [
+      "cocoa",
+      "small tin of cocoa beside spoon of brown cocoa powder, no text",
+      "Cocoa powder"
+    ]
+  ],
+  [
+    [
+      "dishwasher-tablets",
+      "three small square dishwasher tablets with red and blue centers",
+      "Dishwasher tablets"
+    ],
+    [
+      "laundry-liquid",
+      "bright turquoise laundry detergent bottle with handle, no text",
+      "Laundry detergent|Fabric softener"
+    ],
+    [
+      "laundry-powder",
+      "cardboard box of laundry powder with scoop, no text",
+      "Laundry powder|Dishwasher salt"
+    ],
+    [
+      "bin-bags",
+      "rolled dark grey bin bag and one tied black bin bag",
+      "Bin bags|Bin liners"
+    ],
+    [
+      "sponges",
+      "stack of two yellow kitchen sponges with green scouring tops",
+      "Sponges"
+    ],
+    [
+      "baking-paper",
+      "roll of brown baking paper with unfurled sheet",
+      "Baking paper"
+    ],
+    [
+      "foil",
+      "roll of silver aluminium foil with unfurled sheet",
+      "Aluminium foil"
+    ],
+    [
+      "cleaning-spray",
+      "blue trigger spray cleaning bottle, no text",
+      "Cleaning spray|Glass cleaner"
+    ],
+    ["rubber-gloves", "pair of yellow rubber cleaning gloves", "Rubber gloves"],
+    [
+      "cloths",
+      "stack of three folded colorful microfibre cloths",
+      "Microfibre cloths|Kitchen towels"
+    ],
+    [
+      "floor-cleaner",
+      "green cleaning liquid bottle with handle, no text",
+      "Floor cleaner"
+    ],
+    [
+      "toilet-cleaner",
+      "blue toilet cleaning bottle with angled neck, no text",
+      "Toilet cleaner"
+    ],
+    [
+      "rinse-aid",
+      "small blue rinse aid bottle with flip top cap, no text",
+      "Rinse aid"
+    ],
+    [
+      "toothpaste",
+      "toothpaste tube with red stripe and small white toothpaste curl, no text",
+      "Toothpaste"
+    ],
+    ["toothbrush", "one blue toothbrush with white bristles", "Toothbrush"],
+    [
+      "deodorant",
+      "rounded roll-on deodorant bottle with teal cap, no text",
+      "Deodorant"
+    ]
+  ],
+  [
+    [
+      "sunscreen",
+      "yellow sunscreen tube with orange sun symbol, no text",
+      "Sunscreen"
+    ],
+    [
+      "tissues",
+      "rectangular tissue box with white tissue sticking out, no text",
+      "Tissues"
+    ],
+    ["nappies", "one white baby nappy with blue tabs", "Nappies"],
+    ["lip-balm", "small open lip balm stick with pink balm", "Lip balm"],
+    ["hand-cream", "pale pink hand cream tube, no text", "Hand cream"],
+    [
+      "lotion",
+      "white body lotion pump bottle with pink band, no text",
+      "Body lotion"
+    ],
+    [
+      "face-wash",
+      "small turquoise face wash squeeze tube with droplet symbol, no text",
+      "Face wash"
+    ],
+    ["razors", "one blue handled safety razor", "Razors"],
+    [
+      "shaving-foam",
+      "blue shaving foam aerosol can with white foam on top, no text",
+      "Shaving foam"
+    ],
+    ["cotton-pads", "stack of round white cotton pads", "Cotton pads"],
+    [
+      "sanitary-pads",
+      "white sanitary pad with wings on pale blue wrapper",
+      "Sanitary pads"
+    ],
+    ["tampons", "two white tampons with visible strings", "Tampons"],
+    [
+      "pain-relief",
+      "silver blister pack with four white round pills",
+      "Pain relief"
+    ],
+    ["first-aid-tape", "roll of white medical tape", "First aid tape"],
+    [
+      "disinfectant",
+      "small clear bottle of disinfectant with red cap and droplet symbol, no text",
+      "Disinfectant"
+    ],
+    [
+      "contact-solution",
+      "white contact lens solution bottle with blue cap beside a blue lens case, no text",
+      "Contact lens solution"
+    ]
+  ],
+  [
+    [
+      "cat-food",
+      "pet food bag with small cat face symbol and kibble, no text",
+      "Cat food"
+    ],
+    [
+      "dog-food",
+      "pet food bag with small dog face symbol and kibble, no text",
+      "Dog food"
+    ],
+    [
+      "cat-litter",
+      "bag with cat symbol beside tray of grey cat litter, no text",
+      "Cat litter"
+    ],
+    [
+      "pet-treats",
+      "three small golden bone-shaped dog biscuits",
+      "Pet treats|Dog treats"
+    ],
+    ["cat-treats", "three small fish-shaped brown cat treats", "Cat treats"],
+    [
+      "bird-seed",
+      "small bag beside colorful bird seed pile, no text",
+      "Bird seed"
+    ],
+    [
+      "rabbit-food",
+      "small bag with rabbit face symbol beside green hay and brown pellets, no text",
+      "Rabbit food"
+    ],
+    [
+      "pet-shampoo",
+      "teal pet shampoo bottle with paw symbol, no text",
+      "Pet shampoo"
+    ],
+    [
+      "soil",
+      "open brown bag with mound of dark potting soil, no text",
+      "Potting soil|Compost"
+    ],
+    [
+      "plant-food",
+      "green bottle of plant food with leaf symbol, no text",
+      "Plant food"
+    ],
+    [
+      "matches",
+      "small open matchbox with several wooden red-tipped matches, no text",
+      "Matches"
+    ],
+    [
+      "storage-boxes",
+      "two stacked translucent storage boxes with blue lids",
+      "Storage boxes"
+    ],
+    [
+      "seeds",
+      "small seed packet with green sprout symbol and a few brown seeds, no text",
+      "Seeds"
+    ],
+    [
+      "garden-gloves",
+      "pair of green gardening gloves with cream palms",
+      "Garden gloves"
+    ],
+    ["plant-pots", "two empty terracotta plant pots", "Plant pots"],
+    [
+      "cough-drops",
+      "small bag of amber cough drops with honey drop symbol, no text",
+      "Cough drops"
+    ]
+  ],
+  [
+    [
+      "frozen-pizza",
+      "round pizza with tomato and cheese inside square open freezer carton, no text",
+      "Frozen pizza"
+    ],
+    [
+      "frozen-spinach",
+      "four dark green frozen spinach cubes",
+      "Frozen spinach"
+    ],
+    [
+      "frozen-dumplings",
+      "three pale crescent dumplings",
+      "Dumplings|Frozen dumplings"
+    ],
+    [
+      "soup",
+      "bowl of orange vegetable soup with small carrot pieces",
+      "Ready-made soup"
+    ],
+    [
+      "falafel",
+      "three round brown falafel balls, one cut open showing green filling",
+      "Falafel"
+    ],
+    [
+      "hummus",
+      "small bowl of pale hummus with swirl of oil and one chickpea",
+      "Hummus"
+    ],
+    [
+      "salad",
+      "clear takeaway bowl of green leaves, cucumber and tomato",
+      "Ready-made salad"
+    ],
+    [
+      "instant-noodles",
+      "noodle cup with peeled lid and visible yellow noodles, no text",
+      "Instant noodles"
+    ],
+    [
+      "vegetable-burger",
+      "two brown vegetable burger patties with visible colorful vegetable pieces",
+      "Vegetable burgers"
+    ],
+    ["chicken", "raw pink chicken breast fillet", "Chicken breast"],
+    ["turkey", "raw pale pink turkey breast fillet", "Turkey"],
+    ["lamb", "raw red lamb chop with white bone", "Lamb"],
+    ["tuna", "dark red raw tuna steak", "Tuna steak"],
+    ["fish-fillet", "two pale white raw fish fillets", "Cod"],
+    [
+      "kitchen-paper",
+      "white kitchen paper towel roll with loose sheet",
+      "Kitchen paper"
+    ],
+    ["soap", "pale pink bar of soap with two bubbles", "Hand soap"]
+  ],
+  [
+    [
+      "lime",
+      "bright green lime and half showing pale green citrus segments",
+      "Lime"
+    ],
+    [
+      "grapefruit",
+      "yellow grapefruit and half showing pink citrus segments",
+      "Grapefruit"
+    ],
+    [
+      "red-onion",
+      "red onion with purple skin and sliced end showing white and purple rings",
+      "Red onion"
+    ],
+    [
+      "chicken-thighs",
+      "two raw pink chicken thighs with pale skin",
+      "Chicken thighs"
+    ],
+    [
+      "cornflour",
+      "plain pale yellow cornflour bag with corn cob symbol, no text",
+      "Cornflour"
+    ],
+    ["gelatine", "three translucent cream gelatine sheets", "Gelatine"],
+    [
+      "tahini",
+      "small jar of smooth pale beige tahini with sesame seed symbol, no text",
+      "Tahini"
+    ],
+    [
+      "frozen-chips",
+      "several golden thick-cut french fries in a small plain freezer bag, no text",
+      "Frozen chips"
+    ],
+    [
+      "ice-lollies",
+      "one orange and one red ice lolly on wooden sticks",
+      "Ice lollies"
+    ],
+    ["spinach", "small bunch of dark green oval spinach leaves", "Spinach"],
+    ["basil", "basil sprig with broad oval bright green leaves", "Fresh basil"],
+    [
+      "parsley",
+      "small bunch of flat-leaf parsley with lobed green leaves",
+      "Parsley"
+    ],
+    [
+      "coriander",
+      "small bunch of coriander with rounded lobed green leaves",
+      "Coriander"
+    ],
+    ["cumin", "small bowl of slender brown cumin seeds", "Cumin"],
+    ["lamb-alt", "red lamb chop with short white rib bone and fat edge", ""],
+    ["chocolate-alt", "dark brown chocolate bar with broken corner", ""]
+  ],
+  [
+    [
+      "mussels",
+      "three dark mussel shells, one open with orange flesh",
+      "Mussels"
+    ]
+  ],
+  [
+    [
+      "grated-cheese",
+      "small mound of grated yellow and white cheese strips",
+      ""
+    ]
+  ]
+]

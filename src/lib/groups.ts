@@ -49,7 +49,9 @@ export function changeGroup(
     stores: state.stores.map((store) => ({
       ...store,
       order: remove
-        ? store.order.filter((group) => group !== source)
+        ? store.order.includes(target)
+          ? store.order.filter((group) => group !== source)
+          : store.order.map((group) => (group === source ? target : group))
         : store.order.map((group) => (group === source ? target : group)),
     })),
   }

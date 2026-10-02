@@ -117,6 +117,9 @@ pub struct Recipe {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub favorite: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub meal_plan_eligible: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS, PartialEq)]
@@ -378,6 +381,8 @@ pub struct Seed {
     pub catalog: Vec<Product>,
     pub recipes: Vec<Recipe>,
     pub categories: Vec<String>,
+    #[serde(rename = "artworkAliases")]
+    pub artwork_aliases: BTreeMap<String, String>,
 }
 
 pub fn seed() -> Seed {

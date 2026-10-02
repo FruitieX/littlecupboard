@@ -16,8 +16,8 @@ export function GroupsSettings() {
       <section className="settings-card">
         <SectionTitle title="Groups" />
         <p className="settings-description">
-          Every shop has its own order. New groups are added to the end of each
-          shop’s route.
+          Every shop has its own route. New groups are available to add in
+          Stores.
         </p>
         <div className="group-list">
           {groups.map((g) => (
@@ -44,10 +44,6 @@ export function GroupsSettings() {
             update((s) => ({
               ...s,
               groups: [...(s.groups ?? []), name],
-              stores: s.stores.map((store) => ({
-                ...store,
-                order: [...store.order, name],
-              })),
             }))
             setGroup('')
           }}

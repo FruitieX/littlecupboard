@@ -1,3 +1,4 @@
+import { NumberInput } from './NumberInput'
 import { getProducts } from '../lib/catalog'
 import { useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
@@ -299,6 +300,8 @@ export function Shopping() {
                             >
                               <span className="tile-emoji" aria-hidden="true">
                                 <FoodIcon
+                                  productId={item.id}
+                                  name={item.name}
                                   image={
                                     state.productImages?.[item.id] || item.image
                                   }
@@ -357,6 +360,8 @@ export function Shopping() {
                       >
                         <span>
                           <FoodIcon
+                            productId={item.id}
+                            name={item.name}
                             image={state.productImages?.[item.id] || item.image}
                             value={item.icon}
                           />
@@ -404,7 +409,11 @@ export function Shopping() {
                       }}
                     >
                       <span>
-                        <FoodIcon value={suggestion.product.icon} />
+                        <FoodIcon
+                          value={suggestion.product.icon}
+                          image={suggestion.product.image}
+                          productId={suggestion.product.id}
+                        />
                       </span>
                       <span>
                         <strong>{suggestion.product.name}</strong>
@@ -587,13 +596,12 @@ function ItemEditor({
         <div className="form-row">
           <label>
             Quantity
-            <input
-              type="number"
+            <NumberInput
               min="0.01"
               step="any"
               required
               value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
+              onValueChange={setQuantity}
             />
           </label>
           <label>

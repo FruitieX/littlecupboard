@@ -1,42 +1,20 @@
 import { useState } from 'react'
-import {
-  ArrowDown,
-  ArrowUp,
-  Check,
-  MapPin,
-  Pencil,
-  Plus,
-  Sparkles,
-  Trash2,
-} from 'lucide-react'
+import { Check, MapPin, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../lib/state'
 import { Modal, SectionTitle } from './ui'
 import { SettingsPage } from './SettingsPage'
 import { StoreEditor } from './StoreEditor'
+import { AisleOrder } from './AisleOrder'
 import type { Store } from '../lib/data'
 
 export function StoresSettings() {
-  const { state, update } = useApp()
+  const { state, update, groups } = useApp()
   const [storeId, setStoreId] = useState<string | null>(null)
   const [editor, setEditor] = useState<Store | 'new' | null>(null)
   const [removeStore, setRemoveStore] = useState<Store | null>(null)
   const store =
     state.stores.find((s) => s.id === (storeId ?? state.storeId)) ??
     state.stores[0]
-  function move(index: number, direction: number) {
-    update((s) => ({
-      ...s,
-      stores: s.stores.map((current) => {
-        if (current.id !== store.id) return current
-        const order = [...current.order]
-        ;[order[index], order[index + direction]] = [
-          order[index + direction],
-          order[index],
-        ]
-        return { ...current, order }
-      }),
-    }))
-  }
   return (
     <>
       <SettingsPage
@@ -95,36 +73,21 @@ export function StoresSettings() {
                 </span>
               </SectionTitle>
               <p className="settings-description">
-                Move the groups to match your usual route through the store.
+                Choose the aisles in this shop and match your usual route. Items
+                from other groups stay visible at the end of the list.
               </p>
-              <ol className="aisle-list">
-                {store.order.map((category, index) => (
-                  <li key={category}>
-                    <span className="aisle-number">
-                      {String(index + 1).padStart(2, '0')}
-                    </span>
-                    <strong>{category}</strong>
-                    <div>
-                      <button
-                        className="icon-button"
-                        disabled={index === 0}
-                        onClick={() => move(index, -1)}
-                        aria-label={`Move ${category} up`}
-                      >
-                        <ArrowUp size={16} />
-                      </button>
-                      <button
-                        className="icon-button"
-                        disabled={index === store.order.length - 1}
-                        onClick={() => move(index, 1)}
-                        aria-label={`Move ${category} down`}
-                      >
-                        <ArrowDown size={16} />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ol>
+              <AisleOrder
+                order={store.order}
+                groups={groups}
+                onChange={(order) =>
+                  update((current) => ({
+                    ...current,
+                    stores: current.stores.map((entry) =>
+                      entry.id === store.id ? { ...entry, order } : entry,
+                    ),
+                  }))
+                }
+              />
               {state.stores.length > 1 && (
                 <button
                   className="text-button danger remove-store"

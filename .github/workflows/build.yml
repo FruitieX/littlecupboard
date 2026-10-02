@@ -30,6 +30,12 @@ jobs:
           nix develop --command npm ci --prefix scripts/siwc-probe --ignore-scripts
           nix develop --command npm test --prefix scripts/siwc-probe
       - run: nix develop --command npm run typecheck
+      - name: Verify catalog artwork and backend seed agree
+        run: |
+          nix develop --command node scripts/build-catalog-artwork.mjs
+          nix develop --command node scripts/export-seed.mjs
+          git diff --exit-code -- src/lib/catalog-artwork.ts backend/seed.json
+          nix develop --command node scripts/render-catalog-artwork.mjs --check
       - run: nix develop --command python3 scripts/hermes-companion.check.py
       - run: nix develop --command npm test
       - run: nix develop --command npm run format:check

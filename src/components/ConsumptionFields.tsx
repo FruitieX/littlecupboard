@@ -1,3 +1,4 @@
+import { NumberInput } from './NumberInput'
 import type { ConsumptionRate } from '../lib/api/ConsumptionRate'
 
 export function rateLabel(rate: ConsumptionRate) {
@@ -36,17 +37,14 @@ export function ConsumptionFields({
         <div className="consumption-row">
           <label>
             Quantity
-            <input
+            <NumberInput
               aria-label="Consumption quantity"
-              type="number"
               min="0.001"
               max="1000000"
               step="any"
               required
               value={value.quantity}
-              onChange={(e) =>
-                onChange({ ...value, quantity: Number(e.target.value) })
-              }
+              onValueChange={(quantity) => onChange({ ...value, quantity })}
             />
           </label>
           <label>
@@ -61,17 +59,14 @@ export function ConsumptionFields({
           </label>
           <label>
             Every (days)
-            <input
+            <NumberInput
               aria-label="Consumption period (days)"
-              type="number"
               min="0.1"
               max="3650"
               step="any"
               required
               value={value.days}
-              onChange={(e) =>
-                onChange({ ...value, days: Number(e.target.value) })
-              }
+              onValueChange={(days) => onChange({ ...value, days })}
             />
           </label>
         </div>

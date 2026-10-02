@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useApp } from '../lib/state'
 import { post, uploadImage } from '../lib/http'
+import { generateIconBatches, needsItemIcon } from '../lib/icon-batches'
 import { Markdown } from './Markdown'
 import { FoodIcon } from './FoodIcon'
 import type { Ingredient, Product, Recipe } from '../lib/data'
@@ -189,6 +190,40 @@ export function Assistant() {
         error instanceof Error
           ? error.message
           : 'The icon could not be generated.',
+      )
+    } finally {
+      setGenerating(null)
+    }
+  }
+  async function generateMissingIcons() {
+    if (!proposal || generating) return
+    setGenerating('batch')
+    setError('')
+    try {
+      await generateIconBatches(
+        proposal.products.filter(needsItemIcon),
+        (icons) => {
+          setProposal((current) =>
+            current
+              ? {
+                  ...current,
+                  products: current.products.map((product) => {
+                    const image = icons.find((icon) => icon.id === product.id)
+                    return image && needsItemIcon(product)
+                      ? { ...product, image: image.url }
+                      : product
+                  }),
+                }
+              : current,
+          )
+        },
+        proposal.id,
+      )
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : 'The icons could not be generated.',
       )
     } finally {
       setGenerating(null)
@@ -415,6 +450,31 @@ export function Assistant() {
             {!!proposal.products.length && (
               <section>
                 <SectionTitle title="New items" />
+                {session.imageEnabled &&
+                  proposal.products.filter(needsItemIcon).length > 1 && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      disabled={
+                        applied ||
+                        busy ||
+                        uploading ||
+                        !!generating ||
+                        !!pending.length ||
+                        status === 'offline'
+                      }
+                      onClick={() => void generateMissingIcons()}
+                    >
+                      {generating === 'batch' ? (
+                        <LoaderCircle size={16} className="spin" />
+                      ) : (
+                        <Sparkles size={16} />
+                      )}
+                      {generating === 'batch'
+                        ? 'Generating icons…'
+                        : `Generate missing icons (${proposal.products.filter(needsItemIcon).length})`}
+                    </button>
+                  )}
                 <div className="proposal-products">
                   {proposal.products.map((product) => (
                     <div key={product.id}>
@@ -500,6 +560,11 @@ export function Assistant() {
                       </span>
                     </summary>
                     <Markdown>{recipe.subtitle}</Markdown>
+                    {recipe.mealPlanEligible === false && (
+                      <p className="quiet-label">
+                        Recipe library only · excluded from meal planning
+                      </p>
+                    )}
                     {recipe.image.startsWith('/api/images/') && (
                       <img
                         className="proposal-dish-photo"

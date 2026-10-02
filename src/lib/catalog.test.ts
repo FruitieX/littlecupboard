@@ -12,6 +12,20 @@ import { diffState, optimistic } from './sync'
 import { changeGroup } from './groups'
 
 it('ships artwork for every distinct built-in catalog icon', () => {
+  for (const product of catalog) {
+    expect(
+      product.image,
+      `${product.name} has explicit reviewed artwork`,
+    ).toMatch(/^\/images\/(food|catalog\/generated)\//)
+    const file = readFileSync(
+      new URL(`../../public${product.image}`, import.meta.url),
+    )
+    expect(file.length).toBeGreaterThan(100)
+    if (product.image!.endsWith('.webp')) {
+      expect(file.toString('ascii', 0, 4)).toBe('RIFF')
+      expect(file.toString('ascii', 8, 12)).toBe('WEBP')
+    } else expect(file.toString()).toContain('<svg')
+  }
   for (const icon of new Set(catalog.map((product) => product.icon))) {
     const code = [...icon]
       .map((character) => character.codePointAt(0)!.toString(16))
@@ -26,6 +40,53 @@ it('ships artwork for every distinct built-in catalog icon', () => {
 })
 
 describe('settings catalog management', () => {
+  it('gives known custom aliases artwork without replacing chosen icons or photos', () => {
+    const state = initialState()
+    state.customProducts = [
+      'Water',
+      'Basil',
+      'Grated Emmental–mozzarella cheese',
+    ].map((name, i) => ({
+      id: `family-${i}`,
+      name,
+      icon: '🛒',
+      category: 'Ingredients',
+    }))
+    const custom = getProducts(state).filter((product) =>
+      product.id.startsWith('family-'),
+    )
+    expect(custom.map((product) => product.image)).toEqual([
+      '/images/catalog/generated/water.webp',
+      '/images/catalog/generated/basil.webp',
+      '/images/catalog/generated/grated-cheese.webp',
+    ])
+    state.customProducts[0].icon = '🥛'
+    expect(
+      getProducts(state).find((product) => product.id === 'family-0')?.image,
+    ).toBeUndefined()
+    state.productImages = { 'family-1': '/api/images/family-basil' }
+    expect(
+      getProducts(state).find((product) => product.id === 'family-1')?.image,
+    ).toBe('/api/images/family-basil')
+  })
+  it('fills artwork for old item customizations while retaining family photos', () => {
+    const state = initialState()
+    const rice = catalog.find((product) => product.id === 'rice')!
+    state.productDetails = {
+      rice: { ...rice, name: 'Family rice', image: undefined },
+    }
+    expect(
+      getProducts(state).find((product) => product.id === 'rice')?.image,
+    ).toBe(rice.image)
+    state.productDetails.rice.image = '/api/images/family-rice'
+    expect(
+      getProducts(state).find((product) => product.id === 'rice')?.image,
+    ).toBe('/api/images/family-rice')
+    state.productImages = { rice: '/api/images/new-rice' }
+    expect(
+      getProducts(state).find((product) => product.id === 'rice')?.image,
+    ).toBe('/api/images/new-rice')
+  })
   it('keeps product identity and shopping details while overriding a bundled product', () => {
     const state = initialState()
     const apple = catalog.find((product) => product.id === 'apples')!

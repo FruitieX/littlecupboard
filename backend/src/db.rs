@@ -17,6 +17,144 @@ pub enum JournalMode {
     Delete,
 }
 
+impl JournalMode {
+    pub fn parse(value: &str) -> std::result::Result<Self, &'static str> {
+        match value {
+            "WAL" | "wal" => Ok(Self::Wal),
+            "DELETE" | "delete" => Ok(Self::Delete),
+            _ => Err("LITTLECUPBOARD_SQLITE_JOURNAL_MODE must be WAL or DELETE"),
+        }
+    }
+}
+impl Database {
+    #[cfg(test)]
+    pub fn open(path: &Path) -> Result<Self> {
+        Self::open_with_journal(path, JournalMode::Wal)
+    }
+    pub fn open_with_journal(path: &Path, journal: JournalMode) -> Result<Self> {
+        if let Some(parent) = path.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        let conn = Connection::open(path)?;
+        conn.busy_timeout(std::time::Duration::from_secs(5))?;
+        let (mode, synchronous) = match journal {
+            JournalMode::Wal => ("WAL", "FULL"),
+            // NFS cannot share a WAL index. EXTRA also syncs the directory after
+            // deleting a rollback journal, making a completed commit durable.
+            JournalMode::Delete => ("DELETE", "EXTRA"),
+        };
+        let actual: String =
+            conn.query_row(&format!("PRAGMA journal_mode={mode}"), [], |row| row.get(0))?;
+        if !actual.eq_ignore_ascii_case(mode) {
+            return Err(ApiError::internal(
+                "SQLite could not activate the configured journal mode",
+            ));
+        }
+        conn.execute_batch(&format!(
+            "PRAGMA foreign_keys=ON; PRAGMA synchronous={synchronous};"
+        ))?;
+        conn.execute_batch("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)")?;
+        let version: i64 = conn.query_row(
+            "SELECT COALESCE(MAX(version),0) FROM schema_migrations",
+            [],
+            |row| row.get(0),
+        )?;
+        if version > 9 {
+            return Err(ApiError::internal(
+                "This database was created by a newer LittleCupboard version. Restore a compatible backup before downgrading.",
+            ));
+        }
+        if version == 0 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/001_initial.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 2 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/002_companion.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 3 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/003_media_settings.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 4 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/004_catalog_settings.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 5 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/005_item_icons.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 6 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/006_consumption.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 7 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/007_recipe_sources.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 8 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/008_store_aisles.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 9 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/009_recipe_planning.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        conn.execute(
+            "DELETE FROM companion_jobs WHERE deadline < unixepoch()",
+            [],
+        )?;
+        conn.execute("DELETE FROM sessions WHERE expires_at < unixepoch()", [])?;
+        conn.execute("DELETE FROM invitations WHERE expires_at < unixepoch()", [])?;
+        conn.execute(
+            "DELETE FROM ai_proposals WHERE created_at < unixepoch()-86400",
+            [],
+        )?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
+        }
+        Ok(Self(Arc::new(Mutex::new(conn))))
+    }
+    pub fn lock(&self) -> Result<MutexGuard<'_, Connection>> {
+        self.0
+            .lock()
+            .map_err(|_| ApiError::internal("database lock poisoned"))
+    }
+    pub fn snapshot(conn: &Connection, household: &str) -> Result<Snapshot> {
+        let (revision, data): (u32, String) = conn.query_row(
+            "SELECT revision, state FROM households WHERE id=?1",
+            [household],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        Ok(Snapshot {
+            revision,
+            state: serde_json::from_str(&data)?,
+        })
+    }
+    pub fn save(conn: &Connection, household: &str, snapshot: &Snapshot) -> Result<()> {
+        conn.execute(
+            "UPDATE households SET revision=?1, state=?2 WHERE id=?3",
+            params![
+                snapshot.revision,
+                serde_json::to_string(&snapshot.state)?,
+                household
+            ],
+        )?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -70,132 +208,5 @@ mod tests {
         }
         assert!(!path.with_file_name("database.sqlite3-wal").exists());
         assert!(!path.with_file_name("database.sqlite3-shm").exists());
-    }
-}
-impl JournalMode {
-    pub fn parse(value: &str) -> std::result::Result<Self, &'static str> {
-        match value {
-            "WAL" | "wal" => Ok(Self::Wal),
-            "DELETE" | "delete" => Ok(Self::Delete),
-            _ => Err("LITTLECUPBOARD_SQLITE_JOURNAL_MODE must be WAL or DELETE"),
-        }
-    }
-}
-impl Database {
-    #[cfg(test)]
-    pub fn open(path: &Path) -> Result<Self> {
-        Self::open_with_journal(path, JournalMode::Wal)
-    }
-    pub fn open_with_journal(path: &Path, journal: JournalMode) -> Result<Self> {
-        if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        let conn = Connection::open(path)?;
-        conn.busy_timeout(std::time::Duration::from_secs(5))?;
-        let (mode, synchronous) = match journal {
-            JournalMode::Wal => ("WAL", "FULL"),
-            // NFS cannot share a WAL index. EXTRA also syncs the directory after
-            // deleting a rollback journal, making a completed commit durable.
-            JournalMode::Delete => ("DELETE", "EXTRA"),
-        };
-        let actual: String =
-            conn.query_row(&format!("PRAGMA journal_mode={mode}"), [], |row| row.get(0))?;
-        if !actual.eq_ignore_ascii_case(mode) {
-            return Err(ApiError::internal(
-                "SQLite could not activate the configured journal mode",
-            ));
-        }
-        conn.execute_batch(&format!(
-            "PRAGMA foreign_keys=ON; PRAGMA synchronous={synchronous};"
-        ))?;
-        conn.execute_batch("CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)")?;
-        let version: i64 = conn.query_row(
-            "SELECT COALESCE(MAX(version),0) FROM schema_migrations",
-            [],
-            |row| row.get(0),
-        )?;
-        if version > 7 {
-            return Err(ApiError::internal(
-                "This database was created by a newer LittleCupboard version. Restore a compatible backup before downgrading.",
-            ));
-        }
-        if version == 0 {
-            conn.execute_batch("BEGIN IMMEDIATE")?;
-            conn.execute_batch(include_str!("../migrations/001_initial.sql"))?;
-            conn.execute_batch("COMMIT")?;
-        }
-        if version < 2 {
-            conn.execute_batch("BEGIN IMMEDIATE")?;
-            conn.execute_batch(include_str!("../migrations/002_companion.sql"))?;
-            conn.execute_batch("COMMIT")?;
-        }
-        if version < 3 {
-            conn.execute_batch("BEGIN IMMEDIATE")?;
-            conn.execute_batch(include_str!("../migrations/003_media_settings.sql"))?;
-            conn.execute_batch("COMMIT")?;
-        }
-        if version < 4 {
-            conn.execute_batch("BEGIN IMMEDIATE")?;
-            conn.execute_batch(include_str!("../migrations/004_catalog_settings.sql"))?;
-            conn.execute_batch("COMMIT")?;
-        }
-        if version < 5 {
-            conn.execute_batch("BEGIN IMMEDIATE")?;
-            conn.execute_batch(include_str!("../migrations/005_item_icons.sql"))?;
-            conn.execute_batch("COMMIT")?;
-        }
-        if version < 6 {
-            conn.execute_batch("BEGIN IMMEDIATE")?;
-            conn.execute_batch(include_str!("../migrations/006_consumption.sql"))?;
-            conn.execute_batch("COMMIT")?;
-        }
-        if version < 7 {
-            conn.execute_batch("BEGIN IMMEDIATE")?;
-            conn.execute_batch(include_str!("../migrations/007_recipe_sources.sql"))?;
-            conn.execute_batch("COMMIT")?;
-        }
-        conn.execute(
-            "DELETE FROM companion_jobs WHERE deadline < unixepoch()",
-            [],
-        )?;
-        conn.execute("DELETE FROM sessions WHERE expires_at < unixepoch()", [])?;
-        conn.execute("DELETE FROM invitations WHERE expires_at < unixepoch()", [])?;
-        conn.execute(
-            "DELETE FROM ai_proposals WHERE created_at < unixepoch()-86400",
-            [],
-        )?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))?;
-        }
-        Ok(Self(Arc::new(Mutex::new(conn))))
-    }
-    pub fn lock(&self) -> Result<MutexGuard<'_, Connection>> {
-        self.0
-            .lock()
-            .map_err(|_| ApiError::internal("database lock poisoned"))
-    }
-    pub fn snapshot(conn: &Connection, household: &str) -> Result<Snapshot> {
-        let (revision, data): (u32, String) = conn.query_row(
-            "SELECT revision, state FROM households WHERE id=?1",
-            [household],
-            |row| Ok((row.get(0)?, row.get(1)?)),
-        )?;
-        Ok(Snapshot {
-            revision,
-            state: serde_json::from_str(&data)?,
-        })
-    }
-    pub fn save(conn: &Connection, household: &str, snapshot: &Snapshot) -> Result<()> {
-        conn.execute(
-            "UPDATE households SET revision=?1, state=?2 WHERE id=?3",
-            params![
-                snapshot.revision,
-                serde_json::to_string(&snapshot.state)?,
-                household
-            ],
-        )?;
-        Ok(())
     }
 }

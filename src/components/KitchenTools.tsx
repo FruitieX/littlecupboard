@@ -1,3 +1,4 @@
+import { NumberInput } from './NumberInput'
 import { getProducts } from '../lib/catalog'
 import { useState } from 'react'
 import {
@@ -99,13 +100,12 @@ export function KitchenTools() {
             <div className="form-row">
               <label>
                 Quantity
-                <input
-                  type="number"
+                <NumberInput
                   required
                   min="0"
                   step="any"
                   value={quantity}
-                  onChange={(e) => setQuantity(Number(e.target.value))}
+                  onValueChange={setQuantity}
                 />
               </label>
               <label>
@@ -146,8 +146,9 @@ export function KitchenTools() {
               return (
                 <div key={id}>
                   <FoodIcon
+                    productId={id}
                     value={product?.icon ?? '🛒'}
-                    image={state.productImages?.[id]}
+                    image={state.productImages?.[id] || product?.image}
                   />
                   <span>
                     <strong>{product?.name ?? id}</strong>
