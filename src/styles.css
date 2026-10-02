@@ -3994,3 +3994,121 @@ svg {
   font-size: 0.8rem;
   overflow-wrap: anywhere;
 }
+.recipe-tags-field {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+}
+.recipe-tags-combobox {
+  position: relative;
+}
+.recipe-tags-combobox input {
+  width: 100%;
+}
+.recipe-tag-suggestions {
+  position: absolute;
+  top: calc(100% + 0.3rem);
+  z-index: 4;
+  width: 100%;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fffef9;
+  box-shadow: 0 8px 24px #203f281a;
+}
+.recipe-tag-suggestions button {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+.recipe-tag-suggestions button:hover,
+.recipe-tag-suggestions button[aria-selected='true'] {
+  background: #eef2e6;
+}
+.recipe-tag-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.recipe-tag-preview .recipe-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+.recipe-tag-preview button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+}
+.recipe-sources {
+  min-width: 0;
+  margin: 1rem 0;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.recipe-sources summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+.recipe-source-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+.recipe-source {
+  position: relative;
+  min-width: 0;
+}
+.recipe-source a {
+  display: grid;
+  gap: 0.5rem;
+}
+.recipe-source img {
+  width: 100%;
+  height: 150px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #eef2e6;
+}
+.recipe-source a span {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.recipe-source a svg {
+  flex: none;
+}
+.recipe-source > button {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  background: #fffef9;
+}
+@media (max-width: 760px) {
+  .filter-chips {
+    max-width: 100%;
+    overflow-x: auto;
+    padding-bottom: 3px;
+  }
+  .filter-chips button {
+    flex: none;
+  }
+}

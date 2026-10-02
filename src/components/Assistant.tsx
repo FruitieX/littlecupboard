@@ -1,5 +1,5 @@
 import { getProducts } from '../lib/catalog'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Sparkles,
   ArrowRight,
@@ -42,6 +42,7 @@ export function Assistant() {
     pending,
     status,
     resolvePending,
+    lastAppliedProposal,
   } = useApp()
   const [open, setOpen] = useState(false)
   const [prompt, setPrompt] = useState('')
@@ -60,6 +61,16 @@ export function Assistant() {
       entry.operation.type === 'applyProposal' &&
       entry.operation.proposalId === proposal?.id,
   )
+  useEffect(() => {
+    if (applied && proposal?.id === lastAppliedProposal) {
+      setOpen(false)
+      setProposal(null)
+      setImages([])
+      setPrompt('')
+      setApplied(false)
+      setError('')
+    }
+  }, [applied, proposal?.id, lastAppliedProposal])
   if (!session.aiEnabled) return null
   async function attach(files: File[]) {
     if (busy || uploading || generating || status === 'offline') return
@@ -75,10 +86,13 @@ export function Assistant() {
           throw new Error('Choose a JPG, PNG or WebP image.')
         if (file.size > 8 * 1024 * 1024)
           throw new Error('Choose an image under 8 MB.')
-        const url = await uploadImage(file)
+        const url = await uploadImage(file, true)
         setImages((current) => [
           ...current,
-          { url, name: file.name || 'Recipe image' },
+          {
+            url,
+            name: [...(file.name || 'Recipe image')].slice(0, 100).join(''),
+          },
         ])
       }
     } catch (error) {
@@ -190,6 +204,7 @@ export function Assistant() {
       const result = await post<Proposal>('/ai/assistant', {
         prompt,
         images: images.map((image) => image.url),
+        imageNames: images.map((image) => image.name),
       })
       setProposal(result)
       setShopping(result.shopping.map((_, index) => index))
@@ -615,7 +630,9 @@ export function Assistant() {
                     ? 'Proposal needs a fresh review'
                     : queuedProposal
                       ? 'Saving selected suggestions…'
-                      : 'Suggestions saved'
+                      : lastAppliedProposal === proposal.id
+                        ? 'Suggestions saved'
+                        : 'Save canceled. Ask for fresh suggestions.'
                   : 'Save selected suggestions'}
               </button>
             )}

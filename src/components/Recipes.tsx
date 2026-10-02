@@ -1,6 +1,6 @@
 import { getProducts } from '../lib/catalog'
 import { deleteRecipe } from '../lib/catalog'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   Search,
@@ -22,24 +22,44 @@ import { FoodIcon } from './FoodIcon'
 import { ImageField } from './ImageField'
 import { Markdown } from './Markdown'
 import { discovery } from '../lib/learning'
+import {
+  availableRecipeTags,
+  hasRecipeTag,
+  normalizeTags,
+  recipeTags,
+} from '../lib/recipe-tags'
+import { RecipeTagsInput } from './RecipeTagsInput'
+import { RecipeSources } from './RecipeSources'
 
 export function Recipes() {
   const { state, update, allRecipes } = useApp()
   const [query, setQuery] = useState('')
-  const [filter, setFilter] = useState('All recipes')
+  const [filter, setFilter] = useState<{
+    kind: 'all' | 'favorites' | 'quick' | 'tag'
+    tag?: string
+  }>({ kind: 'all' })
   const [selected, setSelected] = useState<Recipe | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<Recipe | null>(null)
   const newIdea = discovery(allRecipes, state)
+  const tags = availableRecipeTags(allRecipes)
+  useEffect(() => {
+    if (
+      filter.kind === 'tag' &&
+      !tags.some((tag) => tag.toLowerCase() === filter.tag?.toLowerCase())
+    )
+      setFilter({ kind: 'all' })
+  }, [filter, tags.join('\n')])
   const visible = allRecipes.filter(
     (r) =>
-      `${r.name} ${r.subtitle} ${(r.tags ?? []).join(' ')}`
+      `${r.name} ${r.subtitle} ${recipeTags(r).join(' ')}`
         .toLowerCase()
         .includes(query.toLowerCase()) &&
-      (filter === 'All recipes' ||
-        (filter === 'Favorites' && state.favoriteRecipeIds.includes(r.id)) ||
-        (filter === 'Quick & easy' && r.minutes <= 20) ||
-        (filter === 'Vegetarian' && r.tag === 'Vegetarian')),
+      (filter.kind === 'all' ||
+        (filter.kind === 'favorites' &&
+          state.favoriteRecipeIds.includes(r.id)) ||
+        (filter.kind === 'quick' && r.minutes <= 20) ||
+        (filter.kind === 'tag' && hasRecipeTag(r, filter.tag!))),
   )
   return (
     <>
@@ -123,19 +143,38 @@ export function Recipes() {
         </span>
       </div>
       <div className="filter-chips" aria-label="Filter recipes">
-        {['All recipes', 'Favorites', 'Quick & easy', 'Vegetarian'].map(
-          (label) => (
-            <button
-              key={label}
-              aria-pressed={filter === label}
-              className={filter === label ? 'selected' : ''}
-              onClick={() => setFilter(label)}
-            >
-              {label === 'Favorites' && <Heart size={14} />}
-              {label}
-            </button>
-          ),
-        )}
+        {(
+          [
+            { kind: 'all', label: 'All recipes' },
+            { kind: 'favorites', label: 'Favorites' },
+            { kind: 'quick', label: 'Quick & easy' },
+          ] as const
+        ).map(({ kind, label }) => (
+          <button
+            key={label}
+            aria-pressed={filter.kind === kind}
+            className={filter.kind === kind ? 'selected' : ''}
+            onClick={() => setFilter({ kind })}
+          >
+            {label === 'Favorites' && <Heart size={14} />}
+            {label}
+          </button>
+        ))}
+        {tags.map((tag) => (
+          <button
+            key={`tag:${tag}`}
+            aria-label={`Filter by tag ${tag}`}
+            aria-pressed={filter.kind === 'tag' && filter.tag === tag}
+            className={
+              filter.kind === 'tag' && filter.tag === tag ? 'selected' : ''
+            }
+            onClick={() => setFilter({ kind: 'tag', tag })}
+          >
+            {['All recipes', 'Favorites', 'Quick & easy'].includes(tag)
+              ? `${tag} · tag`
+              : tag}
+          </button>
+        ))}
       </div>
       <div className="recipe-grid">
         <AnimatePresence mode="popLayout">
@@ -273,6 +312,7 @@ export function RecipeDetail({
           </span>
         </div>
         <Markdown>{recipe.subtitle}</Markdown>
+        <RecipeSources sources={recipe.sourceImages} />
         <div className="ingredients-heading">
           <h3>Gather the good stuff</h3>
           <div className="servings-control">
@@ -404,7 +444,7 @@ export function RecipeEditor({
   onClose: () => void
   recipe?: Recipe
 }) {
-  const { state, update, groups } = useApp()
+  const { state, update, groups, allRecipes } = useApp()
   const [name, setName] = useState(recipe?.name ?? '')
   const [subtitle, setSubtitle] = useState(recipe?.subtitle ?? '')
   const [minutes, setMinutes] = useState(recipe?.minutes ?? 20)
@@ -424,6 +464,8 @@ export function RecipeEditor({
   const [tags, setTags] = useState(
     recipe?.tags?.join(', ') ?? recipe?.tag ?? '',
   )
+  const knownTags = availableRecipeTags(allRecipes)
+  const [sources, setSources] = useState(recipe?.sourceImages ?? [])
   const [products, setProducts] = useState(state.customProducts)
   const [uploadCount, setUploadCount] = useState(0)
   const pictureBusy = (busy: boolean) =>
@@ -484,6 +526,14 @@ export function RecipeEditor({
             setError('Add at least one ingredient.')
             return
           }
+          const savedTags = normalizeTags(tags, knownTags)
+          if (
+            savedTags.length > 20 ||
+            savedTags.some((tag) => [...tag].length > 60)
+          ) {
+            setError('Use up to 20 tags, with at most 60 characters each.')
+            return
+          }
           const saved: Recipe = {
             id: recipe?.id ?? crypto.randomUUID(),
             name: name.trim(),
@@ -491,11 +541,9 @@ export function RecipeEditor({
             image: image || '/images/recipe-placeholder.svg',
             minutes,
             servings,
-            tag: tags.split(',')[0]?.trim() || 'Our recipe',
-            tags: tags
-              .split(',')
-              .map((t) => t.trim())
-              .filter(Boolean),
+            tag: savedTags[0] || 'Our recipe',
+            tags: savedTags,
+            ...(sources.length ? { sourceImages: sources } : {}),
             ingredients,
             steps: steps
               .split('\n')
@@ -576,15 +624,8 @@ export function RecipeEditor({
             />
           </label>
         </div>
-        <label>
-          Tags
-          <input
-            value={tags}
-            maxLength={500}
-            onChange={(e) => setTags(e.target.value)}
-            placeholder="Vegetarian, quick, family favorite…"
-          />
-        </label>
+        <RecipeTagsInput value={tags} onChange={setTags} options={knownTags} />
+        <RecipeSources sources={sources} onChange={setSources} />
         <ImageField
           value={image}
           onChange={setImage}

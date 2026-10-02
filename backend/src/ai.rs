@@ -464,11 +464,13 @@ fn schema() -> Value {
     json!({"type":"object","additionalProperties":false,"required":["message","shopping","recipes","plan"],"properties":{"message":{"type":"string"},"shopping":{"type":"array","items":ingredient},"recipes":{"type":"array","items":recipe},"plan":{"type":"array","items":meal}}})
 }
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct AssistantRequest {
     pub prompt: String,
     #[serde(default)]
     pub images: Vec<String>,
+    #[serde(default)]
+    pub image_names: Vec<String>,
 }
 #[derive(Serialize, Deserialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -570,7 +572,36 @@ pub async fn assistant(
     if !config.enabled {
         return Err(ApiError::bad("The assistant is disabled in settings."));
     }
-    let attachments = assistant_images(&server, &actor.household_id, &input.images)?;
+    if (!input.image_names.is_empty() && input.image_names.len() != input.images.len())
+        || input
+            .image_names
+            .iter()
+            .any(|name| name.trim().is_empty() || name.chars().count() > 100 || name.contains('\0'))
+        || input
+            .images
+            .iter()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len()
+            != input.images.len()
+    {
+        return Err(ApiError::bad(
+            "Give each attached source image a valid name and attach it once.",
+        ));
+    }
+    let attachments = assistant_images(&server, &actor.household_id, &input.images).await?;
+    let source_images = input
+        .images
+        .iter()
+        .enumerate()
+        .map(|(index, url)| SourceImage {
+            url: url.clone(),
+            name: input
+                .image_names
+                .get(index)
+                .cloned()
+                .unwrap_or_else(|| format!("Source image {}", index + 1)),
+        })
+        .collect::<Vec<_>>();
     let snapshot = Database::snapshot(&*server.db.lock()?, &actor.household_id)?;
     let mut state = snapshot.state;
     let signals = crate::insights::summarize(&*server.db.lock()?, &actor.household_id, &state)?;
@@ -661,6 +692,7 @@ pub async fn assistant(
             ingredients,
             steps: recipe.steps,
             tags: recipe.tags,
+            source_images: source_images.clone(),
             favorite: None,
         });
     }
@@ -746,23 +778,45 @@ pub async fn assistant(
     Ok(Json(proposal))
 }
 
-fn assistant_images(server: &Server, household: &str, urls: &[String]) -> Result<Vec<Value>> {
+async fn assistant_images(server: &Server, household: &str, urls: &[String]) -> Result<Vec<Value>> {
     if urls.len() > 4 {
         return Err(ApiError::bad("Attach up to four recipe images at a time."));
     }
-    let conn = server.db.lock()?;
-    let mut total = 0;
-    urls.iter().map(|url| {
-        let id = url.strip_prefix("/api/images/").filter(|id| Uuid::parse_str(id).is_ok())
-            .ok_or_else(|| ApiError::bad("Use recipe images uploaded to your household."))?;
-        let stored: Option<(String, Vec<u8>)> = conn.query_row("SELECT mime,bytes FROM uploads WHERE id=?1 AND household_id=?2",params![id,household],|row|Ok((row.get(0)?,row.get(1)?))).optional()?;
-        let (mime,bytes) = stored.ok_or_else(||ApiError::bad("The attached image is unavailable in your household."))?;
-        total += bytes.len();
+    let images = {
+        let conn = server.db.lock()?;
+        urls.iter()
+            .map(|url| {
+                let id = url
+                    .strip_prefix("/api/images/")
+                    .filter(|id| Uuid::parse_str(id).is_ok())
+                    .ok_or_else(|| {
+                        ApiError::bad("Use recipe images uploaded to your household.")
+                    })?;
+                let stored: Option<Vec<u8>> = conn
+                    .query_row(
+                        "SELECT bytes FROM uploads WHERE id=?1 AND household_id=?2",
+                        params![id, household],
+                        |row| row.get(0),
+                    )
+                    .optional()?;
+                stored.ok_or_else(|| {
+                    ApiError::bad("The attached image is unavailable in your household.")
+                })
+            })
+            .collect::<Result<Vec<_>>>()?
+    };
+    // Keep archival sources at full resolution; send bounded vision previews.
+    tokio::task::spawn_blocking(move || {
+      let mut total = 0;
+      images.into_iter().map(|bytes| {
+        let image = crate::api::encode_image(&bytes)?;
+        total += image.bytes.len();
         if total > 6 * 1024 * 1024 {
             return Err(ApiError::bad("These images are too large together. Attach fewer pages."));
         }
-        Ok(json!({"type":"image_url","image_url":{"url":format!("data:{mime};base64,{}",STANDARD.encode(bytes)),"detail":"high"}}))
-    }).collect()
+        Ok(json!({"type":"image_url","image_url":{"url":format!("data:{};base64,{}",image.mime,STANDARD.encode(image.bytes)),"detail":"high"}}))
+      }).collect::<Result<Vec<_>>>()
+    }).await.map_err(ApiError::internal)?
 }
 
 #[derive(Clone, Default, Deserialize, PartialEq)]

@@ -111,9 +111,20 @@ pub struct Recipe {
     pub steps: Vec<String>,
     #[serde(default)]
     pub tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(as = "Option<Vec<SourceImage>>", optional)]
+    pub source_images: Vec<SourceImage>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub favorite: Option<bool>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct SourceImage {
+    pub url: String,
+    pub name: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS, PartialEq)]

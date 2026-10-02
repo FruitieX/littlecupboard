@@ -228,6 +228,36 @@ pub async fn mutate(
                 .clone();
         }
         domain::validate(&snapshot.state)?;
+        let old_sources = before
+            .recipe_book
+            .iter()
+            .chain(&before.custom_recipes)
+            .flat_map(|recipe| &recipe.source_images)
+            .map(|source| &source.url)
+            .collect::<std::collections::BTreeSet<_>>();
+        for source in snapshot
+            .state
+            .recipe_book
+            .iter()
+            .chain(&snapshot.state.custom_recipes)
+            .flat_map(|recipe| &recipe.source_images)
+            .filter(|source| !old_sources.contains(&source.url))
+        {
+            let id = source
+                .url
+                .strip_prefix("/api/images/")
+                .expect("validated source URL");
+            let exists: bool = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM uploads WHERE id=?1 AND household_id=?2)",
+                params![id, actor.household_id],
+                |row| row.get(0),
+            )?;
+            if !exists {
+                return Err(ApiError::bad(
+                    "A source image is unavailable in your household. Attach it again before saving.",
+                ));
+            }
+        }
         crate::icon_jobs::enqueue_new(&tx, &actor.household_id, &before, &snapshot.state)?;
         let changes = domain::changes(&before, &snapshot.state)?;
         let kind = serde_json::to_value(&input.operation)?["type"]
@@ -319,9 +349,15 @@ pub async fn stream(State(server): State<Server>, headers: HeaderMap) -> Result<
     Ok(response)
 }
 
+#[derive(Deserialize, Default)]
+pub struct UploadOptions {
+    #[serde(default)]
+    pub source: bool,
+}
 pub async fn upload(
     State(server): State<Server>,
     headers: HeaderMap,
+    Query(options): Query<UploadOptions>,
     mut multipart: Multipart,
 ) -> Result<Json<Value>> {
     let actor = authenticate(&server, &headers)?;
@@ -338,19 +374,32 @@ pub async fn upload(
     if bytes.len() > 8 * 1024 * 1024 {
         return Err(ApiError::bad("Choose an image under 8 MB."));
     }
-    let image = tokio::task::spawn_blocking(move || encode_image(&bytes))
-        .await
-        .map_err(ApiError::internal)??;
+    let image = tokio::task::spawn_blocking(move || {
+        if options.source {
+            encode_source_image(&bytes)
+        } else {
+            encode_image(&bytes)
+        }
+    })
+    .await
+    .map_err(ApiError::internal)??;
     save_image(&server, &actor.household_id, image)
 }
 pub struct StoredImage {
     pub bytes: Vec<u8>,
     pub mime: &'static str,
+    pub source: bool,
 }
 pub fn encode_image(bytes: &[u8]) -> Result<StoredImage> {
     encode_image_at_size(bytes, 1600)
 }
 pub fn encode_image_at_size(bytes: &[u8], edge: u32) -> Result<StoredImage> {
+    encode_image_options(bytes, edge, false)
+}
+pub fn encode_source_image(bytes: &[u8]) -> Result<StoredImage> {
+    encode_image_options(bytes, 8192, true)
+}
+fn encode_image_options(bytes: &[u8], edge: u32, source: bool) -> Result<StoredImage> {
     let mut reader = image::ImageReader::new(std::io::Cursor::new(bytes))
         .with_guessed_format()
         .map_err(|_| ApiError::bad("Use a JPG, PNG, or WebP image."))?;
@@ -360,6 +409,7 @@ pub fn encode_image_at_size(bytes: &[u8], edge: u32) -> Result<StoredImage> {
     ) {
         return Err(ApiError::bad("Use a JPG, PNG, or WebP image."));
     }
+    let lossless_source = source && reader.format() != Some(image::ImageFormat::Jpeg);
     let mut limits = image::Limits::default();
     limits.max_image_width = Some(8192);
     limits.max_image_height = Some(8192);
@@ -375,11 +425,15 @@ pub fn encode_image_at_size(bytes: &[u8], edge: u32) -> Result<StoredImage> {
     let mut decoded = image::DynamicImage::from_decoder(decoder)
         .map_err(|_| ApiError::bad("The image is damaged or too large."))?;
     decoded.apply_orientation(orientation);
-    let image = decoded.thumbnail(edge, edge);
+    let image = if source {
+        decoded
+    } else {
+        decoded.thumbnail(edge, edge)
+    };
     let mut encoded = Vec::new();
     let transparent =
         image.color().has_alpha() && image.to_rgba8().pixels().any(|pixel| pixel[3] < 255);
-    let mime = if transparent || edge == 256 {
+    let mime = if transparent || edge == 256 || lossless_source {
         image::codecs::webp::WebPEncoder::new_lossless(&mut encoded)
             .encode(
                 image.to_rgba8().as_raw(),
@@ -390,14 +444,23 @@ pub fn encode_image_at_size(bytes: &[u8], edge: u32) -> Result<StoredImage> {
             .map_err(ApiError::internal)?;
         "image/webp"
     } else {
-        image::codecs::jpeg::JpegEncoder::new_with_quality(&mut encoded, 85)
-            .encode_image(&image.to_rgb8())
-            .map_err(ApiError::internal)?;
+        image::codecs::jpeg::JpegEncoder::new_with_quality(
+            &mut encoded,
+            if source { 95 } else { 85 },
+        )
+        .encode_image(&image.to_rgb8())
+        .map_err(ApiError::internal)?;
         "image/jpeg"
     };
+    if source && encoded.len() > 8 * 1024 * 1024 {
+        return Err(ApiError::bad(
+            "This source image exceeds 8 MB after processing. Choose a smaller image.",
+        ));
+    }
     Ok(StoredImage {
         bytes: encoded,
         mime,
+        source,
     })
 }
 pub fn save_image(server: &Server, household: &str, image: StoredImage) -> Result<Json<Value>> {
@@ -414,13 +477,14 @@ pub fn save_image(server: &Server, household: &str, image: StoredImage) -> Resul
         ));
     }
     conn.execute(
-        "INSERT INTO uploads(id,household_id,mime,bytes,created_at) VALUES(?1,?2,?3,?4,?5)",
+        "INSERT INTO uploads(id,household_id,mime,bytes,created_at,source) VALUES(?1,?2,?3,?4,?5,?6)",
         params![
             id,
             household,
             image.mime,
             image.bytes,
-            Utc::now().to_rfc3339()
+            Utc::now().to_rfc3339(),
+            image.source
         ],
     )?;
     Ok(Json(json!({"url":format!("/api/images/{id}")})))
@@ -477,8 +541,9 @@ pub async fn delete_image(
             .recipe_book
             .iter()
             .chain(&state.custom_recipes)
-            .any(|recipe| recipe.image == url)
+            .any(|recipe| recipe.image == url || recipe.source_images.iter().any(|source| source.url == url))
         || state.product_images.values().any(|image| image == &url)
+        || conn.query_row("SELECT EXISTS(SELECT 1 FROM ai_proposals WHERE household_id=?1 AND applied=0 AND created_at>unixepoch()-86400 AND proposal LIKE ?2)",params![actor.household_id,format!("%{url}%")],|row|row.get::<_,bool>(0))?
     {
         return Err(ApiError::bad(
             "Remove this image from its recipe or product first.",
@@ -498,20 +563,21 @@ pub async fn backup(State(server): State<Server>, headers: HeaderMap) -> Result<
         let conn = server.db.lock()?;
         let snapshot = Database::snapshot(&conn, &actor.household_id)?;
         let uploads = conn
-            .prepare("SELECT id,mime,bytes,created_at FROM uploads WHERE household_id=?1")?
+            .prepare("SELECT id,mime,bytes,created_at,source FROM uploads WHERE household_id=?1")?
             .query_map([&actor.household_id], |row| {
                 Ok((
                     row.get::<_, String>(0)?,
                     row.get::<_, String>(1)?,
                     row.get::<_, Vec<u8>>(2)?,
                     row.get::<_, String>(3)?,
+                    row.get::<_, bool>(4)?,
                 ))
             })?
             .collect::<std::result::Result<Vec<_>, _>>()?;
         use base64::Engine;
         let events=conn.prepare("SELECT id,actor,kind,at,detail,changes,undone FROM events WHERE household_id=?1")?.query_map([&actor.household_id],|row|Ok(json!({"id":row.get::<_,String>(0)?,"actor":row.get::<_,String>(1)?,"kind":row.get::<_,String>(2)?,"at":row.get::<_,String>(3)?,"detail":row.get::<_,String>(4)?,"changes":row.get::<_,String>(5)?,"undone":row.get::<_,bool>(6)?})))?.collect::<std::result::Result<Vec<_>,_>>()?;
         serde_json::to_vec(
-            &json!({"format":"forkbasket-household-v1","state":snapshot.state,"events":events,"images":uploads.into_iter().map(|(id,mime,bytes,at)|json!({"id":id,"mime":mime,"data":base64::engine::general_purpose::STANDARD.encode(bytes),"at":at})).collect::<Vec<_>>()}),
+            &json!({"format":"forkbasket-household-v1","state":snapshot.state,"events":events,"images":uploads.into_iter().map(|(id,mime,bytes,at,source)|json!({"id":id,"mime":mime,"data":base64::engine::general_purpose::STANDARD.encode(bytes),"at":at,"source":source})).collect::<Vec<_>>()}),
         )?
     };
     Ok((
@@ -599,17 +665,43 @@ pub async fn restore(
         }
         let id_new = Uuid::new_v4().to_string();
         remap.insert(id.to_string(), id_new.clone());
-        uploads.push((id_new, bytes));
+        let source = image
+            .get("source")
+            .map(|source| {
+                source
+                    .as_bool()
+                    .ok_or_else(|| ApiError::bad("Invalid backup image type."))
+            })
+            .transpose()?
+            .unwrap_or(false);
+        uploads.push((id_new, bytes, source));
     }
     let uploads = tokio::task::spawn_blocking(move || {
         uploads
             .into_iter()
-            .map(|(id, bytes)| encode_image(&bytes).map(|bytes| (id, bytes)))
+            .map(|(id, bytes, source)| {
+                if source {
+                    encode_source_image(&bytes)
+                } else {
+                    encode_image(&bytes)
+                }
+                .map(|image| (id, image))
+            })
             .collect::<Result<Vec<_>>>()
     })
     .await
     .map_err(ApiError::internal)??;
     remap_images(&mut input.backup["state"], &remap);
+    if uploads
+        .iter()
+        .map(|(_, image)| image.bytes.len())
+        .sum::<usize>()
+        > 64 * 1024 * 1024
+    {
+        return Err(ApiError::bad(
+            "Processed backup images exceed 64 MB. Restore a full database backup instead.",
+        ));
+    }
     let state: HouseholdState = serde_json::from_value(input.backup["state"].clone())?;
     domain::validate(&state)?;
     let events = input.backup["events"]
@@ -672,13 +764,14 @@ pub async fn restore(
         }
         for (id, image) in uploads {
             tx.execute(
-                "INSERT INTO uploads(id,household_id,mime,bytes,created_at) VALUES(?1,?2,?3,?4,?5)",
+                "INSERT INTO uploads(id,household_id,mime,bytes,created_at,source) VALUES(?1,?2,?3,?4,?5,?6)",
                 params![
                     id,
                     actor.household_id,
                     image.mime,
                     image.bytes,
-                    Utc::now().to_rfc3339()
+                    Utc::now().to_rfc3339(),
+                    image.source
                 ],
             )?;
         }
@@ -732,7 +825,8 @@ pub async fn cleanup_images(
     for id in images {
         let url = format!("/api/images/{id}");
         let used:bool=conn.query_row("SELECT EXISTS(SELECT 1 FROM events WHERE household_id=?1 AND undone=0 AND changes LIKE ?2)",params![actor.household_id,format!("%{url}%")],|row|row.get(0))?;
-        if !state.contains(&url) && !used {
+        let in_proposal:bool = conn.query_row("SELECT EXISTS(SELECT 1 FROM ai_proposals WHERE household_id=?1 AND applied=0 AND created_at>unixepoch()-86400 AND proposal LIKE ?2)",params![actor.household_id,format!("%{url}%")],|row|row.get(0))?;
+        if !state.contains(&url) && !used && !in_proposal {
             removed += conn.execute(
                 "DELETE FROM uploads WHERE id=?1 AND household_id=?2",
                 params![id, actor.household_id],

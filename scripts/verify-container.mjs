@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 
 const image =
   process.env.FORKBASKET_TEST_IMAGE ?? 'ghcr.io/fruitiex/forkbasket:main'
@@ -117,6 +118,50 @@ try {
         unit: 'pc',
         note: 'Crisp',
         accumulate: true,
+      },
+    },
+    cookie,
+  )
+  const sourceBody = new FormData()
+  sourceBody.append(
+    'image',
+    new Blob([readFileSync('public/images/pasta.jpg')], { type: 'image/jpeg' }),
+    'Source recipe.jpg',
+  )
+  const sourceResponse = await fetch(origin + '/api/images?source=true', {
+    method: 'POST',
+    headers: {
+      Cookie: cookie,
+      Origin: 'http://localhost:8080',
+      'X-ForkBasket-Request': '1',
+    },
+    body: sourceBody,
+  })
+  assert.equal(sourceResponse.status, 200)
+  const { url: sourceUrl } = await sourceResponse.json()
+  const recipe = (await api(origin, '/state', undefined, cookie)).body.state
+    .recipeBook[0]
+  const recipeWithSource = {
+    ...recipe,
+    sourceImages: [{ url: sourceUrl, name: 'Source recipe.jpg' }],
+  }
+  await api(
+    origin,
+    '/operations',
+    {
+      id: randomUUID(),
+      operation: {
+        type: 'patch',
+        label: 'Keep recipe source',
+        changes: [
+          {
+            collection: 'recipeBook',
+            key: recipe.id,
+            field: null,
+            before: recipe,
+            after: recipeWithSource,
+          },
+        ],
       },
     },
     cookie,
@@ -253,6 +298,15 @@ try {
     5,
   )
   const restarted = (await api(origin, '/state', undefined, cookie)).body.state
+  assert.deepEqual(
+    restarted.recipeBook.find((value) => value.id === recipe.id).sourceImages,
+    recipeWithSource.sourceImages,
+  )
+  assert.equal(
+    (await fetch(origin + sourceUrl, { headers: { Cookie: cookie } })).status,
+    200,
+  )
+  assert.equal((await fetch(origin + sourceUrl)).status, 401)
   assert.deepEqual(restarted.consumptionRates.apples, {
     quantity: 6,
     unit: 'pc',
@@ -272,6 +326,24 @@ try {
   assert.deepEqual(recovered.consumptionRates.apples, initialRate)
   assert.equal(recovered.pantry.rice.amounts[0].quantity, 1000)
   assert.equal(recovered.pantry.rice.note, 'Backed up pantry')
+  assert.deepEqual(
+    recovered.recipeBook.find((value) => value.id === recipe.id).sourceImages,
+    recipeWithSource.sourceImages,
+  )
+  assert.equal(
+    (await fetch(restoredOrigin + sourceUrl, { headers: { Cookie: cookie } }))
+      .status,
+    200,
+  )
+  const householdBackup = (
+    await api(restoredOrigin, '/backup', undefined, cookie)
+  ).body
+  assert.ok(
+    householdBackup.images.some(
+      (image) =>
+        image.id === sourceUrl.split('/').at(-1) && image.source === true,
+    ),
+  )
   console.log(
     'Container passed: non-root/read-only runtime, SPA routes, persistent accounts/shopping, restart, private online backup and point-in-time restoration.',
   )

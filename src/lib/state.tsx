@@ -20,6 +20,7 @@ type ContextValue = {
   session: SessionInfo
   status: SyncStatus
   pending: Pending[]
+  lastAppliedProposal: string | null
   error: string
   clearError: () => void
   update: (fn: (state: AppState) => AppState, label?: string) => void
@@ -56,6 +57,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [setupRequired, setSetupRequired] = useState(false)
   const [status, setStatus] = useState<SyncStatus>('connecting')
   const [pending, setPending] = useState<Pending[]>([])
+  const [lastAppliedProposal, setLastAppliedProposal] = useState<string | null>(
+    null,
+  )
   const [error, setError] = useState('')
   const [recovery, setRecovery] = useState<string | null>(null)
   const server = useRef<Snapshot | null>(null)
@@ -195,6 +199,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const { failed: _failed, ...mutation } = entry
           const snapshot = await post<Snapshot>('/operations', mutation)
           if (activeSession.current?.user.id !== me.user.id) return
+          if (entry.operation.type === 'applyProposal')
+            setLastAppliedProposal(entry.operation.proposalId)
           queue.current = queue.current.filter((item) => item.id !== entry.id)
           if (!server.current || snapshot.revision >= server.current.revision)
             server.current = snapshot
@@ -236,6 +242,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   flushRef.current = flush
 
   useEffect(() => {
+    setLastAppliedProposal(null)
     if (!session) {
       activeSession.current = null
       return
@@ -437,6 +444,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         session,
         status,
         pending,
+        lastAppliedProposal,
         error,
         clearError: () => setError(''),
         update,

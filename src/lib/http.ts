@@ -33,9 +33,12 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 export function post<T>(path: string, body: unknown) {
   return api<T>(path, { method: 'POST', body: JSON.stringify(body) })
 }
-export async function uploadImage(file: File): Promise<string> {
+export async function uploadImage(file: File, source = false): Promise<string> {
   const body = new FormData()
   body.append('image', file)
-  const result = await api<{ url: string }>('/images', { method: 'POST', body })
+  const result = await api<{ url: string }>(
+    source ? '/images?source=true' : '/images',
+    { method: 'POST', body },
+  )
   return result.url
 }

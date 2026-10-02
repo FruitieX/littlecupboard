@@ -478,6 +478,13 @@ try {
   await owner
     .getByLabel('How to make it', { exact: true })
     .fill('Cook the rice.\nAdd the seasoning and serve.')
+  const tagInput = owner.getByRole('combobox', { name: 'Tags', exact: true })
+  await tagInput.fill('veg')
+  await owner.getByRole('option', { name: 'Vegetarian', exact: true }).click()
+  await tagInput.fill('Vegetarian, Lunchbox')
+  await owner
+    .getByRole('option', { name: 'Create “Lunchbox”', exact: true })
+    .click()
   await owner
     .getByRole('button', { name: 'Save to our recipe book', exact: true })
     .click()
@@ -486,6 +493,20 @@ try {
     .waitFor()
   await owner.reload()
   await settle(owner)
+  await owner
+    .getByRole('button', { name: 'Filter by tag Lunchbox', exact: true })
+    .click()
+  await owner.waitForFunction(
+    () => document.querySelectorAll('.recipe-card').length === 1,
+  )
+  assert.equal(await owner.locator('.recipe-card').count(), 1)
+  await owner
+    .getByRole('button', { name: 'Filter by tag Vegetarian', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Open Family test bowl', exact: true })
+    .waitFor()
+  await owner.getByRole('button', { name: 'All recipes', exact: true }).click()
   await owner
     .getByRole('button', { name: 'Open Family test bowl', exact: true })
     .click()
@@ -504,6 +525,14 @@ try {
   await wife
     .getByRole('button', { name: 'Open Family rice bowl', exact: true })
     .waitFor()
+  await wife
+    .getByRole('button', { name: 'Filter by tag Lunchbox', exact: true })
+    .click()
+  await wife.waitForFunction(
+    () => document.querySelectorAll('.recipe-card').length === 1,
+  )
+  assert.equal(await wife.locator('.recipe-card').count(), 1)
+  await wife.getByRole('button', { name: 'All recipes', exact: true }).click()
   console.log(
     'Pantry observations, recipe creation/editing, custom ingredients and private photo persistence passed.',
   )
@@ -864,10 +893,51 @@ try {
     .waitFor()
   const beforeProposal = await request(owner, '/state', undefined, 'GET')
   assert.ok(!beforeProposal.state.items.some((i) => i.id === 'apples'))
+  let rejectProposal = true
+  const rejectedSave = async (route) => {
+    if (
+      rejectProposal &&
+      route.request().postDataJSON()?.operation?.type === 'applyProposal'
+    ) {
+      rejectProposal = false
+      await route.fulfill({
+        status: 409,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Fixture proposal conflict' }),
+      })
+    } else await route.continue()
+  }
+  await owner.route('**/api/operations', rejectedSave)
   await owner
     .getByRole('button', { name: 'Save selected suggestions', exact: true })
     .click()
-  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await owner
+    .getByText('Fixture proposal conflict', { exact: true })
+    .last()
+    .waitFor()
+  assert.equal(await owner.getByRole('dialog').isVisible(), true)
+  assert.ok(
+    !(await request(owner, '/state', undefined, 'GET')).state.items.some(
+      (item) => item.id === 'apples',
+    ),
+  )
+  await owner
+    .getByRole('button', {
+      name: 'Discard and request fresh suggestions',
+      exact: true,
+    })
+    .click()
+  await owner.unroute('**/api/operations', rejectedSave)
+  await owner
+    .getByRole('button', { name: 'Ask our assistant', exact: true })
+    .click()
+  await owner
+    .getByText('Pick up a little fruit for lunch.', { exact: true })
+    .waitFor()
+  await owner
+    .getByRole('button', { name: 'Save selected suggestions', exact: true })
+    .click()
+  await owner.getByRole('dialog').waitFor({ state: 'hidden' })
   await wife
     .getByRole('button', { name: 'Check Apples', exact: true })
     .waitFor()
@@ -1093,11 +1163,31 @@ try {
   await owner.getByRole('dialog').screenshot({
     path: 'test-results/recipe-import-mobile.png',
   })
+  await ownerContext.setOffline(true)
   await owner
     .getByRole('button', { name: 'Save selected suggestions', exact: true })
     .click()
-  await settle(owner)
-  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await owner
+    .getByRole('button', { name: 'Saving selected suggestions…', exact: true })
+    .waitFor()
+  assert.equal(await owner.getByRole('dialog').isVisible(), true)
+  await ownerContext.setOffline(false)
+  await owner.getByRole('dialog').waitFor({ state: 'hidden' })
+  const sourceRecipe = (
+    await request(owner, '/state', undefined, 'GET')
+  ).state.recipeBook.find((recipe) => recipe.name === 'Imported recipe')
+  assert.equal(sourceRecipe.sourceImages.length, 2)
+  assert.deepEqual(
+    sourceRecipe.sourceImages.map((source) => source.name),
+    ['pasta.jpg', 'Clipboard recipe.png'],
+  )
+  for (const source of sourceRecipe.sourceImages) {
+    assert.equal(
+      (await wife.request.get(frontendUrl + source.url)).status(),
+      200,
+    )
+    assert.equal((await fetch(backendUrl + source.url)).status, 401)
+  }
   await owner.goto(`${frontendUrl}/recipes`)
   await settle(owner)
   await owner
@@ -1114,9 +1204,61 @@ try {
       .count(),
     1,
   )
+  await owner.locator('.recipe-sources summary').click()
+  await owner.locator('.recipe-source-grid').scrollIntoViewIfNeeded()
+  assert.equal(await owner.locator('.recipe-source img').count(), 2)
+  await owner.waitForFunction(() =>
+    [...document.querySelectorAll('.recipe-source img')].every(
+      (img) => img.complete && img.naturalWidth > 0,
+    ),
+  )
+  for (const width of [320, 390, 1440]) {
+    await owner.setViewportSize({ width, height: 844 })
+    await owner
+      .getByRole('dialog')
+      .screenshot({ path: `test-results/recipe-sources-${width}.png` })
+    assert.equal(
+      await owner.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      true,
+    )
+  }
+  await owner.setViewportSize({ width: 390, height: 844 })
   await owner.getByRole('dialog').screenshot({
     path: 'test-results/recipe-markdown-mobile.png',
   })
+  await owner.getByRole('button', { name: 'Edit recipe', exact: true }).click()
+  const importedTags = owner.getByRole('combobox', {
+    name: 'Tags',
+    exact: true,
+  })
+  await importedTags.fill('Imported, lun')
+  await importedTags.press('ArrowDown')
+  await importedTags.press('Enter')
+  assert.equal(await importedTags.inputValue(), 'Imported, Lunchbox, ')
+  await owner
+    .getByRole('dialog')
+    .screenshot({ path: 'test-results/recipe-tags-mobile.png' })
+  await owner
+    .getByRole('button', { name: 'Save to our recipe book', exact: true })
+    .click()
+  await owner.reload()
+  await settle(owner)
+  await owner
+    .getByRole('button', { name: 'Filter by tag Imported', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Open Imported recipe', exact: true })
+    .click()
+  await owner.locator('.recipe-sources summary').click()
+  assert.equal(await owner.locator('.recipe-source img').count(), 2)
+  assert.deepEqual(
+    (await request(owner, '/state', undefined, 'GET')).state.recipeBook.find(
+      (recipe) => recipe.name === 'Imported recipe',
+    ).sourceImages,
+    sourceRecipe.sourceImages,
+  )
   await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
   await wife.goto(`${frontendUrl}/settings`)
   await settle(wife)

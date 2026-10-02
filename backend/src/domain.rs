@@ -1279,6 +1279,22 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
             || recipe.steps.iter().any(|step| !text(step, 3000))
             || recipe.tags.len() > 20
             || recipe.tags.iter().any(|tag| !text(tag, 60))
+            || recipe.source_images.len() > 4
+            || recipe.source_images.iter().any(|source| {
+                source.name.trim().is_empty()
+                    || !text(&source.name, 100)
+                    || !source
+                        .url
+                        .strip_prefix("/api/images/")
+                        .is_some_and(|id| uuid::Uuid::parse_str(id).is_ok())
+            })
+            || recipe
+                .source_images
+                .iter()
+                .map(|source| &source.url)
+                .collect::<BTreeSet<_>>()
+                .len()
+                != recipe.source_images.len()
         {
             return Err(ApiError::bad("Invalid recipe details."));
         }

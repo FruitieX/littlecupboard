@@ -1635,7 +1635,7 @@ async fn compatible_image_generation_stores_a_private_resized_attachment() {
 async fn recipe_vision_icon_alpha_and_generated_draft_photos_are_private_and_reviewed() {
     use axum::routing::post;
     use base64::Engine;
-    let rgba = image::RgbaImage::from_fn(1024, 1024, |x, y| {
+    let rgba = image::RgbaImage::from_fn(2048, 2048, |x, y| {
         if x < 200 || y < 200 {
             image::Rgba([0, 0, 0, 0])
         } else {
@@ -1669,13 +1669,41 @@ async fn recipe_vision_icon_alpha_and_generated_draft_photos_are_private_and_rev
         .unwrap()
         .query_row("SELECT id FROM households", [], |row| row.get(0))
         .unwrap();
-    let upload = api::save_image(
-        &server,
-        &household,
-        api::encode_image(png.get_ref()).unwrap(),
-    )
-    .unwrap()
-    .0;
+    let mut multipart = b"--recipe-source\r\nContent-Disposition: form-data; name=\"image\"; filename=\"Family recipe.png\"\r\nContent-Type: image/png\r\n\r\n".to_vec();
+    multipart.extend(png.get_ref());
+    multipart.extend(b"\r\n--recipe-source--\r\n");
+    let uploaded = app(server.clone())
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/api/images?source=true")
+                .header(header::COOKIE, &owner)
+                .header(header::ORIGIN, &server.config.origin)
+                .header("x-forkbasket-request", "1")
+                .header(
+                    header::CONTENT_TYPE,
+                    "multipart/form-data; boundary=recipe-source",
+                )
+                .body(Body::from(multipart))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(uploaded.status(), StatusCode::OK);
+    let upload: Value =
+        serde_json::from_slice(&uploaded.into_body().collect().await.unwrap().to_bytes()).unwrap();
+    assert_eq!(
+        request(
+            &server,
+            Method::GET,
+            upload["url"].as_str().unwrap(),
+            Value::Null,
+            None
+        )
+        .await
+        .0,
+        StatusCode::UNAUTHORIZED
+    );
     let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"gpt-image-2","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit","prompts":{"assistant":"Use metric quantities and concise Markdown notes.","itemImage":"Draw a flat Twemoji icon with transparent background.","recipeImage":"Photograph the finished dish in natural light."}});
     assert_eq!(
         request(
@@ -1717,11 +1745,54 @@ async fn recipe_vision_icon_alpha_and_generated_draft_photos_are_private_and_rev
         &server,
         Method::POST,
         "/api/ai/assistant",
-        json!({"prompt":"","images":[upload["url"]]}),
+        json!({"prompt":"","images":[upload["url"]],"imageNames":["Family recipe.png"]}),
         Some(&owner),
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{proposal}");
+    assert_eq!(
+        proposal["recipes"][0]["sourceImages"],
+        json!([{ "url":upload["url"],"name":"Family recipe.png" }])
+    );
+    let source_id = upload["url"]
+        .as_str()
+        .unwrap()
+        .strip_prefix("/api/images/")
+        .unwrap();
+    // Active proposals protect their source even before any recipe is saved.
+    server
+        .db
+        .lock()
+        .unwrap()
+        .execute(
+            "UPDATE uploads SET created_at='2000-01-01T00:00:00Z' WHERE id=?1",
+            [source_id],
+        )
+        .unwrap();
+    assert_eq!(
+        request(
+            &server,
+            Method::DELETE,
+            upload["url"].as_str().unwrap(),
+            Value::Null,
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        request(
+            &server,
+            Method::POST,
+            "/api/images/cleanup",
+            json!({}),
+            Some(&owner)
+        )
+        .await
+        .1["removed"],
+        0
+    );
     {
         let seen = calls.lock().unwrap();
         assert!(
@@ -1797,6 +1868,40 @@ async fn recipe_vision_icon_alpha_and_generated_draft_photos_are_private_and_rev
                     .unwrap()
                     .contains("**Keep chilled**"))
     );
+    let saved = snapshot["state"]["recipeBook"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|recipe| recipe["name"] == "Screenshot recipe")
+        .unwrap();
+    assert_eq!(
+        saved["sourceImages"],
+        proposal["recipes"][0]["sourceImages"]
+    );
+    assert_eq!(
+        request(
+            &server,
+            Method::DELETE,
+            upload["url"].as_str().unwrap(),
+            Value::Null,
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    assert_eq!(
+        request(
+            &server,
+            Method::POST,
+            "/api/images/cleanup",
+            json!({}),
+            Some(&owner)
+        )
+        .await
+        .1["removed"],
+        0
+    );
     assert!(
         snapshot["state"]["customProducts"]
             .as_array()
@@ -1835,6 +1940,13 @@ async fn recipe_vision_icon_alpha_and_generated_draft_photos_are_private_and_rev
     )
     .await
     .1;
+    assert!(
+        backup["images"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|image| image["source"] == true && image["id"] == source_id)
+    );
     let (status, restored, _) = request(
         &server,
         Method::POST,
@@ -1844,6 +1956,48 @@ async fn recipe_vision_icon_alpha_and_generated_draft_photos_are_private_and_rev
     )
     .await;
     assert_eq!(status, StatusCode::OK, "{restored}");
+    let restored_state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    let restored_recipe = restored_state["state"]["recipeBook"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|recipe| recipe["name"] == "Screenshot recipe")
+        .unwrap();
+    let restored_url = restored_recipe["sourceImages"][0]["url"].as_str().unwrap();
+    assert_ne!(restored_url, upload["url"].as_str().unwrap());
+    assert_eq!(
+        restored_recipe["sourceImages"][0]["name"],
+        "Family recipe.png"
+    );
+    let (source, archived): (bool, Vec<u8>) = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row(
+            "SELECT source,bytes FROM uploads WHERE household_id=?1 AND id=?2",
+            rusqlite::params![
+                household,
+                restored_url.strip_prefix("/api/images/").unwrap()
+            ],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .unwrap();
+    assert!(source);
+    let archived = image::load_from_memory(&archived).unwrap().to_rgba8();
+    assert_eq!(
+        archived.dimensions(),
+        (2048, 2048),
+        "Source resolution survives household backup/restore"
+    );
+    assert_eq!(archived.get_pixel(0, 0)[3], 0);
     let bytes:Vec<u8>=server.db.lock().unwrap().query_row("SELECT bytes FROM uploads WHERE household_id=?1 AND mime='image/webp' ORDER BY length(bytes) LIMIT 1",[&household],|row|row.get(0)).unwrap();
     assert_eq!(
         image::load_from_memory(&bytes)
@@ -1853,6 +2007,52 @@ async fn recipe_vision_icon_alpha_and_generated_draft_photos_are_private_and_rev
         0
     );
     task.abort();
+}
+
+#[tokio::test]
+async fn recipe_sources_reject_missing_foreign_and_invalid_references_atomically() {
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let snapshot = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    let original = snapshot["state"]["recipeBook"][0].clone();
+    let foreign_id = uuid::Uuid::new_v4().to_string();
+    {
+        let conn = server.db.lock().unwrap();
+        conn.execute("INSERT INTO households(id,name,state,revision) VALUES('other-source-household','Other',?1,0)",[snapshot["state"].to_string()]).unwrap();
+        conn.execute("INSERT INTO uploads(id,household_id,mime,bytes,created_at) VALUES(?1,'other-source-household','image/png',X'01',?2)",rusqlite::params![foreign_id,chrono::Utc::now().to_rfc3339()]).unwrap();
+    }
+    for sources in [
+        json!([{"url":"https://example.test/source.png","name":"Source"}]),
+        json!([{"url":format!("/api/images/{}",uuid::Uuid::new_v4()),"name":"Missing"}]),
+        json!([{"url":format!("/api/images/{foreign_id}"),"name":"Foreign"}]),
+        json!([{"url":format!("/api/images/{foreign_id}"),"name":""}]),
+        json!([{"url":format!("/api/images/{foreign_id}"),"name":"One"},{"url":format!("/api/images/{foreign_id}"),"name":"Duplicate"}]),
+    ] {
+        let mut changed = original.clone();
+        changed["sourceImages"] = sources;
+        let (status,body) = operation(&server,&owner,json!({"type":"patch","label":"Edit sources","changes":[{"collection":"recipeBook","key":original["id"],"field":null,"before":original,"after":changed}]})).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    }
+    assert_eq!(
+        request(
+            &server,
+            Method::GET,
+            "/api/state",
+            Value::Null,
+            Some(&owner)
+        )
+        .await
+        .1,
+        snapshot
+    );
 }
 
 #[tokio::test]

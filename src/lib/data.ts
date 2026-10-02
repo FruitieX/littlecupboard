@@ -66,6 +66,7 @@ export type Recipe = {
   steps: string[]
   favorite?: boolean
   tags?: string[]
+  sourceImages?: import('./api/SourceImage').SourceImage[]
 }
 export type Store = {
   id: string
