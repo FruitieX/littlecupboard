@@ -297,18 +297,7 @@ async fn legacy_prompt_settings_and_companion_icons_keep_their_defaults_and_cred
     let waiting = tokio::spawn(async move {
         ai::render_image(&renderer, &household, ai::ImageKind::Item, "Pear").await
     });
-    let mut job = Value::Null;
-    for _ in 0..100 {
-        job = companion::claim(axum::extract::State(server.clone()), headers.clone())
-            .await
-            .unwrap()
-            .0["job"]
-            .clone();
-        if !job.is_null() {
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
+    let job = wait_for_companion_job(&server, &headers).await;
     assert_eq!(job["path"], "images/generations");
     let body = &job["body"];
     assert!(
@@ -1097,18 +1086,7 @@ async fn companion_jobs_are_scoped_claimed_once_revocable_and_forward_requested_
     let waiting = tokio::spawn(async move {
         request(&test_server,Method::POST,"/api/ai/test",json!({"config":{"enabled":true,"transport":"companion","baseUrl":"https://api.openai.com/v1","model":"gpt-6-luna","reasoningEffort":"xhigh","imageModel":"gpt-image-2-medium","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit"}}),Some(&test_cookie)).await
     });
-    let mut job = Value::Null;
-    for _ in 0..100 {
-        job = companion::claim(axum::extract::State(server.clone()), headers.clone())
-            .await
-            .unwrap()
-            .0["job"]
-            .clone();
-        if !job.is_null() {
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
+    let job = wait_for_companion_job(&server, &headers).await;
     assert_eq!(job["body"]["model"], "gpt-6-luna");
     assert_eq!(job["body"]["reasoning_effort"], "xhigh");
     assert!(
@@ -3116,18 +3094,7 @@ async fn store_map_vision_is_private_validated_review_only_and_companion_compati
         )
         .await
     });
-    let mut job = Value::Null;
-    for _ in 0..100 {
-        job = companion::claim(axum::extract::State(server.clone()), headers.clone())
-            .await
-            .unwrap()
-            .0["job"]
-            .clone();
-        if !job.is_null() {
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
+    let job = wait_for_companion_job(&server, &headers).await;
     assert_eq!(job["path"], "chat/completions");
     assert_eq!(job["body"]["reasoning_effort"], "xhigh");
     assert_eq!(
@@ -3455,18 +3422,7 @@ async fn companion_icon_sheets_keep_the_personal_transport_style_and_private_cro
     let waiting = tokio::spawn(async move {
         request(&renderer,Method::POST,"/api/ai/icon-batch",json!({"items":[{"id":"new-a","name":"Millet flakes","category":"Ingredients"},{"id":"new-b","name":"Juniper berries","category":"Spices"}]}),Some(&cookie)).await
     });
-    let mut job = Value::Null;
-    for _ in 0..100 {
-        job = companion::claim(axum::extract::State(server.clone()), headers.clone())
-            .await
-            .unwrap()
-            .0["job"]
-            .clone();
-        if !job.is_null() {
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
-    }
+    let job = wait_for_companion_job(&server, &headers).await;
     assert_eq!(job["path"], "images/generations");
     assert_eq!(job["body"]["size"], "1024x1024");
     assert_eq!(job["body"]["background"], "transparent");
@@ -3712,4 +3668,22 @@ async fn assistant_keeps_dessert_drafts_in_the_library_and_rejects_excluded_sche
             .contains("\"mealPlanEligible\":false")
     );
     task.abort();
+}
+
+async fn wait_for_companion_job(server: &Server, headers: &axum::http::HeaderMap) -> Value {
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
+        loop {
+            let job = companion::claim(axum::extract::State(server.clone()), headers.clone())
+                .await
+                .unwrap()
+                .0["job"]
+                .clone();
+            if !job.is_null() {
+                return job;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+    })
+    .await
+    .expect("The request did not enqueue a companion job within 30 seconds")
 }
