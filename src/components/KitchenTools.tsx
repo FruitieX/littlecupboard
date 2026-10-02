@@ -14,16 +14,20 @@ import { useLearning } from '../lib/learning'
 import { Modal, SectionTitle } from './ui'
 import { FoodIcon } from './FoodIcon'
 import { PantryEditor, pantryEdit, type PantryEdit } from './PantryEditor'
+import { ProductEditor } from './LibrarySettings'
 export function KitchenTools() {
   const { state, update, action, session } = useApp()
   const { insights, history, error } = useLearning()
   const [open, setOpen] = useState<'pantry' | 'history' | null>(null)
   const [editing, setEditing] = useState<PantryEdit | null>(null)
+  const [editingItem, setEditingItem] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [unit, setUnit] = useState('pc')
   const [expiry, setExpiry] = useState('')
   const products = getProducts(state)
+  const editedProduct = products.find((product) => product.id === editingItem)
+  const pantryEditing = editing && state.pantry?.[editing.id] ? editing : null
   const product = products.find(
     (p) => p.name.toLowerCase() === name.toLowerCase(),
   )
@@ -48,14 +52,20 @@ export function KitchenTools() {
         title="What’s already at home?"
         description="Confirm the total you actually have. We reserve planned ingredients first, then use the remainder for other meals."
       >
-        {editing && (
+        {pantryEditing && (
           <PantryEditor
-            key={editing.id}
-            entry={editing}
+            key={pantryEditing.id}
+            entry={{
+              ...pantryEditing,
+              name:
+                products.find((p) => p.id === pantryEditing.id)?.name ??
+                pantryEditing.name,
+            }}
             onClose={() => setEditing(null)}
+            onEditItem={() => setEditingItem(pantryEditing.id)}
           />
         )}
-        <div hidden={!!editing}>
+        <div hidden={!!pantryEditing}>
           <form
             className="editor-form"
             onSubmit={(e) => {
@@ -195,6 +205,13 @@ export function KitchenTools() {
           )}
         </div>
       </Modal>
+      {editedProduct && (
+        <ProductEditor
+          key={editedProduct.id}
+          product={editedProduct}
+          onClose={() => setEditingItem(null)}
+        />
+      )}
       <Modal
         open={open === 'history'}
         onOpenChange={(v) => {

@@ -341,6 +341,47 @@ try {
   await owner.getByLabel('Pantry quantity 2', { exact: true }).fill('2')
   await owner.getByLabel('Pantry unit 2', { exact: true }).fill('bag')
   await owner
+    .getByRole('button', { name: 'Edit item details', exact: true })
+    .click()
+  const catalogDialog = owner.getByRole('dialog', {
+    name: 'Edit catalog item',
+    exact: true,
+  })
+  await catalogDialog
+    .getByLabel('Item name', { exact: true })
+    .fill('Rice for the cupboard')
+  await catalogDialog
+    .getByLabel('Search aliases', { exact: true })
+    .fill('Cupboard rice')
+  await catalogDialog
+    .getByRole('button', { name: 'Save item', exact: true })
+    .click()
+  await catalogDialog.waitFor({ state: 'hidden' })
+  assert.equal(
+    await owner.getByLabel('Pantry quantity 1', { exact: true }).inputValue(),
+    '750',
+  )
+  assert.equal(
+    await owner.getByLabel('Pantry notes', { exact: true }).inputValue(),
+    'Opened cupboard pack',
+  )
+  await owner
+    .getByRole('heading', { name: 'Edit Rice for the cupboard', exact: true })
+    .waitFor()
+  await owner
+    .getByRole('button', { name: 'Edit item details', exact: true })
+    .click()
+  await catalogDialog.getByLabel('Item name', { exact: true }).fill('Rice')
+  await catalogDialog
+    .getByRole('button', { name: 'Save item', exact: true })
+    .click()
+  await catalogDialog.waitFor({ state: 'hidden' })
+  await wife.waitForFunction(async () =>
+    (
+      await (await fetch('/api/state')).json()
+    ).state.productDetails.rice?.aliases?.includes('Cupboard rice'),
+  )
+  await owner
     .getByRole('dialog')
     .screenshot({ path: 'test-results/pantry-edit-mobile.png' })
   await ownerContext.setOffline(true)

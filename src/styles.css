@@ -1981,6 +1981,32 @@ svg {
   margin: 0;
   color: #214e38;
 }
+.app-update {
+  position: fixed;
+  z-index: 35;
+  right: 20px;
+  bottom: calc(90px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(380px, calc(100vw - 40px));
+  padding: 14px 18px;
+  border: 1px solid #ced9bf;
+  border-radius: 16px;
+  background: #faf8f2;
+  color: #214e38;
+  box-shadow: 0 6px 24px #214e381a;
+  font-size: 13px;
+}
+.app-update .text-button {
+  flex-shrink: 0;
+}
+@media (min-width: 768px) {
+  .app-update {
+    bottom: 20px;
+  }
+}
 @media (max-width: 767px) {
   .settings-navigation-cards {
     grid-template-columns: minmax(0, 1fr);

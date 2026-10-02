@@ -138,19 +138,55 @@ pub fn app(server: Server) -> Router {
         .layer(middleware::from_fn_with_state(server.clone(), protect))
         .with_state(server);
     if let Ok(directory) = app_env("LITTLECUPBOARD_STATIC_DIR") {
-        router
-            .route(
+        static_frontend(
+            router.route(
                 "/api/{*path}",
                 axum::routing::any(|| async { StatusCode::NOT_FOUND }),
-            )
-            .fallback_service(tower_http::services::ServeDir::new(&directory).fallback(
-                tower_http::services::ServeFile::new(
-                    std::path::Path::new(&directory).join("_shell.html"),
-                ),
-            ))
+            ),
+            &directory,
+        )
     } else {
         router
     }
+}
+fn static_frontend(router: Router, directory: &str) -> Router {
+    router
+        .fallback_service(tower_http::services::ServeDir::new(directory).fallback(
+            tower_http::services::ServeFile::new(
+                std::path::Path::new(directory).join("_shell.html"),
+            ),
+        ))
+        .layer(middleware::from_fn(static_cache))
+}
+async fn static_cache(mut request: Request, next: Next) -> Response {
+    let path = request.uri().path();
+    let api = path.starts_with("/api/");
+    let immutable = path.starts_with("/assets/");
+    let worker = path == "/sw.js";
+    if !api && !immutable {
+        // Nix gives files reproducible mtimes, which cannot identify a new release.
+        request.headers_mut().remove("if-modified-since");
+    }
+    let mut response = next.run(request).await;
+    if !api {
+        let policy = if worker {
+            "no-store"
+        } else if immutable
+            && response.status().is_success()
+            && response
+                .headers()
+                .get("content-type")
+                .is_some_and(|value| !value.as_bytes().starts_with(b"text/html"))
+        {
+            "public, max-age=31536000, immutable"
+        } else {
+            "no-cache"
+        };
+        response
+            .headers_mut()
+            .insert("cache-control", HeaderValue::from_static(policy));
+    }
+    response
 }
 async fn ready(
     axum::extract::State(server): axum::extract::State<Server>,

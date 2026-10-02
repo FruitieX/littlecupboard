@@ -232,7 +232,7 @@ export function LibrarySettings({ section }: { section: 'items' | 'recipes' }) {
   )
 }
 
-function ProductEditor({
+export function ProductEditor({
   product,
   onClose,
 }: {

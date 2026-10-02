@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Plus, X } from 'lucide-react'
+import { Check, Pencil, Plus, X } from 'lucide-react'
 import type { AppState, Amount } from '../lib/data'
 import type { PantryItem } from '../lib/api/PantryItem'
 import { pantryTotal } from '../lib/meal-shopping'
@@ -27,9 +27,11 @@ export function pantryEdit(
 export function PantryEditor({
   entry,
   onClose,
+  onEditItem,
 }: {
   entry: PantryEdit
   onClose: () => void
+  onEditItem: () => void
 }) {
   const { action } = useApp()
   const [amounts, setAmounts] = useState<Amount[]>(
@@ -56,6 +58,9 @@ export function PantryEditor({
       }}
     >
       <h3>Edit {entry.name}</h3>
+      <button type="button" className="text-button" onClick={onEditItem}>
+        <Pencil size={15} /> Edit item details
+      </button>
       <p className="quiet-label">
         Enter the total at home, including anything reserved for meals. Saving
         confirms these amounts and recalculates missing ingredients.

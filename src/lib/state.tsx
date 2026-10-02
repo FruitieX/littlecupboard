@@ -108,9 +108,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }
   useEffect(() => {
     void boot()
-    if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-      void navigator.serviceWorker.register('/sw.js').catch(() => {})
-    }
   }, [])
 
   function publish() {

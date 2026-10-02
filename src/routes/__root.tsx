@@ -7,6 +7,7 @@ import {
 import stylesheet from '../styles.css?url'
 import { AppProvider } from '../lib/state'
 import { APP_NAME } from '../lib/brand'
+import { AppUpdate } from '../components/AppUpdate'
 
 export const Route = createRootRoute({
   head: () => ({
@@ -40,6 +41,7 @@ export const Route = createRootRoute({
         <AppProvider>
           <Outlet />
         </AppProvider>
+        <AppUpdate />
         <Scripts />
       </body>
     </html>

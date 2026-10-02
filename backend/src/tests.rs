@@ -7,6 +7,92 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
+#[tokio::test]
+async fn static_shell_updates_with_reproducible_mtimes_and_private_apis_stay_uncached() {
+    let (server, _db_dir) = server();
+    let directory = tempfile::tempdir().unwrap();
+    std::fs::create_dir(directory.path().join("assets")).unwrap();
+    for (path, text) in [
+        ("_shell.html", "<html>First release</html>"),
+        ("sw.js", "// first worker"),
+        ("manifest.webmanifest", "{}"),
+        ("assets/app-abcd1234.js", "console.log('release');"),
+    ] {
+        let file = directory.path().join(path);
+        std::fs::write(&file, text).unwrap();
+        std::fs::File::open(&file)
+            .unwrap()
+            .set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1))
+            .unwrap();
+    }
+    let router = static_frontend(app(server), directory.path().to_str().unwrap());
+    let response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/settings/items")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.headers()[header::CACHE_CONTROL], "no-cache");
+    let modified = response.headers()[header::LAST_MODIFIED].clone();
+    let file = directory.path().join("_shell.html");
+    std::fs::write(&file, "<html>Newer release</html>").unwrap();
+    std::fs::File::open(&file)
+        .unwrap()
+        .set_modified(std::time::UNIX_EPOCH + std::time::Duration::from_secs(1))
+        .unwrap();
+    let response = router
+        .clone()
+        .oneshot(
+            Request::builder()
+                .uri("/settings/items")
+                .header(header::IF_MODIFIED_SINCE, modified)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response
+            .into_body()
+            .collect()
+            .await
+            .unwrap()
+            .to_bytes()
+            .as_ref(),
+        b"<html>Newer release</html>"
+    );
+    for (path, expected) in [
+        ("/sw.js", "no-store"),
+        ("/manifest.webmanifest", "no-cache"),
+        (
+            "/assets/app-abcd1234.js",
+            "public, max-age=31536000, immutable",
+        ),
+        ("/assets/missing.js", "no-cache"),
+        ("/api/state", "no-store"),
+    ] {
+        let response = router
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            response.headers()[header::CACHE_CONTROL],
+            expected,
+            "{path}"
+        );
+        if path == "/api/state" {
+            assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        }
+    }
+}
+
 #[test]
 fn system_prompts_use_defaults_for_missing_null_and_blank_fields() {
     let defaults = ai::SystemPrompts::default();
