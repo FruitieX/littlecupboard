@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react'
-import {
-  ShoppingBasket,
-  ArrowRight,
-  KeyRound,
-  LoaderCircle,
-} from 'lucide-react'
+import { ArrowRight, KeyRound, LoaderCircle } from 'lucide-react'
+import { Brand } from './ui'
 import type { SessionInfo } from '../lib/api/SessionInfo'
 import { api, post } from '../lib/http'
 
@@ -59,19 +55,16 @@ export function AuthScreen({
   return (
     <main className="auth-page">
       <div className="auth-brand">
-        <span>
-          <ShoppingBasket size={30} />
-        </span>
-        ForkBasket<span className="heading-dot">.</span>
+        <Brand />
       </div>
       <section className="auth-card">
         <h1>
           {mode === 'setup'
-            ? 'Set up ForkBasket'
+            ? 'Set up LittleCupboard'
             : mode === 'join'
               ? 'Join your family'
               : mode === 'recover'
-                ? 'Back to your basket.'
+                ? 'Recover your account'
                 : 'Welcome home.'}
         </h1>
         <p>
@@ -81,7 +74,7 @@ export function AuthScreen({
               ? `Join ${household} to shop and plan together.`
               : mode === 'recover'
                 ? 'Use the recovery code you saved when creating your account.'
-                : 'Your shared groceries, recipes, and a delicious week.'}
+                : 'Sign in to your shared shopping list, recipes and meals.'}
         </p>
         <form
           className="editor-form"

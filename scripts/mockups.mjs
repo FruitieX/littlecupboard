@@ -6,8 +6,8 @@ const child = spawn(process.execPath, ['scripts/verify-production.mjs'], {
   stdio: 'inherit',
   env: {
     ...process.env,
-    FORKBASKET_TEST_PRODUCTION: '1',
-    FORKBASKET_CAPTURE: '1',
+    LITTLECUPBOARD_TEST_PRODUCTION: '1',
+    LITTLECUPBOARD_CAPTURE: '1',
   },
 })
 const code = await new Promise((resolve) => child.once('exit', resolve))

@@ -232,7 +232,7 @@ export function Assistant() {
         aria-label="Open family assistant"
       >
         <Sparkles size={19} />
-        <span>Ask ForkBasket</span>
+        <span>Ask LittleCupboard</span>
       </button>
       <Modal
         open={open}

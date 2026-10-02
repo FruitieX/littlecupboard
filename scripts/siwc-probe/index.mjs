@@ -15,7 +15,7 @@ const issuer = 'https://auth.openai.com'
 const resource = 'https://api.openai.com/v1'
 const redirectUri = 'http://127.0.0.1:1455/auth/callback'
 const imageTest = process.argv.includes('--image')
-const directory = join(homedir(), '.config/forkbasket/siwc-probe')
+const directory = join(homedir(), '.config/littlecupboard/siwc-probe')
 const state = randomBytes(32).toString('base64url')
 const nonce = randomBytes(32).toString('base64url')
 const verifier = randomBytes(48).toString('base64url')
@@ -178,7 +178,7 @@ try {
     code_challenge: createHash('sha256').update(verifier).digest('base64url'),
   })
   if (!registeredClientId)
-    authorization.searchParams.set('agent_name_hint', 'ForkBasket')
+    authorization.searchParams.set('agent_name_hint', 'LittleCupboard')
   console.log(
     'Callback listening on 127.0.0.1:1455; browser consent required (15 minute timeout).\n' +
       authorization.href,
@@ -241,7 +241,7 @@ try {
       (model) => model.visibility === 'list' && typeof model.slug === 'string',
     ) ?? []
   const model =
-    process.env.FORKBASKET_SIWC_MODEL ??
+    process.env.LITTLECUPBOARD_SIWC_MODEL ??
     models.find((entry) => entry.slug === 'gpt-6.1-sol')?.slug ??
     models[0]?.slug
   if (!model || !models.some((entry) => entry.slug === model))
@@ -258,7 +258,7 @@ try {
         input: [
           {
             role: 'user',
-            content: 'Reply with exactly: ForkBasket connection works.',
+            content: 'Reply with exactly: LittleCupboard connection works.',
           },
         ],
       }),
@@ -266,7 +266,7 @@ try {
     'subscription inference',
   )
   const output = await consumeResponse(response.body)
-  report.success = output.trim() === 'ForkBasket connection works.'
+  report.success = output.trim() === 'LittleCupboard connection works.'
   if (!report.success)
     throw new Error(
       'Completed inference did not match the synthetic test reply',
@@ -350,7 +350,7 @@ try {
     console.log(
       report.sessionRevoked
         ? 'Test session revoked; no tokens saved.'
-        : 'Could not confirm session revocation. Remove ForkBasket from ChatGPT connected apps if necessary; no tokens saved.',
+        : 'Could not confirm session revocation. Remove LittleCupboard from ChatGPT connected apps if necessary; no tokens saved.',
     )
   }
   await writeFile(

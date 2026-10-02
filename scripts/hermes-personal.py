@@ -43,7 +43,7 @@ def personal_credential(refresh=False):
 def image_provider(refresh=False, model=None, background=None, size=None):
     import hermes_cli
     root = Path(hermes_cli.__file__).resolve().parent.parent
-    spec = importlib.util.spec_from_file_location('forkbasket_personal_images', root / 'plugins/image_gen/openai-codex/__init__.py')
+    spec = importlib.util.spec_from_file_location('littlecupboard_personal_images', root / 'plugins/image_gen/openai-codex/__init__.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module._read_codex_credential = lambda: personal_credential(refresh)

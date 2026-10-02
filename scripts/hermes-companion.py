@@ -1,4 +1,4 @@
-"""Outbound-only ForkBasket companion, using the dedicated personal Hermes login."""
+"""Outbound-only LittleCupboard companion, using the dedicated personal Hermes login."""
 import base64
 import getpass
 import importlib.util
@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 
 logging.disable(logging.CRITICAL)
 os.umask(0o077)
-spec = importlib.util.spec_from_file_location('forkbasket_personal', Path(__file__).with_name('hermes-personal.py'))
+spec = importlib.util.spec_from_file_location('littlecupboard_personal', Path(__file__).with_name('hermes-personal.py'))
 personal = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(personal)
 
@@ -131,11 +131,13 @@ def main():
     from hermes_constants import get_hermes_home
     personal.personal_credential(refresh=True)
     home=get_hermes_home()
-    file=home/'forkbasket-companion.json'
+    file=home/'littlecupboard-companion.json'
+    if not file.exists() and (home/'forkbasket-companion.json').exists():
+        file=home/'forkbasket-companion.json'
     if '--pair-stdin' in sys.argv:
         config=validate_config(json.load(sys.stdin))
     elif '--setup' in sys.argv:
-        config=validate_config({'url':sys.argv[sys.argv.index('--setup')+1],'token':getpass.getpass('ForkBasket pairing token: ')})
+        config=validate_config({'url':sys.argv[sys.argv.index('--setup')+1],'token':getpass.getpass('LittleCupboard pairing token: ')})
     else:
         stat=file.stat()
         if stat.st_uid!=os.getuid() or stat.st_mode&0o077:
@@ -154,7 +156,7 @@ def main():
         emit('paired',profile=home.name)
         return
     import httpx
-    headers={'Authorization':f"Bearer {config['token']}",'X-ForkBasket-Request':'1','Origin':config['url']}
+    headers={'Authorization':f"Bearer {config['token']}",'X-LittleCupboard-Request':'1','Origin':config['url']}
     stop=threading.Event()
     def call(client,path,body):
         response=client.post(f"{config['url']}/api/companion/{path}",json=body)

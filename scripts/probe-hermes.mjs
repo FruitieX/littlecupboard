@@ -11,15 +11,15 @@ const profileIndex = options.indexOf('--profile')
 const profile = profileIndex >= 0 ? options[profileIndex + 1] : undefined
 assert.ok(
   profile && /^[a-z0-9][a-z0-9-]*$/.test(profile) && profile !== 'default',
-  'Select a dedicated personal profile: node scripts/probe-hermes.mjs --profile forkbasket [--images]',
+  'Select a dedicated personal profile: node scripts/probe-hermes.mjs --profile littlecupboard [--images]',
 )
 options.splice(profileIndex, 2)
 const args = options
 assert.ok(
   args.every((arg) => arg === '--images'),
-  'Usage: node scripts/probe-hermes.mjs --profile forkbasket [--images]',
+  'Usage: node scripts/probe-hermes.mjs --profile littlecupboard [--images]',
 )
-const binary = process.env.FORKBASKET_HERMES_BINARY || 'hermes'
+const binary = process.env.LITTLECUPBOARD_HERMES_BINARY || 'hermes'
 const environment = {
   ...process.env,
   HERMES_HOME: join(homedir(), '.hermes/profiles', profile),
@@ -55,8 +55,8 @@ child.stderr.resume()
 const lines = createInterface({ input: child.stdout })
 let received = false
 lines.on('line', (line) => {
-  if (!line.startsWith('FORKBASKET_HERMES_PROBE ')) return
-  const report = JSON.parse(line.slice('FORKBASKET_HERMES_PROBE '.length))
+  if (!line.startsWith('LITTLECUPBOARD_HERMES_PROBE ')) return
+  const report = JSON.parse(line.slice('LITTLECUPBOARD_HERMES_PROBE '.length))
   received = true
   console.log(JSON.stringify(report, null, 2))
 })

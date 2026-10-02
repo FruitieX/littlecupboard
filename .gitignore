@@ -14,4 +14,4 @@ data/
 result
 result-*
 __pycache__/
-deploy/kubernetes/apps/forkbasket/secret.sops.yaml
+deploy/kubernetes/apps/littlecupboard/secret.sops.yaml

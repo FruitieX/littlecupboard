@@ -31,6 +31,7 @@ type ContextValue = {
   refreshSession: () => Promise<void>
 }
 const Context = createContext<ContextValue | null>(null)
+// Keep the original storage namespace: existing offline edits and preferences survive upgrades.
 const cachedSession = 'forkbasket:session'
 function read<T>(key: string): T | null {
   try {
@@ -475,14 +476,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
           onClick={() => {
             const file = new Blob(
               [
-                `ForkBasket recovery code\n${session.user.email}\n${recovery}\n`,
+                `LittleCupboard recovery code\n${session.user.email}\n${recovery}\n`,
               ],
               { type: 'text/plain' },
             )
             const url = URL.createObjectURL(file)
             const link = document.createElement('a')
             link.href = url
-            link.download = 'forkbasket-recovery.txt'
+            link.download = 'littlecupboard-recovery.txt'
             link.click()
             URL.revokeObjectURL(url)
           }}

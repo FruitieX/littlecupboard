@@ -30,6 +30,7 @@ use tokio::sync::broadcast;
 
 pub struct Config {
     pub origin: String,
+    pub legacy_origins: Vec<String>,
     pub secure_cookie: bool,
     pub setup_token: String,
     pub data_dir: PathBuf,
@@ -77,7 +78,7 @@ pub fn app(server: Server) -> Router {
     let router = Router::new()
         .route(
             "/api/health",
-            get(|| async { Json(json!({"status":"ok","service":"forkbasket-api"})) }),
+            get(|| async { Json(json!({"status":"ok","service":"littlecupboard-api"})) }),
         )
         .route("/api/ready", get(ready))
         .route("/api/auth/status", get(auth::status))
@@ -136,7 +137,7 @@ pub fn app(server: Server) -> Router {
         .layer(DefaultBodyLimit::max(9 * 1024 * 1024))
         .layer(middleware::from_fn_with_state(server.clone(), protect))
         .with_state(server);
-    if let Ok(directory) = std::env::var("FORKBASKET_STATIC_DIR") {
+    if let Ok(directory) = app_env("LITTLECUPBOARD_STATIC_DIR") {
         router
             .route(
                 "/api/{*path}",
@@ -171,7 +172,8 @@ async fn protect(
     ) {
         if request
             .headers()
-            .get("x-forkbasket-request")
+            .get("x-littlecupboard-request")
+            .or_else(|| request.headers().get("x-forkbasket-request"))
             .and_then(|value| value.to_str().ok())
             != Some("1")
         {
@@ -180,11 +182,16 @@ async fn protect(
                 "The request is missing its same-origin protection header.".into(),
             ));
         }
-        if request
-            .headers()
-            .get("origin")
-            .is_some_and(|value| value.to_str().ok() != Some(&server.config.origin))
-        {
+        if request.headers().get("origin").is_some_and(|value| {
+            value.to_str().ok().is_none_or(|origin| {
+                origin != server.config.origin
+                    && !server
+                        .config
+                        .legacy_origins
+                        .iter()
+                        .any(|allowed| allowed == origin)
+            })
+        }) {
             return Err(ApiError(
                 StatusCode::FORBIDDEN,
                 "Requests must come from the configured application origin.".into(),
@@ -212,16 +219,26 @@ async fn protect(
     Ok(response)
 }
 
+// Keep existing deployments and encrypted environment secrets valid after rebranding.
+fn app_env(name: &str) -> std::result::Result<String, std::env::VarError> {
+    std::env::var(name).or_else(|error| match error {
+        std::env::VarError::NotPresent => {
+            std::env::var(name.replace("LITTLECUPBOARD_", "FORKBASKET_"))
+        }
+        _ => Err(error),
+    })
+}
+
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "forkbasket_api=info,tower_http=info".into()),
+                .unwrap_or_else(|_| "littlecupboard_api=info,tower_http=info".into()),
         )
         .init();
     let data_dir =
-        PathBuf::from(std::env::var("FORKBASKET_DATA_DIR").unwrap_or_else(|_| "./data".into()));
+        PathBuf::from(app_env("LITTLECUPBOARD_DATA_DIR").unwrap_or_else(|_| "./data".into()));
     if let Some(destination) = std::env::args()
         .skip(1)
         .collect::<Vec<_>>()
@@ -244,13 +261,13 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
     std::fs::create_dir_all(&data_dir)?;
-    let origin = std::env::var("FORKBASKET_ORIGIN")
+    let origin = app_env("LITTLECUPBOARD_ORIGIN")
         .unwrap_or_else(|_| "http://localhost:3100".into())
         .trim_end_matches('/')
         .to_string();
-    let setup_token = if let Ok(token) = std::env::var("FORKBASKET_SETUP_TOKEN") {
+    let setup_token = if let Ok(token) = app_env("LITTLECUPBOARD_SETUP_TOKEN") {
         if token.len() < 16 {
-            return Err("FORKBASKET_SETUP_TOKEN needs at least 16 characters".into());
+            return Err("LITTLECUPBOARD_SETUP_TOKEN needs at least 16 characters".into());
         }
         token
     } else {
@@ -272,7 +289,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         }
     };
     let secure_cookie = origin.starts_with("https://");
-    let secret = if let Ok(value) = std::env::var("FORKBASKET_SECRET_KEY") {
+    let secret = if let Ok(value) = app_env("LITTLECUPBOARD_SECRET_KEY") {
         value
     } else {
         let path = data_dir.join("secret-key");
@@ -292,13 +309,20 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let mut encryption_key = [0u8; 32];
     let secret = secret.trim();
     if secret.len() != 64 || !secret.is_ascii() {
-        return Err("FORKBASKET_SECRET_KEY must be 64 hexadecimal characters".into());
+        return Err("LITTLECUPBOARD_SECRET_KEY must be 64 hexadecimal characters".into());
     }
     for (index, byte) in encryption_key.iter_mut().enumerate() {
         *byte = u8::from_str_radix(&secret[index * 2..index * 2 + 2], 16)
-            .map_err(|_| "FORKBASKET_SECRET_KEY must be hexadecimal")?;
+            .map_err(|_| "LITTLECUPBOARD_SECRET_KEY must be hexadecimal")?;
     }
     let config = Arc::new(Config {
+        legacy_origins: app_env("LITTLECUPBOARD_LEGACY_ORIGINS")
+            .unwrap_or_default()
+            .split(',')
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(|value| value.trim_end_matches('/').to_string())
+            .collect(),
         origin,
         secure_cookie,
         setup_token,
@@ -306,7 +330,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         encryption_key,
     });
     let journal = db::JournalMode::parse(
-        &std::env::var("FORKBASKET_SQLITE_JOURNAL_MODE").unwrap_or_else(|_| "WAL".into()),
+        &app_env("LITTLECUPBOARD_SQLITE_JOURNAL_MODE").unwrap_or_else(|_| "WAL".into()),
     )?;
     let db = db::Database::open_with_journal(&data_dir.join("forkbasket.sqlite3"), journal)
         .map_err(|error| error.1)?;
@@ -371,9 +395,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         println!("{result}");
         return Ok(());
     }
-    let bind = std::env::var("FORKBASKET_BIND").unwrap_or_else(|_| "127.0.0.1:3001".into());
+    let bind = app_env("LITTLECUPBOARD_BIND").unwrap_or_else(|_| "127.0.0.1:3001".into());
     let listener = tokio::net::TcpListener::bind(&bind).await?;
-    tracing::info!("ForkBasket API listening on {bind}");
+    tracing::info!("LittleCupboard API listening on {bind}");
     icon_jobs::start(server.clone()).map_err(|error| error.1)?;
     axum::serve(listener, app(server))
         .with_graceful_shutdown(async {

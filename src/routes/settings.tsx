@@ -1,9 +1,9 @@
 import { createFileRoute, Outlet } from '@tanstack/react-router'
-import { ForkBasket } from '../components/ForkBasket'
+import { LittleCupboard } from '../components/LittleCupboard'
 export const Route = createFileRoute('/settings')({
   component: () => (
-    <ForkBasket view="settings">
+    <LittleCupboard view="settings">
       <Outlet />
-    </ForkBasket>
+    </LittleCupboard>
   ),
 })

@@ -1,13 +1,13 @@
-# ForkBasket product and implementation plan
+# LittleCupboard product and implementation plan
 
-ForkBasket is a mobile-first app for a family to share a shopping list, store recipes, and plan lunch for every day of the current and next week. The main shopping experience must be fast enough to use one-handed in the store. More detailed setup belongs in settings.
+LittleCupboard is a mobile-first app for a family to share a shopping list, store recipes, and plan lunch for every day of the current and next week. The main shopping experience must be fast enough to use one-handed in the store. More detailed setup belongs in settings.
 
 This document records the user’s requirements, the chosen direction, and implementation progress. Keep it current as work proceeds. The user has now authorized completing the full polished homelab application in one sustained goal, including accounts for both adults, AI, and every discussed feature. The original prototype milestones below are historical; they do not limit the current scope or authorize deferring features.
 
 ## Decisions and context
 
-- Project: `/home/rasse/forkbasket`.
-- Name: **ForkBasket**. MealBasket was the first choice but is already used by a closely related app. The user then suggested PrepBasket, with ForkBasket as the fallback; preliminary searches found PrepBasket used for a kitchen product, so the fallback was selected. No matching ForkBasket app appeared in the initial web searches. This is a preliminary name search, not a claim of exclusivity.
+- Project: `/home/rasse/littlecupboard` (renamed from `~/forkbasket`).
+- Name: **LittleCupboard**, chosen by the user on 2026-10-02. Previously ForkBasket; historical milestones below retain that name. Canonical ingress: `https://littlecupboard.fruitiex.org`.
 - Household: the user, wife, and kids. Collaboration must work on separate devices simultaneously.
 - Frontend preference: TanStack Start, TypeScript, Tailwind CSS, and Radix or similar accessible components.
 - Backend preference: Rust, Tokio, Axum, and ts-rs for shared API types.
@@ -289,3 +289,9 @@ Local validation passed 59 Rust tests, 30 frontend tests, TypeScript, formatting
 ### Companion refresh isolation — 2026-10-02
 
 While configuring a second family application, an explicit refresh check found that Hermes's general CLI pool loader adds a borrowed singleton login to the profile. The companion correctly rejects the resulting ambiguity. Replaced that CLI path with the native pure OAuth refresher, under the profile-local auth-store lock, rechecking ownership and concurrent rotation before saving. The worker never loads a general pool or imports root/CLI credentials. Removed only the borrowed entries introduced by the diagnostic; the existing personal login and household pairing were preserved. Twelve offline protocol/ownership tests passed, including root rejection, ambiguous entries, route validation, exact owned-token refresh and a concurrent refresh. A real profile-only refresh and the existing production model/chat queue passed afterward. No production shopping or recipe data changed.
+
+### LittleCupboard rebrand — 2026-10-02
+
+The user authorized all appropriate renames, a new app icon and `littlecupboard.fruitiex.org` ingress. Work includes UI/PWA/metadata, a bespoke SVG cupboard mark and reproducible PNG exports, source/package/container/repository names, deployment documentation and companion integration. Existing NFS data, SQLite file, session cookie and browser outbox/storage identities are compatibility identifiers: preserve them rather than creating an empty installation or abandoning pending writes. Old backups remain readable, exact saved default prompts adopt the new name, and custom prompts remain unchanged. The old origin remains explicitly allowed and routed during the transition so installed apps can finish syncing; new invitation links use the canonical origin. Local validation and rollout are in progress.
+
+Local validation passed 61 Rust tests, 30 frontend tests, TypeScript, formatting, Clippy, 12 companion protocol tests, the full production two-device browser suite and reproducible Nix container build. Mobile/desktop cupboard wordmarks and icons were visually reviewed, and all committed mockup screenshots were refreshed from the actual app. Container checks cover persistent accounts, shopping, restart and private consistent backup/restoration; the primary fixture now also uses legacy encrypted-secret environment names. The GitHub repository was renamed to FruitieX/littlecupboard with its dispatch secret retained. Homelab receiver substitutions were tested against both old and new image names. Live rollout remains in progress.

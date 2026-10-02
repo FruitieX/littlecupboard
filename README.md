@@ -1,14 +1,14 @@
-# ForkBasket
+# LittleCupboard
 
 A shared family shopping list, recipe book and weekly lunch planner, ready to self-host. Mobile shopping stays one tap: large tiles, hold to edit, recently checked items below, and a searchable shop selector that orders the list by your usual aisles.
 
-![ForkBasket shopping, weekly lunches and recipes](mockups/overview.png)
+![LittleCupboard shopping, weekly lunches and recipes](mockups/overview.png)
 
 Missing meal ingredients automatically join the list with a small source marker. Recipes support editing, favorites, tags, serving scaling, custom ingredients and private photos. Current/next-week lunches have serving counts and cooked/skipped feedback. Edit pantry quantities, units, notes and expiry directly in its dialog, or use conservative purchase estimates; the app keeps purchased meal ingredients reserved and releases them when plans change.
 
 Settings links to separate pages for stores/aisle order, item groups, items and recipes. Search the item catalog and recipe book without opening accordions. Family/account details and backups stay on the main settings page. Archive catalog items to hide suggestions without breaking existing recipe ingredients; restore them later, or permanently delete unreferenced custom items. Shared deletions and AI disconnection require confirmation. AI connection setup and advanced prompts are collapsed and owner-only.
 
-ForkBasket is an installable PWA with a standalone manifest, app icons and an offline shell. On Android, open its HTTPS address in Chrome and choose **Add to home screen → Install**. The public homelab ingress allows synchronization outside the LAN/VPN; queued shopping changes survive offline use.
+LittleCupboard is an installable PWA with a standalone manifest, app icons and an offline shell. On Android, open its HTTPS address in Chrome and choose **Add to home screen → Install**. The public homelab ingress allows synchronization outside the LAN/VPN; queued shopping changes survive offline use.
 
 Accounts, expiring invitations, secure cookie sessions, SQLite transactions and SSE keep independent devices together. A persisted offline outbox and installable app shell keep shopping usable through connection loss. Concurrent edits get explicit review rather than overwriting another person’s changes. History supports guarded undo and shopping-trip completion.
 
@@ -20,14 +20,14 @@ Settings → AI assistant → Configure AI assistant → Compatibility & image g
 
 ## Deploy
 
-The homelab app is live at **https://forkbasket.fruitiex.org** through the public and private Envoy gateways, with authenticated access to household data. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Flux/SOPS setup, first-owner account, wife/member invitations, HTTPS/PWA behavior, AI compatibility, backups and upgrades.
+The homelab app is live at **https://littlecupboard.fruitiex.org** through the public and private Envoy gateways, with authenticated access to household data. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Flux/SOPS setup, first-owner account, wife/member invitations, HTTPS/PWA behavior, AI compatibility, backups and upgrades.
 
 ```sh
 nix build .#container
 docker load < result
 ```
 
-The image serves frontend and API in one Rust process on port 8080. Keep /data on persistent storage and set FORKBASKET_ORIGIN to the externally visited origin. WAL is the default for local/block storage; NFS requires FORKBASKET_SQLITE_JOURNAL_MODE=DELETE and reliable NFSv4 locking/sync. The supplied Kubernetes template uses one replica, Recreate, a block PVC, non-root permissions, public/private Envoy HTTPS routes and health probes. The live homelab instead uses the migrated NFS claim; see [the deployment guide](docs/DEPLOYMENT.md). Generate and SOPS-encrypt the deployment secrets before copying them into your homelab.
+The image serves frontend and API in one Rust process on port 8080. Keep /data on persistent storage and set LITTLECUPBOARD_ORIGIN to the externally visited origin. WAL is the default for local/block storage; NFS requires LITTLECUPBOARD_SQLITE_JOURNAL_MODE=DELETE and reliable NFSv4 locking/sync. The supplied Kubernetes template uses one replica, Recreate, a block PVC, non-root permissions, public/private Envoy HTTPS routes and health probes. The live homelab instead uses the migrated NFS claim; see [the deployment guide](docs/DEPLOYMENT.md). Generate and SOPS-encrypt the deployment secrets before copying them into your homelab.
 
 ## Develop
 
@@ -76,3 +76,7 @@ Food and household SVG illustrations are [Twemoji](https://github.com/twitter/tw
 DM Sans and Fraunces are bundled from [Google Fonts](https://github.com/google/fonts), with their SIL Open Font License files in `public/fonts/`.
 
 Illustrative recipe photography is downloaded from Unsplash and bundled locally under the [Unsplash License](https://unsplash.com/license): [pasta](https://images.unsplash.com/photo-1473093226795-af9932fe5856), [salmon](https://images.unsplash.com/photo-1467003909585-2f8a72700288), [salad](https://images.unsplash.com/photo-1512621776951-a57141f2eefd), [tomato soup](https://unsplash.com/photos/tomato-soup-6eCpa9J3c_c), and [tacos](https://images.unsplash.com/photo-1551504734-5ee1c4a1479b). These photos illustrate the sample recipes rather than documenting their exact preparation.
+
+## Brand assets
+
+`public/icon.svg` is the editable cupboard mark, also used for the favicon and in-app wordmark. Run `nix develop --command npm run icons` to export deterministic 192/512 px opaque maskable PNGs. The mark stays inside Android's central safe area. Local working-directory and deployment compatibility details are in [DEPLOYMENT.md](docs/DEPLOYMENT.md).

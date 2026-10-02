@@ -1,10 +1,10 @@
-# Deploy ForkBasket
+# Deploy LittleCupboard
 
-ForkBasket runs as one unprivileged Rust process serving the API and compiled TanStack frontend. SQLite, private photos and encrypted provider configuration live in `/data`. The manifests in `deploy/kubernetes/` follow the existing `/home/rasse/homelab` Flux/SOPS layout and attach to both public and private Envoy HTTPS gateways. The reusable templates default to block storage; the live homelab uses NFS with rollback journaling as described below.
+LittleCupboard runs as one unprivileged Rust process serving the API and compiled TanStack frontend. SQLite, private photos and encrypted provider configuration live in `/data`. The manifests in `deploy/kubernetes/` follow the existing `/home/rasse/homelab` Flux/SOPS layout and attach to both public and private Envoy HTTPS gateways. The reusable templates default to block storage; the live homelab uses NFS with rollback journaling as described below.
 
-The homelab deployment is live as of 2026-10-01 at **https://forkbasket.fruitiex.org**, through the public gateway (`192.168.11.1`, with existing router port forwarding) and private gateway (`192.168.11.99`). The hostname uses the existing public wildcard DNS CNAME to `fruitiex.org`, allowing access and shopping synchronization without a VPN. Its HTTPRoute opts out of external-dns; otherwise that controller would publish gateway LAN IPs that override the wildcard. Keep the private parent for existing LAN overrides and companion connections. Both gateways redirect HTTP to HTTPS. The hostname and `FORKBASKET_ORIGIN` stay the same, preserving existing sessions, installed PWAs and companion pairing. Accounts are required for household data, photos, SSE and AI access; initial setup is already complete.
+The homelab deployment is live as of 2026-10-01 at **https://littlecupboard.fruitiex.org**, through the public gateway (`192.168.11.1`, with existing router port forwarding) and private gateway (`192.168.11.99`). The hostname uses the existing public wildcard DNS CNAME to `fruitiex.org`, allowing access and shopping synchronization without a VPN. Its HTTPRoute opts out of external-dns; otherwise that controller would publish gateway LAN IPs that override the wildcard. Keep the private parent for existing LAN overrides and companion connections. Both gateways redirect HTTP to HTTPS. The hostname and `LITTLECUPBOARD_ORIGIN` stay the same, preserving existing sessions, installed PWAs and companion pairing. Accounts are required for household data, photos, SSE and AI access; initial setup is already complete.
 
-The live manifests, encrypted secrets and first-login instructions are in `~/homelab/apps/forkbasket/`; that deployment uses the existing GHCR pull secret and a pinned image digest. The templates here remain reusable deployment examples. On a new installation, create your owner account, invite your wife and configure the AI provider through Settings when ready. Public ingress does not expose NFS, the companion's inbound ports or OAuth credentials.
+The live manifests, encrypted secrets and first-login instructions are in `~/homelab/apps/littlecupboard/`; that deployment uses the existing GHCR pull secret and a pinned image digest. The templates here remain reusable deployment examples. On a new installation, create your owner account, invite your wife and configure the AI provider through Settings when ready. Public ingress does not expose NFS, the companion's inbound ports or OAuth credentials.
 
 ## Build and image publishing
 
@@ -16,16 +16,16 @@ docker load < result
 
 The locked flake pins Node, Rust, build dependencies and the container base closure; npm and Cargo lockfiles pin app dependencies. The image runs as UID/GID 10001, listens on 8080, and contains trusted CA certificates. No Node server or external CDN is needed at runtime. `nix build .#backend` and `nix build .#frontend` also produce separate packages.
 
-The GitHub workflow checks the app and publishes `ghcr.io/fruitiex/forkbasket:main` and a commit SHA tag on pushes to main. After successful validation and publication, it dispatches the immutable image digest and source revision to `FruitieX/homelab`. The receiver updates only `apps/forkbasket/deployment.yaml`, commits the new SHA tag and digest, and Flux rolls out the image. Pull requests and release tags do not deploy; an older main build is skipped if a newer main commit exists. A private GHCR package requires a registry pull secret; the live deployment already uses `ghcr-credentials`.
+The GitHub workflow checks the app and publishes `ghcr.io/fruitiex/littlecupboard:main` and a commit SHA tag on pushes to main. After successful validation and publication, it dispatches the immutable image digest and source revision to `FruitieX/homelab`. The receiver updates only `apps/littlecupboard/deployment.yaml`, commits the new SHA tag and digest, and Flux rolls out the image. Pull requests and release tags do not deploy; an older main build is skipped if a newer main commit exists. A private GHCR package requires a registry pull secret; the live deployment already uses `ghcr-credentials`.
 
-Enable this path by adding **`HOMELAB_DISPATCH_TOKEN`** to [ForkBasket's GitHub Actions secrets](https://github.com/FruitieX/forkbasket/settings/secrets/actions). Use a fine-grained GitHub PAT restricted to **FruitieX/homelab** with **Contents: Read and write**. The sender uses this credential only to send the dispatch; the receiver commits with homelab's built-in `GITHUB_TOKEN`. Without the secret, CI still validates and publishes, and explicitly warns that automatic deployment is disabled. Once configured, run the workflow on the latest main commit or push a new commit. Inspect both repositories' Actions runs and Flux readiness to confirm the complete path.
+Enable this path by adding **`HOMELAB_DISPATCH_TOKEN`** to [LittleCupboard's GitHub Actions secrets](https://github.com/FruitieX/littlecupboard/settings/secrets/actions). Use a fine-grained GitHub PAT restricted to **FruitieX/homelab** with **Contents: Read and write**. The sender uses this credential only to send the dispatch; the receiver commits with homelab's built-in `GITHUB_TOKEN`. Without the secret, CI still validates and publishes, and explicitly warns that automatic deployment is disabled. Once configured, run the workflow on the latest main commit or push a new commit. Inspect both repositories' Actions runs and Flux readiness to confirm the complete path.
 
 If the token is in 1Password, transfer it directly through GitHub's secret form, or use the CLI in an authenticated local terminal. Substitute the actual vault, item and field in this example; do not paste the value into chat or a committed file:
 
 ```sh
 set -o pipefail
 op-agent read 'op://Agents/GitHub FruitieX homelab deploy token HOMELAB_DISPATCH_TOKEN/credential' |
-  gh secret set HOMELAB_DISPATCH_TOKEN --repo FruitieX/forkbasket
+  gh secret set HOMELAB_DISPATCH_TOKEN --repo FruitieX/littlecupboard
 ```
 
 For ongoing agent access, use a dedicated vault containing only agent-accessible credentials and a [1Password service account](https://www.1password.dev/service-accounts/get-started) granted only `read_items` in that vault. Disable vault creation and omit write/share permissions. Authenticate the CLI with `OP_SERVICE_ACCOUNT_TOKEN` injected by the agent launcher. A scoped service account is the access boundary; a CLI vault selector alone does not restrict a personal account. Run agents in a separate OS user or container if they must also be isolated from your personal session's credentials and 1Password integration. Keep the plaintext service-account credential outside the repository; SOPS ciphertext can be versioned.
@@ -36,20 +36,20 @@ Automatic deployment was activated and verified on 2026-10-01. The fine-grained 
 
 ## Flux deployment
 
-1. Copy `deploy/kubernetes/apps/forkbasket/` to `~/homelab/apps/forkbasket/` and `deploy/kubernetes/clusters/homelab/apps/forkbasket.yaml` to `~/homelab/clusters/homelab/apps/`. Add the latter to that directory’s resource list.
-2. Confirm the hostname `forkbasket.fruitiex.org`, public/private gateways, DNS, router port forwarding, certificate and storage class. `FORKBASKET_ORIGIN` must exactly match the externally visited scheme and hostname, including a port if applicable. The current manifests attach to both HTTPS gateways, use the existing public wildcard DNS and disable the HTTP request deadline for SSE. For a private-only deployment, remove the public parent and the external-dns exclusion so the controller manages its private DNS record instead. Adapt DNS for other homelabs that do not have this wildcard/port-forwarding setup.
+1. Copy `deploy/kubernetes/apps/littlecupboard/` to `~/homelab/apps/littlecupboard/` and `deploy/kubernetes/clusters/homelab/apps/littlecupboard.yaml` to `~/homelab/clusters/homelab/apps/`. Add the latter to that directory’s resource list.
+2. Confirm the hostname `littlecupboard.fruitiex.org`, public/private gateways, DNS, router port forwarding, certificate and storage class. `LITTLECUPBOARD_ORIGIN` must exactly match the externally visited scheme and hostname, including a port if applicable. The current manifests attach to both HTTPS gateways, use the existing public wildcard DNS and disable the HTTP request deadline for SSE. For a private-only deployment, remove the public parent and the external-dns exclusion so the controller manages its private DNS record instead. Adapt DNS for other homelabs that do not have this wildcard/port-forwarding setup.
 3. Copy `secret.sops.yaml.example` to `secret.sops.yaml`. Generate a random setup token and a **64-character hexadecimal** encryption key. For example, `openssl rand -hex 32` produces either value. Insert them locally; never commit the plaintext file. Encrypt with your homelab’s SOPS configuration/recipients before adding it to Git. The supplied file is a template, not a real secret.
-4. Pin the image digest and set image pull credentials if needed. Run `kustomize build apps/forkbasket` after materializing the encrypted secret, review the result locally without publishing decrypted output, then commit/push in your homelab repository when ready to deploy.
+4. Pin the image digest and set image pull credentials if needed. Run `kustomize build apps/littlecupboard` after materializing the encrypted secret, review the result locally without publishing decrypted output, then commit/push in your homelab repository when ready to deploy.
 
-Keep one replica with Recreate. SQLite defaults to WAL for local or block storage; the reusable PVC example requests 5 GiB of `syno-storage` iSCSI/ext4. For NFS, explicitly set `FORKBASKET_SQLITE_JOURNAL_MODE=DELETE`: [WAL cannot operate over a network filesystem](https://sqlite.org/wal.html). DELETE uses rollback journaling with `synchronous=EXTRA`, including a directory sync after a commit. Use NFSv4 with working POSIX locks and durable server writes; never mount with `nolock` or run multiple app replicas against the database. This depends on the NAS correctly implementing locking and sync operations. `fsGroup` makes the volume writable for the non-root process. The Deployment supplies startup, readiness and liveness probes, a read-only root filesystem and a writable temporary volume.
+Keep one replica with Recreate. SQLite defaults to WAL for local or block storage; the reusable PVC example requests 5 GiB of `syno-storage` iSCSI/ext4. For NFS, explicitly set `LITTLECUPBOARD_SQLITE_JOURNAL_MODE=DELETE`: [WAL cannot operate over a network filesystem](https://sqlite.org/wal.html). DELETE uses rollback journaling with `synchronous=EXTRA`, including a directory sync after a commit. Use NFSv4 with working POSIX locks and durable server writes; never mount with `nolock` or run multiple app replicas against the database. This depends on the NAS correctly implementing locking and sync operations. `fsGroup` makes the volume writable for the non-root process. The Deployment supplies startup, readiness and liveness probes, a read-only root filesystem and a writable temporary volume.
 
-The live homelab uses `forkbasket-data-nfs` on the existing `nfs-csi` storage class, mounted at `/data`. Its NAS directory is `/volume3/homelab/forkbasket-data-nfs` on `nectarine.internal.fruitiex.org`. The previous `forkbasket-data` iSCSI claim and backing LUN were removed at the user's request after migration verification; a private pre-migration database backup remains on NFS. Migration verification is recorded alongside the live manifests.
+The live homelab uses `littlecupboard-data-nfs` on the existing `nfs-csi` storage class, mounted at `/data`. Its NAS directory is `/volume3/homelab/littlecupboard-data-nfs` on `nectarine.internal.fruitiex.org`. The previous `littlecupboard-data` iSCSI claim and backing LUN were removed at the user's request after migration verification; a private pre-migration database backup remains on NFS. Migration verification is recorded alongside the live manifests.
 
 The app supports one initial owner household per installation. The API scopes every account, image, event and AI request to its household. The owner invites other family accounts in Settings; invitations are email-specific, single-use, and expire after seven days. They are links to share yourself; the app does not require SMTP.
 
 ## First launch
 
-Open the HTTPS site. Use `FORKBASKET_SETUP_TOKEN` from your deployment secret to create your owner account. Optionally include five editable sample recipes; the shopping list and purchase history start empty. Save your individual recovery code, then invite your wife from Settings. Each member has their own sign-in and recovery code. Password changes sign out other sessions; recovery rotates the code and signs out every previous session. Owner settings can remove a member.
+Open the HTTPS site. Use `LITTLECUPBOARD_SETUP_TOKEN` from your deployment secret to create your owner account. Optionally include five editable sample recipes; the shopping list and purchase history start empty. Save your individual recovery code, then invite your wife from Settings. Each member has their own sign-in and recovery code. Password changes sign out other sessions; recovery rotates the code and signs out every previous session. Owner settings can remove a member.
 
 If you omit the setup token and encryption key environment variables, the app creates private `setup-token` and `secret-key` files in its data directory. Preserve the encryption key: changing or losing it makes saved AI credentials unreadable. In Kubernetes, keep the SOPS secret as part of your backup plan.
 
@@ -58,21 +58,21 @@ If you omit the setup token and encryption key environment variables, the app cr
 ```sh
 nix develop --command npm ci
 nix develop --command npm run build
-FORKBASKET_STATIC_DIR="$PWD/dist/client" \
-FORKBASKET_ORIGIN=http://localhost:8080 \
-FORKBASKET_BIND=127.0.0.1:8080 \
+LITTLECUPBOARD_STATIC_DIR="$PWD/dist/client" \
+LITTLECUPBOARD_ORIGIN=http://localhost:8080 \
+LITTLECUPBOARD_BIND=127.0.0.1:8080 \
 nix develop --command cargo run --manifest-path backend/Cargo.toml
 ```
 
 Or run the image with a persistent named volume:
 
 ```sh
-docker run --rm --name forkbasket -p 127.0.0.1:8080:8080 \
-  -e FORKBASKET_ORIGIN=http://localhost:8080 \
-  -v forkbasket-data:/data ghcr.io/fruitiex/forkbasket:main
+docker run --rm --name littlecupboard -p 127.0.0.1:8080:8080 \
+  -e LITTLECUPBOARD_ORIGIN=http://localhost:8080 \
+  -v littlecupboard-data:/data ghcr.io/fruitiex/littlecupboard:main
 ```
 
-Access the generated setup token using a private terminal (`docker exec forkbasket cat /data/setup-token`). A bind-mounted directory needs UID/GID 10001 write access. For a production reverse proxy, set the origin to your HTTPS hostname, stream `/api/events` without buffering, allow 8 MB photo uploads and up to 96 MB restore requests, and allow at least 120 seconds for provider calls. HTTPS enables secure cookies and installable offline use. `/api/health` is liveness; `/api/ready` checks the database. Logs report service errors and startup, without logging passwords/provider credentials.
+Access the generated setup token using a private terminal (`docker exec littlecupboard cat /data/setup-token`). A bind-mounted directory needs UID/GID 10001 write access. For a production reverse proxy, set the origin to your HTTPS hostname, stream `/api/events` without buffering, allow 8 MB photo uploads and up to 96 MB restore requests, and allow at least 120 seconds for provider calls. HTTPS enables secure cookies and installable offline use. `/api/health` is liveness; `/api/ready` checks the database. Logs report service errors and startup, without logging passwords/provider credentials.
 
 ## Mobile and offline use
 
@@ -100,7 +100,7 @@ In Settings, configure a compatible base URL (usually ending in `/v1`), chat mod
 
 Advanced prompts opens with the effective saved instructions, using the backend defaults for any missing, null or blank prompt field in older configurations. Custom nonblank instructions are preserved exactly. These defaults also apply to generation and background icon jobs without requiring a provider resave or credential repair. The settings form waits for configuration to load; failures expose Retry rather than empty editable fields, and reconnect retries an unsuccessful load. Restore default prompts updates the form and requires Save provider to apply. Default item/shop instructions request flat Twemoji-style transparent icons; the companion additionally receives the bundled style reference, including when the default text differs only in surrounding whitespace. Recipe photo instructions remain separate.
 
-The current provider integration uses Chat Completions and Images APIs with API credentials. A Codex/ChatGPT subscription cannot be connected by pasting its login token into these fields. OpenAI's [Sign in with ChatGPT](https://developers.openai.com/siwc/quickstart) supports eligible plan usage through OAuth and the [Responses API](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference), but that sign-in/transport is not implemented in ForkBasket. The documented [plan-usage preview does not support image generation](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations). Native Codex image generation is a separate capability: a local ChatGPT-authenticated probe successfully generated an image. [The investigation](CHATGPT-INTEGRATION.md) records the tested protocol, hosted-service authentication boundaries and proposed personal companion. A regular OpenAI API key uses separately billed API access, including image generation.
+The current provider integration uses Chat Completions and Images APIs with API credentials. A Codex/ChatGPT subscription cannot be connected by pasting its login token into these fields. OpenAI's [Sign in with ChatGPT](https://developers.openai.com/siwc/quickstart) supports eligible plan usage through OAuth and the [Responses API](https://developers.openai.com/siwc/token-sharing-open-source/models-and-inference), but that sign-in/transport is not implemented in LittleCupboard. The documented [plan-usage preview does not support image generation](https://developers.openai.com/siwc/token-sharing-open-source/preview-limitations). Native Codex image generation is a separate capability: a local ChatGPT-authenticated probe successfully generated an image. [The investigation](CHATGPT-INTEGRATION.md) records the tested protocol, hosted-service authentication boundaries and proposed personal companion. A regular OpenAI API key uses separately billed API access, including image generation.
 
 Choose strict JSON Schema for providers that support it, JSON mode for compatible servers, or prompted JSON as a fallback. All modes receive the same server validation. Configure `max_completion_tokens`, legacy `max_tokens`, or omission depending on your endpoint. An image model is optional and uses the same provider’s `/images/generations` endpoint. Base64 images work; remote image URLs must use the provider’s origin or OpenAI image storage. Generated and uploaded photos are decoded, metadata stripped and resized before private storage.
 
@@ -117,8 +117,8 @@ Settings offers an owner-only household JSON backup containing recipes, list, pa
 For a complete, consistent backup while the service is running, use the SQLite online backup command:
 
 ```sh
-kubectl exec deploy/forkbasket -- forkbasket-api --backup /data/backup-2026-09-30.sqlite3
-kubectl cp default/$(kubectl get pod -l app=forkbasket -o jsonpath='{.items[0].metadata.name}'):/data/backup-2026-09-30.sqlite3 ./forkbasket-backup.sqlite3
+kubectl exec deploy/littlecupboard -- littlecupboard-api --backup /data/backup-2026-09-30.sqlite3
+kubectl cp default/$(kubectl get pod -l app=littlecupboard -o jsonpath='{.items[0].metadata.name}'):/data/backup-2026-09-30.sqlite3 ./littlecupboard-backup.sqlite3
 ```
 
 The image includes `tar` for `kubectl cp`. You can also use your storage backup tooling. The `--backup` command refuses to overwrite a destination and produces a private file. Back up the database **and** SOPS encryption key/configuration. Image bytes and accounts are inside SQLite. Do not copy just the live SQLite main file while WAL writes are active; use the online backup or a consistent stopped-volume snapshot.
@@ -126,3 +126,11 @@ The image includes `tar` for `kubectl cp`. You can also use your storage backup 
 To restore the complete installation, stop/scale down the Deployment, restore `forkbasket.sqlite3` from a consistent backup, remove obsolete WAL/SHM files while stopped, preserve owner permissions and the matching encryption key, then restart. Never replace the live database beneath the server. Check `/api/ready`, sign in, inspect recipes/photos and test shared shopping. Keep backup copies outside the PVC and periodically verify restoration.
 
 Before upgrading, take a full backup, pin the new image digest and let Flux replace the single pod. Schema migrations run transactionally at startup; newer unknown schema versions are rejected. To downgrade across a schema change, restore a backup from the matching older version. Service-worker updates activate after existing app windows close, so finish syncing and reopen the app after an upgrade.
+
+## Rebranding compatibility
+
+LittleCupboard replaces ForkBasket. New source/package/container/repository names use `littlecupboard`. The canonical origin is `https://littlecupboard.fruitiex.org`; the old hostname remains routed to the same installation with `LITTLECUPBOARD_LEGACY_ORIGINS=https://forkbasket.fruitiex.org` to let existing devices sync pending changes. The old site offers a link only after the queue is empty and connected. Sign in at the new address with the same account; browser storage and installed PWAs belong to their origin, so reinstall the app from the new address. No automatic cross-origin transfer of credentials or offline edits occurs.
+
+The existing NFS PVC `forkbasket-data-nfs` and database filename `forkbasket.sqlite3` are deliberately retained. The `forkbasket_session` cookie and original browser storage/Web Lock namespace remain compatible. New backups identify themselves as `littlecupboard-household-v1`; restore also accepts `forkbasket-household-v1`. `LITTLECUPBOARD_*` environment variables take priority, with corresponding `FORKBASKET_*` variables accepted for existing encrypted secrets. Both same-origin protection headers are supported; only the canonical origin and explicitly configured legacy origins may write. Built-in saved prompts receive the new name on read; custom instructions are preserved. No schema upgrade or AI credential rotation is needed.
+
+The live Flux Kustomization remains named `forkbasket` to retain its resource inventory during the move to `apps/littlecupboard`. The Deployment/Service/HTTPRoute use `littlecupboard`; the existing SOPS Secret remains `forkbasket-server-env`. Stop the old Deployment and wait for its pod to exit before reconciling the renamed Deployment against the same SQLite volume. The homelab dispatch receiver supports the old and new image names during rollout.

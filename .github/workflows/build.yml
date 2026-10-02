@@ -13,7 +13,7 @@ jobs:
     outputs:
       digest: ${{ steps.publish.outputs.digest }}
     concurrency:
-      group: forkbasket-build-${{ github.ref }}
+      group: littlecupboard-build-${{ github.ref }}
       cancel-in-progress: true
     permissions:
       contents: read
@@ -50,14 +50,14 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-          docker tag ghcr.io/fruitiex/forkbasket:main ghcr.io/fruitiex/forkbasket:${{ github.sha }}
-          docker push ghcr.io/fruitiex/forkbasket:main
-          docker push ghcr.io/fruitiex/forkbasket:${{ github.sha }}
-          forkbasket_reference="$(docker inspect --format '{{index .RepoDigests 0}}' ghcr.io/fruitiex/forkbasket:${{ github.sha }})"
-          [[ "$forkbasket_reference" == ghcr.io/fruitiex/forkbasket@sha256:* ]]
-          forkbasket_digest="${forkbasket_reference##*@}"
-          [[ "$forkbasket_digest" =~ ^sha256:[a-f0-9]{64}$ ]]
-          printf 'digest=%s\n' "$forkbasket_digest" >> "$GITHUB_OUTPUT"
+          docker tag ghcr.io/fruitiex/littlecupboard:main ghcr.io/fruitiex/littlecupboard:${{ github.sha }}
+          docker push ghcr.io/fruitiex/littlecupboard:main
+          docker push ghcr.io/fruitiex/littlecupboard:${{ github.sha }}
+          littlecupboard_reference="$(docker inspect --format '{{index .RepoDigests 0}}' ghcr.io/fruitiex/littlecupboard:${{ github.sha }})"
+          [[ "$littlecupboard_reference" == ghcr.io/fruitiex/littlecupboard@sha256:* ]]
+          littlecupboard_digest="${littlecupboard_reference##*@}"
+          [[ "$littlecupboard_digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          printf 'digest=%s\n' "$littlecupboard_digest" >> "$GITHUB_OUTPUT"
 
   deploy:
     needs: build
@@ -78,8 +78,8 @@ jobs:
             printf 'enabled=false\n' >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          forkbasket_head="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
-          if [[ "$forkbasket_head" != "$GITHUB_SHA" ]]; then
+          littlecupboard_head="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$littlecupboard_head" != "$GITHUB_SHA" ]]; then
             echo 'A newer main commit exists; skipping deployment of this older build.'
             printf 'enabled=false\n' >> "$GITHUB_OUTPUT"
             exit 0
@@ -95,7 +95,7 @@ jobs:
           event-type: image-update
           client-payload: |
             {
-              "image": "ghcr.io/fruitiex/forkbasket",
+              "image": "ghcr.io/fruitiex/littlecupboard",
               "digest": "${{ needs.build.outputs.digest }}",
               "revision": "${{ github.sha }}"
             }

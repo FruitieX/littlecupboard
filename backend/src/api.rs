@@ -577,7 +577,7 @@ pub async fn backup(State(server): State<Server>, headers: HeaderMap) -> Result<
         use base64::Engine;
         let events=conn.prepare("SELECT id,actor,kind,at,detail,changes,undone FROM events WHERE household_id=?1")?.query_map([&actor.household_id],|row|Ok(json!({"id":row.get::<_,String>(0)?,"actor":row.get::<_,String>(1)?,"kind":row.get::<_,String>(2)?,"at":row.get::<_,String>(3)?,"detail":row.get::<_,String>(4)?,"changes":row.get::<_,String>(5)?,"undone":row.get::<_,bool>(6)?})))?.collect::<std::result::Result<Vec<_>,_>>()?;
         serde_json::to_vec(
-            &json!({"format":"forkbasket-household-v1","state":snapshot.state,"events":events,"images":uploads.into_iter().map(|(id,mime,bytes,at,source)|json!({"id":id,"mime":mime,"data":base64::engine::general_purpose::STANDARD.encode(bytes),"at":at,"source":source})).collect::<Vec<_>>()}),
+            &json!({"format":"littlecupboard-household-v1","state":snapshot.state,"events":events,"images":uploads.into_iter().map(|(id,mime,bytes,at,source)|json!({"id":id,"mime":mime,"data":base64::engine::general_purpose::STANDARD.encode(bytes),"at":at,"source":source})).collect::<Vec<_>>()}),
         )?
     };
     Ok((
@@ -585,7 +585,7 @@ pub async fn backup(State(server): State<Server>, headers: HeaderMap) -> Result<
             (header::CONTENT_TYPE, "application/json"),
             (
                 header::CONTENT_DISPOSITION,
-                "attachment; filename=\"forkbasket-backup.json\"",
+                "attachment; filename=\"littlecupboard-backup.json\"",
             ),
         ],
         bytes,
@@ -629,8 +629,10 @@ pub async fn restore(
     let actor = authenticate(&server, &headers)?;
     actor.owner()?;
     server.rate_limit(&format!("restore:{}", actor.household_id), 4, 3600)?;
-    if input.backup["format"] != "forkbasket-household-v1" {
-        return Err(ApiError::bad("Choose a ForkBasket household backup."));
+    if input.backup["format"] != "littlecupboard-household-v1"
+        && input.backup["format"] != "forkbasket-household-v1"
+    {
+        return Err(ApiError::bad("Choose a LittleCupboard household backup."));
     }
     let images = input.backup["images"]
         .as_array()

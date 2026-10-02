@@ -6,15 +6,15 @@ import { tmpdir, homedir } from 'node:os'
 import { join } from 'node:path'
 import { launchBrowser, settle } from './browser.mjs'
 assert.equal(
-  process.env.FORKBASKET_HERMES_LIVE,
+  process.env.LITTLECUPBOARD_HERMES_LIVE,
   '1',
-  'Set FORKBASKET_HERMES_LIVE=1 for personal subscription calls',
+  'Set LITTLECUPBOARD_HERMES_LIVE=1 for personal subscription calls',
 )
-const folder = await mkdtemp(join(tmpdir(), 'forkbasket-hermes-'))
+const folder = await mkdtemp(join(tmpdir(), 'littlecupboard-hermes-'))
 const origin = 'http://127.0.0.1:3310'
 const pairingFile = join(
   homedir(),
-  '.hermes/profiles/forkbasket/forkbasket-companion.json',
+  '.hermes/profiles/littlecupboard/littlecupboard-companion.json',
 )
 let previous
 try {
@@ -25,11 +25,15 @@ try {
 const children = []
 let browser
 let cookie = ''
-const systemd = process.env.FORKBASKET_HERMES_SYSTEMD === '1'
+const systemd = process.env.LITTLECUPBOARD_HERMES_SYSTEMD === '1'
 async function service(action) {
-  const child = spawn('systemctl', ['--user', action, 'forkbasket-companion'], {
-    stdio: 'ignore',
-  })
+  const child = spawn(
+    'systemctl',
+    ['--user', action, 'littlecupboard-companion'],
+    {
+      stdio: 'ignore',
+    },
+  )
   assert.equal(
     await new Promise((resolve) => child.once('exit', resolve)),
     0,
@@ -57,7 +61,7 @@ async function api(path, body, method = 'POST') {
     method,
     headers: {
       'Content-Type': 'application/json',
-      'X-ForkBasket-Request': '1',
+      'X-LittleCupboard-Request': '1',
       Origin: origin,
       ...(cookie ? { Cookie: cookie } : {}),
     },
@@ -71,11 +75,11 @@ async function api(path, body, method = 'POST') {
 }
 try {
   start(['cargo', 'run', '--manifest-path', 'backend/Cargo.toml'], {
-    FORKBASKET_BIND: '127.0.0.1:3310',
-    FORKBASKET_DATA_DIR: folder,
-    FORKBASKET_ORIGIN: origin,
-    FORKBASKET_STATIC_DIR: 'dist/client',
-    FORKBASKET_SETUP_TOKEN: 'synthetic-household-setup',
+    LITTLECUPBOARD_BIND: '127.0.0.1:3310',
+    LITTLECUPBOARD_DATA_DIR: folder,
+    LITTLECUPBOARD_ORIGIN: origin,
+    LITTLECUPBOARD_STATIC_DIR: 'dist/client',
+    LITTLECUPBOARD_SETUP_TOKEN: 'synthetic-household-setup',
   })
   const until = Date.now() + 90000
   while (true) {
@@ -99,7 +103,7 @@ try {
     process.execPath,
     'scripts/hermes-companion.mjs',
     '--profile',
-    'forkbasket',
+    'littlecupboard',
     '--pair-stdin',
   ])
   setup.stdin.end(JSON.stringify({ url: origin, token }))
@@ -114,7 +118,7 @@ try {
       process.execPath,
       'scripts/hermes-companion.mjs',
       '--profile',
-      'forkbasket',
+      'littlecupboard',
     ])
   const config = {
     enabled: true,
@@ -134,7 +138,7 @@ try {
     await new Promise((r) => setTimeout(r, 500))
   }
   console.log('Personal companion paired with synthetic household.')
-  if (process.env.FORKBASKET_HERMES_UI_ONLY !== '1') {
+  if (process.env.LITTLECUPBOARD_HERMES_UI_ONLY !== '1') {
     await api('/ai/test', { config })
     console.log('gpt-6-luna xhigh connection test passed.')
     const proposal = await api('/ai/assistant', {

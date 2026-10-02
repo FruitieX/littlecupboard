@@ -68,7 +68,10 @@ impl<'de> Deserialize<'de> for SystemPrompts {
             (overrides.recipe_image, &mut prompts.recipe_image),
         ] {
             if let Some(value) = value.filter(|value| !value.trim().is_empty()) {
-                *target = value;
+                // Upgrade only the old built-in text; never rewrite custom instructions.
+                if value.trim() != target.replace("LittleCupboard", "ForkBasket") {
+                    *target = value;
+                }
             }
         }
         Ok(prompts)
@@ -77,8 +80,8 @@ impl<'de> Deserialize<'de> for SystemPrompts {
 impl Default for SystemPrompts {
     fn default() -> Self {
         Self {
-            assistant: "You are ForkBasket, a helpful family shopping and lunch planning assistant. Keep suggestions practical and messages concise. When given recipe photos or screenshots, faithfully transcribe visible titles, quantities, units, servings and ordered steps. Flag illegible or missing details rather than inventing them. Multiple images may be pages of one recipe. Recipe descriptions and step text may use Markdown for useful notes and emphasis. If a dish photo is requested, explain that Generate dish photo in the recipe review creates an illustrative image.".into(),
-            item_image: "Draw one shopping-list icon. Match ForkBasket's existing Twemoji food icons: simple flat 2D vector-like emoji illustration, bold rounded silhouettes, cheerful clean solid colors, very few shapes and minimal flat shading, no outlines. Center one recognizable object (or a small unified set) with generous empty padding, filling about 75% of a square canvas. Isolated on a fully transparent background. No photography, photorealism, 3D rendering, textures, gradients, lighting, cast shadows, scenery, plate, tile, frame, lettering, logo, solid backdrop or checkerboard. The silhouette must stay clear at 48 pixels.".into(),
+            assistant: "You are LittleCupboard, a helpful family shopping and lunch planning assistant. Keep suggestions practical and messages concise. When given recipe photos or screenshots, faithfully transcribe visible titles, quantities, units, servings and ordered steps. Flag illegible or missing details rather than inventing them. Multiple images may be pages of one recipe. Recipe descriptions and step text may use Markdown for useful notes and emphasis. If a dish photo is requested, explain that Generate dish photo in the recipe review creates an illustrative image.".into(),
+            item_image: "Draw one shopping-list icon. Match LittleCupboard's existing Twemoji food icons: simple flat 2D vector-like emoji illustration, bold rounded silhouettes, cheerful clean solid colors, very few shapes and minimal flat shading, no outlines. Center one recognizable object (or a small unified set) with generous empty padding, filling about 75% of a square canvas. Isolated on a fully transparent background. No photography, photorealism, 3D rendering, textures, gradients, lighting, cast shadows, scenery, plate, tile, frame, lettering, logo, solid backdrop or checkerboard. The silhouette must stay clear at 48 pixels.".into(),
             recipe_image: "A beautiful natural food photograph of the finished dish, softly lit, simple warm background, appetizing realistic home cooking, no lettering, recipe page, screenshot or collage.".into(),
         }
     }
@@ -652,7 +655,7 @@ pub async fn assistant(
     }
     match config.response_format.as_str() {
         "schema" => {
-            body["response_format"] = json!({"type":"json_schema","json_schema":{"name":"forkbasket_proposal","strict":true,"schema":schema()}})
+            body["response_format"] = json!({"type":"json_schema","json_schema":{"name":"littlecupboard_proposal","strict":true,"schema":schema()}})
         }
         "json" => body["response_format"] = json!({"type":"json_object"}),
         _ => {}

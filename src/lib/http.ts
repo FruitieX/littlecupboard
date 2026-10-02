@@ -11,7 +11,7 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (init.body && !(init.body instanceof FormData))
     headers.set('Content-Type', 'application/json')
   if (init.method && !['GET', 'HEAD'].includes(init.method))
-    headers.set('X-ForkBasket-Request', '1')
+    headers.set('X-LittleCupboard-Request', '1')
   const response = await fetch(`/api${path}`, {
     ...init,
     headers,

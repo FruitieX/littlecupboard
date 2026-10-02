@@ -4,10 +4,11 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 
 const image =
-  process.env.FORKBASKET_TEST_IMAGE ?? 'ghcr.io/fruitiex/forkbasket:main'
+  process.env.LITTLECUPBOARD_TEST_IMAGE ??
+  'ghcr.io/fruitiex/littlecupboard:main'
 const suffix = randomUUID().slice(0, 8)
-const volume = `forkbasket-check-${suffix}`
-const primary = `forkbasket-check-${suffix}`
+const volume = `littlecupboard-check-${suffix}`
+const primary = `littlecupboard-check-${suffix}`
 const restored = `${primary}-restored`
 const containers = []
 const setupToken = randomBytes(32).toString('hex')
@@ -35,13 +36,13 @@ function start(name, dataDir = '/data') {
     '-v',
     `${volume}:/data`,
     '-e',
-    'FORKBASKET_SETUP_TOKEN',
+    name === primary ? 'FORKBASKET_SETUP_TOKEN' : 'LITTLECUPBOARD_SETUP_TOKEN',
     '-e',
-    'FORKBASKET_SECRET_KEY',
+    name === primary ? 'FORKBASKET_SECRET_KEY' : 'LITTLECUPBOARD_SECRET_KEY',
     '-e',
-    `FORKBASKET_DATA_DIR=${dataDir}`,
+    `LITTLECUPBOARD_DATA_DIR=${dataDir}`,
     '-e',
-    'FORKBASKET_ORIGIN=http://localhost:8080',
+    'LITTLECUPBOARD_ORIGIN=http://localhost:8080',
     image,
   )
   const port = JSON.parse(docker('inspect', name))[0].NetworkSettings.Ports[
@@ -63,7 +64,7 @@ async function api(origin, path, body, cookie) {
     method: body ? 'POST' : 'GET',
     headers: {
       'Content-Type': 'application/json',
-      'X-ForkBasket-Request': '1',
+      'X-LittleCupboard-Request': '1',
       Origin: 'http://localhost:8080',
       ...(cookie ? { Cookie: cookie } : {}),
     },
@@ -77,6 +78,8 @@ async function api(origin, path, body, cookie) {
 }
 process.env.FORKBASKET_SETUP_TOKEN = setupToken
 process.env.FORKBASKET_SECRET_KEY = secretKey
+process.env.LITTLECUPBOARD_SETUP_TOKEN = setupToken
+process.env.LITTLECUPBOARD_SECRET_KEY = secretKey
 try {
   docker('volume', 'create', volume)
   let origin = start(primary)
@@ -133,7 +136,7 @@ try {
     headers: {
       Cookie: cookie,
       Origin: 'http://localhost:8080',
-      'X-ForkBasket-Request': '1',
+      'X-LittleCupboard-Request': '1',
     },
     body: sourceBody,
   })
@@ -208,7 +211,7 @@ try {
   docker(
     'exec',
     primary,
-    'forkbasket-api',
+    'littlecupboard-api',
     '--backup',
     '/data/smoke-backup.sqlite3',
   )
@@ -221,7 +224,7 @@ try {
       docker(
         'exec',
         primary,
-        'forkbasket-api',
+        'littlecupboard-api',
         '--backup',
         '/data/smoke-backup.sqlite3',
       ),

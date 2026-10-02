@@ -29,7 +29,7 @@ try:
     with Image.open(target) as image:
         alpha = image.getchannel('A').getextrema() if 'A' in image.getbands() else (255, 255)
         print(json.dumps({'stage':'icon','image':str(target),'size':image.size,'alpha':alpha,'transparent':alpha[0] < 255}), flush=True)
-    if os.environ.get('FORKBASKET_MEDIA_ICON_ONLY') == '1':
+    if os.environ.get('LITTLECUPBOARD_MEDIA_ICON_ONLY') == '1':
         sys.exit(0)
     schema = {'type':'object','additionalProperties':False,'required':['name','servings','ingredients','steps'],'properties':{'name':{'type':'string'},'servings':{'type':'integer'},'ingredients':{'type':'array','items':{'type':'string'}},'steps':{'type':'array','items':{'type':'string'}}}}
     result = companion.perform({'path':'chat/completions','body':{'model':'gpt-6-luna','reasoning_effort':'xhigh','messages':[

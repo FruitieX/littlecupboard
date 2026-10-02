@@ -7,10 +7,10 @@ export default defineConfig({
   plugins: [tailwindcss(), tanstackStart({ spa: { enabled: true } }), react()],
   server: {
     watch: { ignored: ['**/mockups/**'] },
-    port: Number(process.env.FORKBASKET_PORT ?? 3100),
+    port: Number(process.env.LITTLECUPBOARD_PORT ?? 3100),
     strictPort: true,
     proxy: {
-      '/api': process.env.FORKBASKET_API_URL ?? 'http://127.0.0.1:3001',
+      '/api': process.env.LITTLECUPBOARD_API_URL ?? 'http://127.0.0.1:3001',
     },
   },
 })

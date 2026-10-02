@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ForkBasket } from '../components/ForkBasket'
+import { LittleCupboard } from '../components/LittleCupboard'
 export const Route = createFileRoute('/recipes')({
-  component: () => <ForkBasket view="recipes" />,
+  component: () => <LittleCupboard view="recipes" />,
 })

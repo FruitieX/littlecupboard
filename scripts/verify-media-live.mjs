@@ -7,9 +7,9 @@ import { resolve, join } from 'node:path'
 import { launchBrowser } from './browser.mjs'
 
 assert.equal(
-  process.env.FORKBASKET_HERMES_LIVE,
+  process.env.LITTLECUPBOARD_HERMES_LIVE,
   '1',
-  'Set FORKBASKET_HERMES_LIVE=1 to make two personal subscription calls',
+  'Set LITTLECUPBOARD_HERMES_LIVE=1 to make two personal subscription calls',
 )
 const folder = resolve('test-results/media-live')
 await mkdir(folder, { recursive: true, mode: 0o700 })
@@ -25,11 +25,11 @@ try {
 }
 const env = {
   ...process.env,
-  HERMES_HOME: join(homedir(), '.hermes/profiles/forkbasket'),
+  HERMES_HOME: join(homedir(), '.hermes/profiles/littlecupboard'),
 }
 const command = JSON.parse(
   execFileSync(
-    process.env.FORKBASKET_HERMES_BINARY || 'hermes',
+    process.env.LITTLECUPBOARD_HERMES_BINARY || 'hermes',
     ['--print-runtime-command', '--module', 'runpy'],
     { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
   ),

@@ -17,7 +17,7 @@ images = '--images' in sys.argv[2:]
 report = {'provider': 'openai-codex', 'trials': []}
 
 def emit(value):
-    print('FORKBASKET_HERMES_PROBE ' + json.dumps(value), flush=True)
+    print('LITTLECUPBOARD_HERMES_PROBE ' + json.dumps(value), flush=True)
 
 def image_file(value, name):
     from PIL import Image
@@ -63,7 +63,7 @@ try:
     import hermes_cli
     root = Path(hermes_cli.__file__).resolve().parent.parent
     plugin = root / 'plugins/image_gen/openai-codex/__init__.py'
-    spec = importlib.util.spec_from_file_location('forkbasket_hermes_image_probe', plugin)
+    spec = importlib.util.spec_from_file_location('littlecupboard_hermes_image_probe', plugin)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     # Keep the actual Hermes image provider, but pin credential selection to the

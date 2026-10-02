@@ -21,8 +21,8 @@ assert.ok(
   [...modes].every((mode) => ['--text', '--image'].includes(mode)),
   'Usage: node scripts/probe-codex.mjs [--text] [--image]',
 )
-const binary = process.env.FORKBASKET_CODEX_BINARY || 'codex'
-const workspace = await mkdtemp(join(tmpdir(), 'forkbasket-codex-probe-'))
+const binary = process.env.LITTLECUPBOARD_CODEX_BINARY || 'codex'
+const workspace = await mkdtemp(join(tmpdir(), 'littlecupboard-codex-probe-'))
 await mkdir('test-results', { recursive: true })
 const pending = new Map()
 const notifications = []
@@ -123,8 +123,8 @@ async function trial(kind, prompt, outputSchema) {
     sandbox: 'read-only',
     approvalPolicy: 'never',
     environments: [],
-    ...(process.env.FORKBASKET_CODEX_MODEL
-      ? { model: process.env.FORKBASKET_CODEX_MODEL }
+    ...(process.env.LITTLECUPBOARD_CODEX_MODEL
+      ? { model: process.env.LITTLECUPBOARD_CODEX_MODEL }
       : {}),
     baseInstructions:
       'You are an integration test for a family shopping app. Use only the supplied synthetic data. Do not read files, run commands, use external apps, browse, or delegate. Use the built-in image-generation tool only if explicitly requested. Never substitute another image API or an SVG.',
@@ -240,8 +240,8 @@ async function trial(kind, prompt, outputSchema) {
 try {
   await request('initialize', {
     clientInfo: {
-      name: 'forkbasket_probe',
-      title: 'ForkBasket integration investigation',
+      name: 'littlecupboard_probe',
+      title: 'LittleCupboard integration investigation',
       version: '0.1.0',
     },
     capabilities: { experimentalApi: true },

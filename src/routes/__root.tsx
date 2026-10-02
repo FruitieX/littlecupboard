@@ -16,12 +16,12 @@ export const Route = createRootRoute({
         name: 'viewport',
         content: 'width=device-width, initial-scale=1, viewport-fit=cover',
       },
-      { title: `${APP_NAME} · A little less planning. A little more living.` },
+      { title: `${APP_NAME} · Shopping, recipes & meals` },
       { name: 'theme-color', content: '#1e4938' },
       {
         name: 'description',
         content:
-          'Your family shopping list, recipes, and weekly meals. Together in one happy basket.',
+          'Shared shopping lists, recipes, weekly meals and pantry supplies.',
       },
     ],
     links: [

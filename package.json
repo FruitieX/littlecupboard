@@ -1,5 +1,5 @@
 {
-  "name": "forkbasket",
+  "name": "littlecupboard",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,8 +12,9 @@
     "test": "vitest run",
     "test:ui": "node scripts/verify-production.mjs",
     "mockups": "node scripts/mockups.mjs",
-    "test:production": "FORKBASKET_TEST_PRODUCTION=1 node scripts/verify-production.mjs",
-    "test:container": "node scripts/verify-container.mjs"
+    "test:production": "LITTLECUPBOARD_TEST_PRODUCTION=1 node scripts/verify-production.mjs",
+    "test:container": "node scripts/verify-container.mjs",
+    "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.23",

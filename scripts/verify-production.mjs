@@ -6,9 +6,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { launchBrowser, settle } from './browser.mjs'
 
-const data = await mkdtemp(join(tmpdir(), 'forkbasket-ui-'))
+const data = await mkdtemp(join(tmpdir(), 'littlecupboard-ui-'))
 const frontendUrl = 'http://127.0.0.1:3300'
-const production = process.env.FORKBASKET_TEST_PRODUCTION === '1'
+const production = process.env.LITTLECUPBOARD_TEST_PRODUCTION === '1'
 const backendUrl = production ? frontendUrl : 'http://127.0.0.1:3301'
 const processes = []
 const logs = []
@@ -56,7 +56,7 @@ async function dismissRecovery(page) {
 async function request(page, path, body, method = 'POST') {
   const response = await page.request.fetch(`${frontendUrl}/api${path}`, {
     method,
-    headers: { 'X-ForkBasket-Request': '1', Origin: frontendUrl },
+    headers: { 'X-LittleCupboard-Request': '1', Origin: frontendUrl },
     data: body,
   })
   assert.ok(response.ok(), `${path}: ${await response.text()}`)
@@ -75,24 +75,26 @@ let owner
 let provider
 try {
   start('cargo', ['run', '--manifest-path', 'backend/Cargo.toml'], {
-    FORKBASKET_BIND: production ? '127.0.0.1:3300' : '127.0.0.1:3301',
-    ...(production ? { FORKBASKET_STATIC_DIR: 'dist/client' } : {}),
-    FORKBASKET_ORIGIN: frontendUrl,
-    FORKBASKET_DATA_DIR: data,
-    FORKBASKET_SETUP_TOKEN: 'ui-only-bootstrap-token',
-    FORKBASKET_SQLITE_JOURNAL_MODE: 'DELETE',
+    LITTLECUPBOARD_BIND: production ? '127.0.0.1:3300' : '127.0.0.1:3301',
+    ...(production ? { LITTLECUPBOARD_STATIC_DIR: 'dist/client' } : {}),
+    LITTLECUPBOARD_ORIGIN: frontendUrl,
+    LITTLECUPBOARD_DATA_DIR: data,
+    LITTLECUPBOARD_SETUP_TOKEN: 'ui-only-bootstrap-token',
+    LITTLECUPBOARD_SQLITE_JOURNAL_MODE: 'DELETE',
   })
   await wait(`${backendUrl}/api/ready`)
   if (!production)
     start(
       process.execPath,
       ['node_modules/vite/bin/vite.js', '--host', '127.0.0.1'],
-      { FORKBASKET_PORT: '3300', FORKBASKET_API_URL: backendUrl },
+      { LITTLECUPBOARD_PORT: '3300', LITTLECUPBOARD_API_URL: backendUrl },
     )
   await wait(frontendUrl)
   const manifest = await (
     await fetch(`${frontendUrl}/manifest.webmanifest`)
   ).json()
+  assert.equal(manifest.name, 'LittleCupboard')
+  assert.equal(manifest.short_name, 'LittleCupboard')
   assert.equal(manifest.display, 'standalone')
   assert.equal(manifest.start_url, '/')
   for (const edge of [192, 512]) {
@@ -2020,7 +2022,7 @@ try {
     fullPage: true,
   })
 
-  if (process.env.FORKBASKET_CAPTURE === '1') {
+  if (process.env.LITTLECUPBOARD_CAPTURE === '1') {
     await mkdir('mockups', { recursive: true })
     const snapshot = await request(owner, '/state', undefined, 'GET')
     const now = new Date()

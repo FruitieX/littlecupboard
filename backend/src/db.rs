@@ -77,7 +77,7 @@ impl JournalMode {
         match value {
             "WAL" | "wal" => Ok(Self::Wal),
             "DELETE" | "delete" => Ok(Self::Delete),
-            _ => Err("FORKBASKET_SQLITE_JOURNAL_MODE must be WAL or DELETE"),
+            _ => Err("LITTLECUPBOARD_SQLITE_JOURNAL_MODE must be WAL or DELETE"),
         }
     }
 }
@@ -116,7 +116,7 @@ impl Database {
         )?;
         if version > 7 {
             return Err(ApiError::internal(
-                "This database was created by a newer ForkBasket version. Restore a compatible backup before downgrading.",
+                "This database was created by a newer LittleCupboard version. Restore a compatible backup before downgrading.",
             ));
         }
         if version == 0 {

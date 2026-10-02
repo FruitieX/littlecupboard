@@ -1,17 +1,19 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { X, ShoppingBasket, ArrowUpRight } from 'lucide-react'
+import { X, ArrowUpRight } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { APP_NAME } from '../lib/brand'
 import { FoodIcon } from './FoodIcon'
 
 export function Brand() {
   return (
-    <span className="brand">
+    <span className="brand" aria-label={APP_NAME}>
       <span className="brand-mark">
-        <ShoppingBasket size={23} strokeWidth={1.8} />
+        <img src="/icon.svg" width="40" height="40" alt="" />
       </span>
-      <span>{APP_NAME}</span>
-      <span className="brand-dot">.</span>
+      <span className="brand-wordmark" aria-hidden="true">
+        <span className="brand-little">Little</span>
+        <span className="brand-cupboard">Cupboard</span>
+      </span>
     </span>
   )
 }

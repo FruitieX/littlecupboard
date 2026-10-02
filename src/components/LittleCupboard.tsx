@@ -11,6 +11,7 @@ import { FoodIcon } from './FoodIcon'
 import { useApp } from '../lib/state'
 import { ConnectionStatus } from './ConnectionStatus'
 import { Assistant } from './Assistant'
+import { APP_ORIGIN, LEGACY_ORIGIN } from '../lib/brand'
 
 export type View = 'shopping' | 'week' | 'recipes' | 'settings'
 const navigation = [
@@ -44,14 +45,14 @@ const navigation = [
   },
 ] as const
 
-export function ForkBasket({
+export function LittleCupboard({
   view = 'shopping',
   children,
 }: {
   view?: View
   children?: ReactNode
 }) {
-  const { session, error, clearError } = useApp()
+  const { session, error, clearError, pending, status } = useApp()
   return (
     <MotionConfig reducedMotion="user">
       <div
@@ -116,6 +117,20 @@ export function ForkBasket({
             </div>
           </header>
           <main id="main-content" className={`main-content view-${view}`}>
+            {typeof location !== 'undefined' &&
+              location.origin === LEGACY_ORIGIN && (
+                <div className="address-notice" role="status">
+                  <span>
+                    LittleCupboard has a new address. Finish syncing here, then
+                    switch.
+                  </span>
+                  {pending.length === 0 && status === 'live' ? (
+                    <a href={APP_ORIGIN}>Open LittleCupboard</a>
+                  ) : (
+                    <span>Waiting for your changes to sync…</span>
+                  )}
+                </div>
+              )}
             {error && (
               <div className="form-error app-error" role="alert">
                 {error}

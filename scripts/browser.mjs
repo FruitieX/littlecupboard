@@ -1,6 +1,6 @@
 import { chromium } from 'playwright'
 
-export const baseUrl = process.env.FORKBASKET_URL ?? 'http://127.0.0.1:3100'
+export const baseUrl = process.env.LITTLECUPBOARD_URL ?? 'http://127.0.0.1:3100'
 export async function launchBrowser() {
   return chromium.launch({
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || undefined,

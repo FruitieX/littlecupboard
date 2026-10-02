@@ -1,4 +1,4 @@
-# ForkBasket project context
+# LittleCupboard project context
 
 Read `docs/PLAN.md` before continuing implementation. It preserves the user’s requirements, accepted naming decision, architecture, scope, and remaining work. Update its progress section when a milestone finishes or a meaningful decision changes.
 

@@ -27,7 +27,9 @@ const env = {
 }
 const command = JSON.parse(
   execFileSync(
-    process.env.FORKBASKET_HERMES_BINARY || 'hermes',
+    process.env.LITTLECUPBOARD_HERMES_BINARY ||
+      process.env.FORKBASKET_HERMES_BINARY ||
+      'hermes',
     ['--print-runtime-command', '--module', 'runpy'],
     { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
   ),

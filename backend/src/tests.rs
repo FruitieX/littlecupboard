@@ -32,6 +32,73 @@ fn system_prompts_use_defaults_for_missing_null_and_blank_fields() {
     }
 }
 
+#[test]
+fn rebrand_updates_only_legacy_default_prompts() {
+    let defaults = ai::SystemPrompts::default();
+    let legacy = serde_json::to_value(&defaults)
+        .unwrap()
+        .to_string()
+        .replace("LittleCupboard", "ForkBasket");
+    let upgraded: ai::SystemPrompts = serde_json::from_str(&legacy).unwrap();
+    assert_eq!(upgraded, defaults);
+    let custom = "You are ForkBasket. My custom family instructions.";
+    let preserved: ai::SystemPrompts = serde_json::from_value(json!({"assistant":custom})).unwrap();
+    assert_eq!(preserved.assistant, custom);
+}
+
+#[tokio::test]
+async fn legacy_origin_and_header_can_sync_but_other_origins_are_rejected() {
+    let (mut server, _dir) = server();
+    Arc::get_mut(&mut server.config)
+        .unwrap()
+        .legacy_origins
+        .push("https://forkbasket.fruitiex.org".into());
+    let cookie = owner(&server).await;
+    for (origin, expected) in [
+        ("https://forkbasket.fruitiex.org", StatusCode::OK),
+        ("https://other.example", StatusCode::FORBIDDEN),
+    ] {
+        let request = Request::builder().method(Method::POST).uri("/api/operations")
+            .header(header::CONTENT_TYPE, "application/json")
+            .header(header::COOKIE, &cookie).header(header::ORIGIN, origin)
+            .header("x-forkbasket-request", "1")
+            .body(Body::from(json!({"id":uuid::Uuid::new_v4().to_string(),"operation":{"type":"addItem","productId":"coffee","quantity":1,"unit":"pack","note":"Legacy queue","accumulate":true}}).to_string())).unwrap();
+        assert_eq!(
+            app(server.clone()).oneshot(request).await.unwrap().status(),
+            expected
+        );
+    }
+    let mut backup = request(
+        &server,
+        Method::GET,
+        "/api/backup",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert_eq!(backup["format"], "littlecupboard-household-v1");
+    backup["format"] = json!("forkbasket-household-v1");
+    let snapshot = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    let (status, result, _) = request(
+        &server,
+        Method::POST,
+        "/api/restore",
+        json!({"backup":backup,"expectedRevision":snapshot["revision"]}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{result}");
+}
+
 #[tokio::test]
 async fn legacy_prompt_settings_and_companion_icons_keep_their_defaults_and_credentials() {
     use base64::Engine;
@@ -1042,6 +1109,7 @@ fn server() -> (Server, tempfile::TempDir) {
     let directory = tempfile::tempdir().expect("temporary data directory");
     let config = Arc::new(Config {
         origin: "http://localhost:3100".into(),
+        legacy_origins: vec![],
         secure_cookie: false,
         setup_token: "test-bootstrap-secret".into(),
         data_dir: directory.path().into(),
@@ -1073,7 +1141,7 @@ async fn request(
         .method(method)
         .uri(path)
         .header(header::CONTENT_TYPE, "application/json")
-        .header("x-forkbasket-request", "1")
+        .header("x-littlecupboard-request", "1")
         .header(header::ORIGIN, &server.config.origin);
     if let Some(cookie) = cookie {
         request = request.header(header::COOKIE, cookie);
@@ -1289,7 +1357,7 @@ async fn cross_origin_writes_and_requests_without_csrf_header_are_rejected() {
             .header(header::CONTENT_TYPE, "application/json")
             .header(header::ORIGIN, origin);
         if protection {
-            request = request.header("x-forkbasket-request", "1");
+            request = request.header("x-littlecupboard-request", "1");
         }
         let response=app(server.clone()).oneshot(request.body(Body::from(json!({"email":"owner@example.test","password":"some long enough password"}).to_string())).unwrap()).await.unwrap();
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
@@ -1862,7 +1930,7 @@ async fn recipe_vision_icon_alpha_and_generated_draft_photos_are_private_and_rev
                 .uri("/api/images?source=true")
                 .header(header::COOKIE, &owner)
                 .header(header::ORIGIN, &server.config.origin)
-                .header("x-forkbasket-request", "1")
+                .header("x-littlecupboard-request", "1")
                 .header(
                     header::CONTENT_TYPE,
                     "multipart/form-data; boundary=recipe-source",

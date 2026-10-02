@@ -1,3 +1,3 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { ForkBasket } from '../components/ForkBasket'
-export const Route = createFileRoute('/')({ component: ForkBasket })
+import { LittleCupboard } from '../components/LittleCupboard'
+export const Route = createFileRoute('/')({ component: LittleCupboard })
