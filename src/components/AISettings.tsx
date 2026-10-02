@@ -18,23 +18,10 @@ type ProviderConfig = {
   tokenParameter: string
   prompts: { assistant: string; itemImage: string; recipeImage: string }
 }
-const defaults: ProviderConfig = {
-  transport: 'api',
-  reasoningEffort: '',
-  enabled: false,
-  baseUrl: 'https://api.openai.com/v1',
-  model: '',
-  imageModel: '',
-  imageSize: '1024x1024',
-  autoItemIcons: false,
-  responseFormat: 'json',
-  tokenParameter: 'max_completion_tokens',
-  prompts: { assistant: '', itemImage: '', recipeImage: '' },
-}
-
 export function AISettings() {
   const { session, refreshSession } = useApp()
-  const [config, setConfig] = useState(defaults)
+  const [config, setConfig] = useState<ProviderConfig | null>(null)
+  const [retry, setRetry] = useState(0)
   const [apiKey, setApiKey] = useState('')
   const [hasKey, setHasKey] = useState(false)
   const [models, setModels] = useState<string[]>([])
@@ -48,20 +35,36 @@ export function AISettings() {
   >(null)
   useEffect(() => {
     if (session.user.role !== 'owner') return
+    let active = true
+    setConfig(null)
+    setError('')
     void api<{
       config: ProviderConfig
       hasKey: boolean
       companion: typeof companion
     }>('/ai/config')
       .then((result) => {
+        if (!active) return
         setConfig(result.config)
         setHasKey(result.hasKey)
         setCompanion(result.companion)
       })
-      .catch((error) => setError(error.message))
-  }, [session.user.role])
+      .catch((error) => {
+        if (active) setError(error.message)
+      })
+    return () => {
+      active = false
+    }
+  }, [session.user.id, session.user.role, retry])
   useEffect(() => {
-    if (config.transport !== 'companion' || session.user.role !== 'owner')
+    const online = () => {
+      if (!config) setRetry((value) => value + 1)
+    }
+    window.addEventListener('online', online)
+    return () => window.removeEventListener('online', online)
+  }, [config])
+  useEffect(() => {
+    if (config?.transport !== 'companion' || session.user.role !== 'owner')
       return
     const timer = setInterval(() => {
       void api<{ companion: typeof companion }>('/ai/config')
@@ -69,7 +72,7 @@ export function AISettings() {
         .catch(() => {})
     }, 10000)
     return () => clearInterval(timer)
-  }, [config.transport, session.user.role])
+  }, [config?.transport, session.user.role])
   async function run(action: () => Promise<void>) {
     setBusy(true)
     setError('')
@@ -86,7 +89,7 @@ export function AISettings() {
     key: K,
     value: ProviderConfig[K],
   ) {
-    setConfig((current) => ({ ...current, [key]: value }))
+    setConfig((current) => (current ? { ...current, [key]: value } : current))
     setMessage('')
   }
   async function pairCompanion() {
@@ -105,6 +108,32 @@ export function AISettings() {
             ? 'The assistant is connected and available to everyone in your household.'
             : 'The assistant appears when a provider is connected.'}
         </p>
+      </section>
+    )
+  if (!config)
+    return (
+      <section className="settings-card ai-provider-card">
+        <SectionTitle title="AI assistant">
+          <Sparkles size={20} />
+        </SectionTitle>
+        {error ? (
+          <>
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => setRetry((value) => value + 1)}
+            >
+              Retry loading assistant settings
+            </button>
+          </>
+        ) : (
+          <p className="settings-description" role="status">
+            Loading assistant settings…
+          </p>
+        )}
       </section>
     )
   return (
@@ -156,8 +185,8 @@ export function AISettings() {
               onChange={(event) => {
                 const transport = event.target
                   .value as ProviderConfig['transport']
-                setConfig((current) => ({
-                  ...current,
+                setConfig({
+                  ...config,
                   transport,
                   ...(transport === 'companion'
                     ? {
@@ -168,7 +197,7 @@ export function AISettings() {
                         tokenParameter: 'omit',
                       }
                     : {}),
-                }))
+                })
                 setMessage('')
               }}
             >
@@ -427,7 +456,8 @@ export function AISettings() {
             <p className="quiet-label">
               Control assistant behavior and image style. Recipe details are
               appended automatically. Required response structure, validation,
-              and the review step remain in place.
+              and the review step remain in place. Start with the defaults below
+              and edit them as needed.
             </p>
             {(
               [

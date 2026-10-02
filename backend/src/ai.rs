@@ -41,13 +41,38 @@ pub struct ProviderConfig {
     #[serde(default)]
     pub prompts: SystemPrompts,
 }
-#[derive(Clone, Deserialize, Serialize, TS)]
+#[derive(Clone, Debug, Serialize, TS, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[ts(export, export_to = "../../src/lib/api/")]
 pub struct SystemPrompts {
     pub assistant: String,
     pub item_image: String,
     pub recipe_image: String,
+}
+impl<'de> Deserialize<'de> for SystemPrompts {
+    fn deserialize<D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> std::result::Result<Self, D::Error> {
+        #[derive(Default, Deserialize)]
+        #[serde(rename_all = "camelCase", deny_unknown_fields)]
+        struct Overrides {
+            assistant: Option<String>,
+            item_image: Option<String>,
+            recipe_image: Option<String>,
+        }
+        let overrides = Option::<Overrides>::deserialize(deserializer)?.unwrap_or_default();
+        let mut prompts = Self::default();
+        for (value, target) in [
+            (overrides.assistant, &mut prompts.assistant),
+            (overrides.item_image, &mut prompts.item_image),
+            (overrides.recipe_image, &mut prompts.recipe_image),
+        ] {
+            if let Some(value) = value.filter(|value| !value.trim().is_empty()) {
+                *target = value;
+            }
+        }
+        Ok(prompts)
+    }
 }
 impl Default for SystemPrompts {
     fn default() -> Self {
@@ -971,7 +996,7 @@ pub(crate) async fn render_image(
             body["size"] = json!("816x816");
         }
         if config.transport == "companion"
-            && config.prompts.item_image == SystemPrompts::default().item_image
+            && config.prompts.item_image.trim() == SystemPrompts::default().item_image.trim()
         {
             body["reference_images"] = json!([format!(
                 "data:image/png;base64,{}",

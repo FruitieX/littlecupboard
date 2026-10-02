@@ -7,6 +7,189 @@ use http_body_util::BodyExt;
 use serde_json::{Value, json};
 use tower::ServiceExt;
 
+#[test]
+fn system_prompts_use_defaults_for_missing_null_and_blank_fields() {
+    let defaults = ai::SystemPrompts::default();
+    for value in [
+        Value::Null,
+        json!({}),
+        json!({"assistant":null,"itemImage":" \n\t","recipeImage":""}),
+    ] {
+        let prompts: ai::SystemPrompts = serde_json::from_value(value).unwrap();
+        assert_eq!(prompts, defaults);
+    }
+    let custom = "  My household instructions.\nUse metric units.  ";
+    let prompts: ai::SystemPrompts = serde_json::from_value(json!({"assistant":custom})).unwrap();
+    assert_eq!(prompts.assistant, custom);
+    assert_eq!(prompts.item_image, defaults.item_image);
+    assert_eq!(prompts.recipe_image, defaults.recipe_image);
+    for value in [
+        json!({"itemImage":42}),
+        json!({"itemimage":"typo"}),
+        json!([]),
+    ] {
+        assert!(serde_json::from_value::<ai::SystemPrompts>(value).is_err());
+    }
+}
+
+#[tokio::test]
+async fn legacy_prompt_settings_and_companion_icons_keep_their_defaults_and_credentials() {
+    use base64::Engine;
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let household: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT id FROM households", [], |row| row.get(0))
+        .unwrap();
+    let pairing = ai::provision_companion(&server, &household, "gpt-6-luna", "xhigh").unwrap();
+    let headers = worker_headers(pairing["token"].as_str().unwrap());
+    let _ = companion::heartbeat(axum::extract::State(server.clone()), headers.clone())
+        .await
+        .unwrap();
+    let (_, initial, _) = request(
+        &server,
+        Method::GET,
+        "/api/ai/config",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await;
+    let defaults = initial["promptDefaults"].clone();
+    let secret: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT secret FROM providers", [], |row| row.get(0))
+        .unwrap();
+    for override_value in [
+        None,
+        Some(Value::Null),
+        Some(json!({})),
+        Some(json!({"assistant":"","itemImage":" \n","recipeImage":null})),
+        Some(json!({"assistant":"Custom assistant instructions."})),
+    ] {
+        let mut config = initial["config"].clone();
+        match override_value {
+            Some(value) => {
+                config["prompts"] = value;
+            }
+            None => {
+                config.as_object_mut().unwrap().remove("prompts");
+            }
+        }
+        server
+            .db
+            .lock()
+            .unwrap()
+            .execute("UPDATE providers SET config=?1", [config.to_string()])
+            .unwrap();
+        let (status, loaded, _) = request(
+            &server,
+            Method::GET,
+            "/api/ai/config",
+            Value::Null,
+            Some(&cookie),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK, "{loaded}");
+        assert_eq!(
+            loaded["config"]["prompts"]["itemImage"],
+            defaults["itemImage"]
+        );
+        assert_eq!(
+            loaded["config"]["prompts"]["recipeImage"],
+            defaults["recipeImage"]
+        );
+        assert_eq!(
+            loaded["config"]["prompts"]["assistant"],
+            if config["prompts"]["assistant"] == "Custom assistant instructions." {
+                json!("Custom assistant instructions.")
+            } else {
+                defaults["assistant"].clone()
+            }
+        );
+        assert_eq!(loaded["companion"]["paired"], true);
+        assert_eq!(loaded["hasKey"], false);
+        assert_eq!(
+            server
+                .db
+                .lock()
+                .unwrap()
+                .query_row("SELECT secret FROM providers", [], |row| row
+                    .get::<_, String>(0))
+                .unwrap(),
+            secret
+        );
+    }
+    // Default text edited only for whitespace still receives the existing icon style sheet.
+    let mut config = initial["config"].clone();
+    config["prompts"] =
+        json!({"itemImage": format!(" {}\n", defaults["itemImage"].as_str().unwrap())});
+    let (status, saved, _) = request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config,"apiKey":null}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(
+        saved["config"]["prompts"]["assistant"],
+        defaults["assistant"]
+    );
+    let renderer = server.clone();
+    let waiting = tokio::spawn(async move {
+        ai::render_image(&renderer, &household, ai::ImageKind::Item, "Pear").await
+    });
+    let mut job = Value::Null;
+    for _ in 0..100 {
+        job = companion::claim(axum::extract::State(server.clone()), headers.clone())
+            .await
+            .unwrap()
+            .0["job"]
+            .clone();
+        if !job.is_null() {
+            break;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    assert_eq!(job["path"], "images/generations");
+    let body = &job["body"];
+    assert!(
+        body["prompt"]
+            .as_str()
+            .unwrap()
+            .contains(defaults["itemImage"].as_str().unwrap())
+    );
+    assert!(
+        !body["prompt"]
+            .as_str()
+            .unwrap()
+            .contains(defaults["recipeImage"].as_str().unwrap())
+    );
+    assert_eq!(body["background"], "transparent");
+    assert_eq!(body["output_format"], "png");
+    assert_eq!(body["size"], "816x816");
+    assert!(
+        body["reference_images"][0]
+            .as_str()
+            .unwrap()
+            .starts_with("data:image/png;base64,")
+    );
+    let mut image = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::ImageRgba8(image::RgbaImage::new(32, 32))
+        .write_to(&mut image, image::ImageFormat::Png)
+        .unwrap();
+    let _ = companion::complete(axum::extract::State(server.clone()), headers, Json(companion::Completion {
+        id: job["id"].as_str().unwrap().into(), lease: job["lease"].as_str().unwrap().into(), failed:false,
+        result:Some(json!({"data":[{"b64_json":base64::engine::general_purpose::STANDARD.encode(image.get_ref())}]})),
+    })).await.unwrap();
+    assert_eq!(waiting.await.unwrap().unwrap().mime, "image/webp");
+}
+
 #[tokio::test]
 async fn item_icons_are_opt_in_durable_deduplicated_private_and_retryable() {
     use axum::{Json, routing::post};

@@ -699,9 +699,76 @@ try {
     res.end(JSON.stringify({ choices: [{ message: { content } }] }))
   })
   await new Promise((resolve) => provider.listen(0, '127.0.0.1', resolve))
+  const promptDefaults = (await request(owner, '/ai/config', undefined, 'GET'))
+    .promptDefaults
+  let failConfigOnce = true
+  const failingSettings = async (route) => {
+    if (route.request().method() === 'GET' && failConfigOnce) {
+      failConfigOnce = false
+      await route.fulfill({
+        status: 503,
+        contentType: 'application/json',
+        body: JSON.stringify({ message: 'Settings temporarily unavailable.' }),
+      })
+    } else await route.continue()
+  }
+  await owner.route('**/api/ai/config', failingSettings)
   await owner.goto(frontendUrl + '/settings')
   await settle(owner)
+  await owner
+    .getByRole('button', {
+      name: 'Retry loading assistant settings',
+      exact: true,
+    })
+    .waitFor()
+  assert.equal(
+    await owner
+      .getByLabel('Item and shop icon instructions', { exact: true })
+      .count(),
+    0,
+  )
+  assert.equal(
+    await owner
+      .getByRole('button', { name: 'Save provider', exact: true })
+      .count(),
+    0,
+  )
+  await owner
+    .getByRole('button', {
+      name: 'Retry loading assistant settings',
+      exact: true,
+    })
+    .click()
+  await owner.getByText('Configure AI assistant', { exact: true }).waitFor()
+  failConfigOnce = true
+  await owner.reload()
+  await settle(owner)
+  await owner
+    .getByRole('button', {
+      name: 'Retry loading assistant settings',
+      exact: true,
+    })
+    .waitFor()
+  await owner.evaluate(() => window.dispatchEvent(new Event('online')))
+  await owner.getByText('Configure AI assistant', { exact: true }).waitFor()
+  await owner.unroute('**/api/ai/config', failingSettings)
   await owner.getByText('Configure AI assistant', { exact: true }).click()
+  await owner.getByText('Advanced prompts', { exact: true }).click()
+  for (const [key, label] of [
+    ['assistant', 'Assistant system instructions'],
+    ['itemImage', 'Item and shop icon instructions'],
+    ['recipeImage', 'Recipe photo instructions'],
+  ]) {
+    assert.ok(promptDefaults[key].length > 100)
+    assert.equal(
+      await owner.getByLabel(label, { exact: true }).inputValue(),
+      promptDefaults[key],
+    )
+  }
+  await owner.getByText('Advanced prompts', { exact: true }).click()
+  console.log(
+    'Assistant settings failures recover through Retry/reconnect without exposing blank defaults or Save controls; all prompt fields contain server defaults.',
+  )
   await owner
     .getByLabel('Enable the household assistant', { exact: true })
     .check()
