@@ -6,7 +6,7 @@ The companion runs on the personal agent machine and polls the private LittleCup
 
 ## Pairing
 
-Use a dedicated profile with exactly one locally owned Codex OAuth credential labeled `personal`; profiles otherwise can borrow the root account. On Pear the profile is already created and logged in. To set up another machine:
+Use a dedicated profile with exactly one locally owned Codex OAuth credential labeled `personal`; profiles otherwise can borrow the root account. On Honeydew the existing `forkbasket` profile is already created and logged in. Keep that profile name to preserve its isolated personal credential. To set up another machine:
 
 ```sh
 hermes profile create littlecupboard --no-alias
@@ -24,7 +24,7 @@ The setup command accepts the token at a masked prompt, writes a mode-0600 profi
 
 Administrators can run `--check-companion [HOUSEHOLD_ID] [--image]` in the same server environment to verify model discovery and a live chat reply through the actual queue. The optional image check creates an unattached private test image and prints only its app URL and sanitized connection metadata.
 
-Pear's NixOS/Home Manager configuration provides `littlecupboard-companion.service`, using the pinned Node runtime and installed Hermes launcher. The service restricts writes to the personal profile and Hermes's managed installation cache/locks, and blocks access to Codex CLI/root Hermes authentication files. The user manager already has linger enabled. The service remains conditional on pairing and requires a checkout at `~/littlecupboard`; deploy updated scripts before restarting it. Nothing changes the existing Hermes gateway or this coding session's company login.
+Honeydew's NixOS/Home Manager configuration provides `littlecupboard-companion.service`, using the pinned Node runtime and installed Hermes launcher. The service restricts writes to the personal profile and Hermes's managed installation cache/locks, and blocks access to Codex CLI/root Hermes authentication files. The user manager already has linger enabled. The service remains conditional on pairing and requires a checkout at `~/littlecupboard`; deploy updated scripts before restarting it. Nothing changes the existing Hermes gateway or this coding session's company login.
 
 ```sh
 systemctl --user restart littlecupboard-companion
@@ -67,3 +67,5 @@ The live test is explicitly opt-in: it consumes personal subscription usage, cre
 ### Existing personal companion after rebranding
 
 The production companion runs on Honeydew. Preserve its dedicated `forkbasket` Hermes profile and existing `forkbasket-companion.json` pairing file; the new worker reads that filename when the new filename is absent. Change only the saved URL to `https://littlecupboard.fruitiex.org`, preserving the token and file permissions. Run the new service from `~/littlecupboard` with `--profile forkbasket`. New installations may use a `littlecupboard` profile. This does not import or touch default/company credentials.
+
+This transition was completed on 2026-10-02. Honeydew's Home Manager generation installs and runs `littlecupboard-companion.service`; the former unit is stopped and removed. The pairing URL now uses the new ingress, with its token and mode-0600 permissions preserved. Production model discovery and `gpt-6-luna` / `xhigh` chat passed through the new URL, and the worker remains active with zero restarts. Both machines retain `~/forkbasket` as a compatibility symlink to `~/littlecupboard`.
