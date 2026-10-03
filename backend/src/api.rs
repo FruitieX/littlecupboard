@@ -465,8 +465,16 @@ fn encode_image_options(bytes: &[u8], edge: u32, source: bool) -> Result<StoredI
     })
 }
 pub fn save_image(server: &Server, household: &str, image: StoredImage) -> Result<Json<Value>> {
-    let id = Uuid::new_v4().to_string();
     let conn = server.db.lock()?;
+    let url = insert_image(&conn, household, image)?;
+    Ok(Json(json!({"url": url})))
+}
+pub(crate) fn insert_image(
+    conn: &rusqlite::Connection,
+    household: &str,
+    image: StoredImage,
+) -> Result<String> {
+    let id = Uuid::new_v4().to_string();
     let size: i64 = conn.query_row(
         "SELECT COALESCE(SUM(length(bytes)),0) FROM uploads WHERE household_id=?1",
         [household],
@@ -488,7 +496,7 @@ pub fn save_image(server: &Server, household: &str, image: StoredImage) -> Resul
             image.source
         ],
     )?;
-    Ok(Json(json!({"url":format!("/api/images/{id}")})))
+    Ok(format!("/api/images/{id}"))
 }
 pub async fn image(
     State(server): State<Server>,

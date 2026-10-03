@@ -14,7 +14,7 @@ pub fn missing_icon(product: &Product) -> bool {
         && matches!(product.icon.trim(), "" | "🛒")
 }
 
-fn config_for(conn: &Connection, household: &str) -> Result<Option<ai::ProviderConfig>> {
+pub(crate) fn config_for(conn: &Connection, household: &str) -> Result<Option<ai::ProviderConfig>> {
     let config: Option<String> = conn
         .query_row(
             "SELECT config FROM providers WHERE household_id=?1",

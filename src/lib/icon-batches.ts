@@ -1,7 +1,6 @@
 import type { Product } from './data'
-import { post } from './http'
+import { awaitAiJob, createAiJob } from './ai-jobs'
 import type { IconResult } from './api/IconResult'
-import type { IconBatchResponse } from './api/IconBatchResponse'
 
 export type GeneratedIcon = IconResult
 export function needsItemIcon(product: Product) {
@@ -10,18 +9,31 @@ export function needsItemIcon(product: Product) {
 export async function generateIconBatches(
   products: Product[],
   onBatch: (icons: GeneratedIcon[]) => void,
-  proposalId?: string,
+  options: {
+    proposalId?: string
+    scope?: string
+    onTrouble?: (trouble: boolean) => void
+  } = {},
 ) {
-  // One provider request per sheet; keep completed previews if a later sheet
-  // fails. Never regenerate already chosen images in a missing-icons action.
+  // One durable server-side sheet per request; keep completed previews if a
+  // later sheet fails. Never regenerate already chosen images in a
+  // missing-icons action.
   for (let offset = 0; offset < products.length; offset += 16) {
     const items = products
       .slice(offset, offset + 16)
       .map(({ id, name, category }) => ({ id, name, category }))
-    const result = await post<IconBatchResponse>('/ai/icon-batch', {
+    const created = await createAiJob({
+      kind: 'sheet',
+      scope: options.scope,
+      proposalId: options.proposalId,
       items,
-      ...(proposalId ? { proposalId } : {}),
     })
-    onBatch(result.icons)
+    const job = await awaitAiJob(created.jobId, options.onTrouble)
+    if (job.status !== 'done' || !job.icons?.length) {
+      throw new Error(
+        job.error || 'The icons could not be generated. Try again.',
+      )
+    }
+    onBatch(job.icons)
   }
 }

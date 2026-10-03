@@ -988,6 +988,16 @@ pub enum ImageKind {
     #[default]
     Recipe,
 }
+impl ImageKind {
+    pub(crate) fn parse(value: &str) -> Option<Self> {
+        match value {
+            "item" => Some(Self::Item),
+            "store" => Some(Self::Store),
+            "recipe" => Some(Self::Recipe),
+            _ => None,
+        }
+    }
+}
 pub fn image_prompt(config: &ProviderConfig, kind: &ImageKind, subject: &str) -> String {
     match kind {
         ImageKind::Item | ImageKind::Store => format!(
@@ -1011,26 +1021,28 @@ pub struct ImageRequest {
     pub recipe_id: Option<String>,
     pub product_id: Option<String>,
 }
-pub async fn generate_image(
-    State(server): State<Server>,
-    headers: HeaderMap,
-    Json(input): Json<ImageRequest>,
-) -> Result<Json<Value>> {
-    let actor = authenticate(&server, &headers)?;
-    server.rate_limit(&format!("ai-image:{}", actor.household_id), 20, 3600)?;
-    let proposal_recipe = match (&input.proposal_id, &input.recipe_id, &input.product_id) {
-        (Some(id), Some(recipe_id), None) if input.kind == ImageKind::Recipe => {
-            let conn = server.db.lock()?;
-            let proposal = image_proposal(&conn, &actor.household_id, id)?;
+/// Resolve the generation subject for a proposal recipe/ingredient item or a
+/// plain prompt. Shared by the synchronous endpoint and the durable job queue.
+pub(crate) fn resolve_image_subject(
+    conn: &rusqlite::Connection,
+    household: &str,
+    kind: &ImageKind,
+    prompt: &str,
+    proposal_id: Option<&str>,
+    recipe_id: Option<&str>,
+    product_id: Option<&str>,
+) -> Result<String> {
+    let proposal_recipe = match (proposal_id, recipe_id, product_id) {
+        (Some(id), Some(recipe_id), None) if kind == &ImageKind::Recipe => {
+            let proposal = image_proposal(conn, household, id)?;
             let recipe = proposal
                 .recipes
                 .iter()
-                .find(|recipe| &recipe.id == recipe_id)
+                .find(|recipe| recipe.id == recipe_id)
                 .ok_or_else(|| ApiError::bad("Choose a recipe in this proposal."))?;
-            let known =
-                domain::products(&Database::snapshot(&conn, &actor.household_id)?.state, true)
-                    .into_iter()
-                    .chain(proposal.products);
+            let known = domain::products(&Database::snapshot(conn, household)?.state, true)
+                .into_iter()
+                .chain(proposal.products);
             let products: Vec<_> = known.collect();
             Some(format!(
                 "{}; {}. Ingredients: {}. Method: {}",
@@ -1055,19 +1067,21 @@ pub async fn generate_image(
                 recipe.steps.join(" ")
             ))
         }
-        (Some(id), None, Some(product_id)) if input.kind == ImageKind::Item => {
-            let conn = server.db.lock()?;
-            let proposal = image_proposal(&conn, &actor.household_id, id)?;
+        (Some(id), None, Some(product_id)) if kind == &ImageKind::Item => {
+            let proposal = image_proposal(conn, household, id)?;
             Some(
                 proposal
                     .products
                     .iter()
-                    .find(|product| &product.id == product_id)
+                    .find(|product| product.id == product_id)
                     .ok_or_else(|| ApiError::bad("Choose a new item in this proposal."))?
                     .name
                     .clone(),
             )
         }
+        // A plain prompt tagged with the item it belongs to (dialog recovery
+        // matching); the subject stays the caller's prompt.
+        (None, None, Some(_)) => None,
         (None, None, None) => None,
         _ => {
             return Err(ApiError::bad(
@@ -1075,13 +1089,34 @@ pub async fn generate_image(
             ));
         }
     };
-    let subject = proposal_recipe.as_deref().unwrap_or(&input.prompt);
+    let subject = proposal_recipe.as_deref().unwrap_or(prompt);
     if subject.trim().is_empty() || (proposal_recipe.is_none() && subject.len() > 4000) {
         return Err(ApiError::bad(
             "Describe the image in up to 4,000 characters.",
         ));
     }
-    let image = render_image(&server, &actor.household_id, input.kind.clone(), subject).await?;
+    Ok(subject.to_string())
+}
+pub async fn generate_image(
+    State(server): State<Server>,
+    headers: HeaderMap,
+    Json(input): Json<ImageRequest>,
+) -> Result<Json<Value>> {
+    let actor = authenticate(&server, &headers)?;
+    server.rate_limit(&format!("ai-image:{}", actor.household_id), 20, 3600)?;
+    let subject = {
+        let conn = server.db.lock()?;
+        resolve_image_subject(
+            &conn,
+            &actor.household_id,
+            &input.kind,
+            &input.prompt,
+            input.proposal_id.as_deref(),
+            input.recipe_id.as_deref(),
+            input.product_id.as_deref(),
+        )?
+    };
+    let image = render_image(&server, &actor.household_id, input.kind.clone(), &subject).await?;
     let result = api::save_image(&server, &actor.household_id, image)?;
     if let (Some(id), Some(recipe_id)) = (&input.proposal_id, &input.recipe_id) {
         let conn = server.db.lock()?;

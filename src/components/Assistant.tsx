@@ -13,6 +13,14 @@ import {
 import { useApp } from '../lib/state'
 import { post, uploadImage } from '../lib/http'
 import { generateIconBatches, needsItemIcon } from '../lib/icon-batches'
+import {
+  awaitAiJob,
+  createAiJob,
+  fetchAiJobs,
+  isJobActive,
+  watchAiJob,
+} from '../lib/ai-jobs'
+import type { AiJobView } from '../lib/ai-jobs'
 import { Markdown } from './Markdown'
 import { FoodIcon } from './FoodIcon'
 import type { Ingredient, Product, Recipe } from '../lib/data'
@@ -72,6 +80,88 @@ export function Assistant() {
       setError('')
     }
   }, [applied, proposal?.id, lastAppliedProposal])
+  function applyJobResult(job: AiJobView) {
+    if (job.status !== 'done') return
+    setProposal((current) => {
+      if (!current) return current
+      if (job.icons?.length) {
+        return {
+          ...current,
+          products: current.products.map((product) => {
+            const icon = job.icons?.find((entry) => entry.id === product.id)
+            return icon && needsItemIcon(product)
+              ? { ...product, image: icon.url }
+              : product
+          }),
+        }
+      }
+      if (job.url && job.recipeId) {
+        return {
+          ...current,
+          recipes: current.recipes.map((recipe) =>
+            recipe.id === job.recipeId
+              ? { ...recipe, image: job.url! }
+              : recipe,
+          ),
+        }
+      }
+      if (job.url && job.productId) {
+        return {
+          ...current,
+          products: current.products.map((product) =>
+            product.id === job.productId
+              ? { ...product, image: job.url! }
+              : product,
+          ),
+        }
+      }
+      return current
+    })
+  }
+  // Reopening the assistant collects generations that finished (or are still
+  // running) while the phone was asleep or the dialog was closed.
+  useEffect(() => {
+    if (!open || !proposal) return
+    let active = true
+    const stops: (() => void)[] = []
+    const targetFor = (job: AiJobView) =>
+      job.recipeId ?? job.productId ?? (job.kind === 'sheet' ? 'batch' : null)
+    void fetchAiJobs({ proposal: proposal.id })
+      .then((jobs) => {
+        if (!active) return
+        const applied = new Set<string>()
+        for (const job of jobs) {
+          const target = targetFor(job)
+          if (job.status === 'done') {
+            // Newest first: an older single picture must not overwrite a
+            // newer one; sheets merge their own distinct icons.
+            if (job.url && target && applied.has(target)) continue
+            if (job.url && target) applied.add(target)
+            applyJobResult(job)
+            continue
+          }
+          if (!isJobActive(job)) continue
+          if (target) setGenerating((current) => current ?? target)
+          stops.push(
+            watchAiJob(job.id, (update) => {
+              if (update.status === 'done') applyJobResult(update)
+              if (!isJobActive(update) && target)
+                setGenerating((current) =>
+                  current === target ? null : current,
+                )
+            }),
+          )
+        }
+      })
+      .catch(() => {
+        /* Recovery is best effort; the buttons still work. */
+      })
+    return () => {
+      active = false
+      stops.forEach((stop) => stop())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, proposal?.id])
   if (!session.aiEnabled) return null
   async function attach(files: File[]) {
     if (busy || uploading || generating || status === 'offline') return
@@ -136,23 +226,15 @@ export function Assistant() {
     setGenerating(recipe.id)
     setError('')
     try {
-      const result = await post<{ url: string }>('/ai/image', {
+      const created = await createAiJob({
         kind: 'recipe',
         proposalId: proposal.id,
         recipeId: recipe.id,
       })
-      setProposal((current) =>
-        current
-          ? {
-              ...current,
-              recipes: current.recipes.map((entry) =>
-                entry.id === recipe.id
-                  ? { ...entry, image: result.url }
-                  : entry,
-              ),
-            }
-          : current,
-      )
+      const job = await awaitAiJob(created.jobId)
+      if (job.status !== 'done' || !job.url)
+        throw new Error(job.error || 'The photo could not be generated.')
+      applyJobResult(job)
     } catch (error) {
       setError(
         error instanceof Error
@@ -168,23 +250,15 @@ export function Assistant() {
     setGenerating(product.id)
     setError('')
     try {
-      const result = await post<{ url: string }>('/ai/image', {
+      const created = await createAiJob({
         kind: 'item',
         proposalId: proposal.id,
         productId: product.id,
       })
-      setProposal((current) =>
-        current
-          ? {
-              ...current,
-              products: current.products.map((entry) =>
-                entry.id === product.id
-                  ? { ...entry, image: result.url }
-                  : entry,
-              ),
-            }
-          : current,
-      )
+      const job = await awaitAiJob(created.jobId)
+      if (job.status !== 'done' || !job.url)
+        throw new Error(job.error || 'The icon could not be generated.')
+      applyJobResult(job)
     } catch (error) {
       setError(
         error instanceof Error
@@ -217,7 +291,7 @@ export function Assistant() {
               : current,
           )
         },
-        proposal.id,
+        { proposalId: proposal.id },
       )
     } catch (error) {
       setError(

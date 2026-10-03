@@ -1947,6 +1947,371 @@ async fn compatible_image_generation_stores_a_private_resized_attachment() {
 }
 
 #[tokio::test]
+async fn durable_image_jobs_are_idempotent_recoverable_and_deliver_private_results() {
+    use axum::routing::post;
+    use base64::Engine;
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::new_rgb8(24, 24)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    let encoded = base64::engine::general_purpose::STANDARD.encode(png.into_inner());
+    let calls = std::sync::Arc::new(std::sync::Mutex::new(0u32));
+    let image_calls = calls.clone();
+    let fixture = Router::new().route(
+        "/v1/images/generations",
+        post(move |Json(_body): Json<Value>| {
+            *image_calls.lock().unwrap() += 1;
+            let encoded = encoded.clone();
+            async move { Json(json!({"data":[{"b64_json":encoded}]})) }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let task = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"fixture-image","imageSize":"1024x1024","responseFormat":"json","tokenParameter":"omit"});
+    assert_eq!(
+        request(
+            &server,
+            Method::PUT,
+            "/api/ai/config",
+            json!({"config":config,"apiKey":"fixture-key"}),
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(
+            &server,
+            Method::POST,
+            "/api/ai/jobs",
+            json!({"kind":"item","prompt":"A pear"}),
+            None
+        )
+        .await
+        .0,
+        StatusCode::UNAUTHORIZED
+    );
+    let body = json!({"requestId":"request-one","scope":"item:pear","kind":"item","prompt":"A pear","productId":"household-pear"});
+    let (status, created, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/jobs",
+        body.clone(),
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    assert_eq!(created["status"], "queued");
+    let job_id = created["jobId"].as_str().unwrap().to_string();
+    // A lost response retried with the same request id collects the job.
+    let (_, retried, _) = request(&server, Method::POST, "/api/ai/jobs", body, Some(&owner)).await;
+    assert_eq!(retried["jobId"], job_id);
+    // An identical request while work is queued is adopted, not doubled.
+    let (_, adopted, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/jobs",
+        json!({"requestId":"request-two","scope":"item:pear","kind":"item","prompt":"A pear","productId":"household-pear"}),
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(adopted["jobId"], job_id);
+    let count: i64 = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT count(*) FROM ai_image_jobs", [], |row| row.get(0))
+        .unwrap();
+    assert_eq!(count, 1);
+    // A dialog recovers queued work by scope, then the finished result.
+    let (status, listed, _) = request(
+        &server,
+        Method::GET,
+        "/api/ai/jobs?scope=item:pear",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(listed["jobs"][0]["id"], job_id);
+    assert_eq!(listed["jobs"][0]["status"], "queued");
+    assert!(crate::image_jobs::run_one(&server).await.unwrap());
+    assert!(!crate::image_jobs::run_one(&server).await.unwrap());
+    let (_, finished, _) = request(
+        &server,
+        Method::GET,
+        &format!("/api/ai/jobs?id={job_id}"),
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(finished["jobs"][0]["status"], "done");
+    let url = finished["jobs"][0]["url"].as_str().unwrap();
+    let response = app(server.clone())
+        .oneshot(
+            Request::builder()
+                .uri(url)
+                .header(header::COOKIE, &owner)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        request(&server, Method::GET, url, Value::Null, None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    assert_eq!(*calls.lock().unwrap(), 1);
+    let (_, recovered, _) = request(
+        &server,
+        Method::GET,
+        "/api/ai/jobs?scope=item:pear",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(recovered["jobs"][0]["status"], "done");
+    assert_eq!(recovered["jobs"][0]["url"], url);
+    task.abort();
+}
+
+#[tokio::test]
+async fn image_job_failures_are_explicit_and_unavailable_work_waits_then_expires() {
+    use axum::routing::post;
+    let fixture = Router::new().route(
+        "/v1/images/generations",
+        post(|| async {
+            (
+                StatusCode::TOO_MANY_REQUESTS,
+                Json(json!({"error":"quota"})),
+            )
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let task = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"fixture-image","imageSize":"1024x1024","responseFormat":"json","tokenParameter":"omit"});
+    assert_eq!(
+        request(
+            &server,
+            Method::PUT,
+            "/api/ai/config",
+            json!({"config":config,"apiKey":"fixture-key"}),
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (_, created, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/jobs",
+        json!({"requestId":"failing-one","scope":"item:failing","kind":"item","prompt":"A lemon"}),
+        Some(&owner),
+    )
+    .await;
+    let failing = created["jobId"].as_str().unwrap().to_string();
+    assert!(crate::image_jobs::run_one(&server).await.unwrap());
+    let (_, view, _) = request(
+        &server,
+        Method::GET,
+        &format!("/api/ai/jobs?id={failing}"),
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(view["jobs"][0]["status"], "failed");
+    assert_eq!(
+        view["jobs"][0]["error"],
+        "The provider is busy or its quota is exhausted. Try again later."
+    );
+    // Companion work waits while the personal agent is away instead of
+    // failing instantly; overly old queued work expires with a clear reason.
+    let companion = json!({"enabled":true,"transport":"companion","baseUrl":"http://127.0.0.1:9/v1","model":"fixture-chat","imageModel":"fixture-image","imageSize":"1024x1024","responseFormat":"json","tokenParameter":"omit"});
+    assert_eq!(
+        request(
+            &server,
+            Method::PUT,
+            "/api/ai/config",
+            json!({"config":companion,"apiKey":null}),
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    let (_, waiting, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/jobs",
+        json!({"requestId":"waiting-one","scope":"item:waiting","kind":"item","prompt":"A plum"}),
+        Some(&owner),
+    )
+    .await;
+    let waiting_id = waiting["jobId"].as_str().unwrap().to_string();
+    assert!(!crate::image_jobs::run_one(&server).await.unwrap());
+    let (_, queued, _) = request(
+        &server,
+        Method::GET,
+        &format!("/api/ai/jobs?id={waiting_id}"),
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(queued["jobs"][0]["status"], "queued");
+    server
+        .db
+        .lock()
+        .unwrap()
+        .execute(
+            "UPDATE ai_image_jobs SET created_at=unixepoch()-2000 WHERE id=?1",
+            rusqlite::params![waiting_id],
+        )
+        .unwrap();
+    assert!(!crate::image_jobs::run_one(&server).await.unwrap());
+    let (_, expired, _) = request(
+        &server,
+        Method::GET,
+        &format!("/api/ai/jobs?id={waiting_id}"),
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(expired["jobs"][0]["status"], "failed");
+    assert_eq!(
+        expired["jobs"][0]["error"],
+        "The assistant was unavailable for too long. Try again."
+    );
+    task.abort();
+}
+
+#[tokio::test]
+async fn durable_icon_sheet_jobs_deliver_icons_and_attach_proposal_images_server_side() {
+    use axum::routing::post;
+    use base64::Engine;
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::new_rgb8(24, 24)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    let encoded = base64::engine::general_purpose::STANDARD.encode(png.into_inner());
+    let calls = std::sync::Arc::new(std::sync::Mutex::new(0u32));
+    let image_calls = calls.clone();
+    let fixture = Router::new().route(
+        "/v1/images/generations",
+        post(move |Json(_body): Json<Value>| {
+            *image_calls.lock().unwrap() += 1;
+            let encoded = encoded.clone();
+            async move { Json(json!({"data":[{"b64_json":encoded}]})) }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let task = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"fixture-image","imageSize":"1024x1024","responseFormat":"json","tokenParameter":"omit"});
+    assert_eq!(
+        request(
+            &server,
+            Method::PUT,
+            "/api/ai/config",
+            json!({"config":config,"apiKey":"fixture-key"}),
+            Some(&owner)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    // A draft icon sheet recovers by scope and returns per-item icons.
+    let (status, created, _) = request(&server,Method::POST,"/api/ai/jobs",json!({"requestId":"sheet-one","scope":"recipe:r1","kind":"sheet","items":[{"id":"draft-pear","name":"Pear","category":"Fruits"}]}),Some(&owner)).await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    assert!(crate::image_jobs::run_one(&server).await.unwrap());
+    let (_, sheet, _) = request(
+        &server,
+        Method::GET,
+        &format!("/api/ai/jobs?id={}", created["jobId"].as_str().unwrap()),
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(sheet["jobs"][0]["status"], "done");
+    assert_eq!(sheet["jobs"][0]["icons"][0]["id"], "draft-pear");
+    let icon_url = sheet["jobs"][0]["icons"][0]["url"].as_str().unwrap();
+    assert!(icon_url.starts_with("/api/images/"));
+    assert_eq!(
+        request(&server, Method::GET, icon_url, Value::Null, None)
+            .await
+            .0,
+        StatusCode::UNAUTHORIZED
+    );
+    // A picture for a proposal product attaches to the stored proposal so a
+    // reopened assistant shows it without rerunning anything.
+    let household: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT id FROM households", [], |row| row.get(0))
+        .unwrap();
+    let revision = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1["revision"]
+        .as_u64()
+        .unwrap();
+    let proposal = json!({"id":"proposal-attach","message":"Try this","products":[{"id":"proposal-pear","name":"Pear","category":"Fruits","icon":"🛒","aliases":[]}],"shopping":[],"recipes":[],"plan":[],"baseRevision":revision});
+    server
+        .db
+        .lock()
+        .unwrap()
+        .execute(
+            "INSERT INTO ai_proposals(id,household_id,proposal,created_at) VALUES('proposal-attach',?1,?2,unixepoch())",
+            rusqlite::params![household, proposal.to_string()],
+        )
+        .unwrap();
+    let (_, attached, _) = request(&server,Method::POST,"/api/ai/jobs",json!({"requestId":"attach-one","kind":"item","proposalId":"proposal-attach","productId":"proposal-pear"}),Some(&owner)).await;
+    assert_eq!(attached["status"], "queued");
+    assert!(crate::image_jobs::run_one(&server).await.unwrap());
+    let (_, job, _) = request(
+        &server,
+        Method::GET,
+        &format!("/api/ai/jobs?id={}", attached["jobId"].as_str().unwrap()),
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(job["jobs"][0]["status"], "done");
+    let stored: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row(
+            "SELECT proposal FROM ai_proposals WHERE id='proposal-attach'",
+            [],
+            |row| row.get(0),
+        )
+        .unwrap();
+    let stored: Value = serde_json::from_str(&stored).unwrap();
+    assert_eq!(stored["products"][0]["image"], job["jobs"][0]["url"]);
+    assert_eq!(*calls.lock().unwrap(), 2);
+    task.abort();
+}
+
+#[tokio::test]
 async fn recipe_vision_icon_alpha_and_generated_draft_photos_are_private_and_reviewed() {
     use axum::routing::post;
     use base64::Engine;
@@ -2872,7 +3237,7 @@ async fn partial_store_routes_are_guarded_validated_and_survive_backup_restore()
                 0
             ))
             .unwrap(),
-        9
+        10
     );
     // Old catalog customizations lacking images inherit new bundled art.
     let mut household: model::HouseholdState =

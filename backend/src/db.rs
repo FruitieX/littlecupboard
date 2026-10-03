@@ -59,7 +59,7 @@ impl Database {
             [],
             |row| row.get(0),
         )?;
-        if version > 9 {
+        if version > 10 {
             return Err(ApiError::internal(
                 "This database was created by a newer LittleCupboard version. Restore a compatible backup before downgrading.",
             ));
@@ -109,8 +109,17 @@ impl Database {
             conn.execute_batch(include_str!("../migrations/009_recipe_planning.sql"))?;
             conn.execute_batch("COMMIT")?;
         }
+        if version < 10 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/010_ai_jobs.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
         conn.execute(
             "DELETE FROM companion_jobs WHERE deadline < unixepoch()",
+            [],
+        )?;
+        conn.execute(
+            "DELETE FROM ai_image_jobs WHERE status IN ('done','failed','canceled') AND COALESCE(finished_at,created_at) < unixepoch()-604800",
             [],
         )?;
         conn.execute("DELETE FROM sessions WHERE expires_at < unixepoch()", [])?;

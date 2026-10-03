@@ -1509,6 +1509,126 @@ try {
   console.log(
     'Private store-map review, editable aisle subsets, SSE persistence, omitted-item visibility and responsive controls passed.',
   )
+  // Durable generation: closing an editor or reloading the page while an
+  // image is being generated must not fail it, and reopening recovers the
+  // finished picture so it can still be saved.
+  for (const [id, name] of [
+    ['recovery-tomatoes', 'Recovery tomatoes'],
+    ['recovery-olives', 'Recovery olives'],
+  ]) {
+    await request(owner, '/operations', {
+      id: crypto.randomUUID(),
+      operation: {
+        type: 'patch',
+        label: 'Generation recovery fixture',
+        changes: [
+          {
+            collection: 'customProducts',
+            key: id,
+            field: null,
+            before: null,
+            after: {
+              id,
+              name,
+              category: 'Vegetables',
+              icon: '🛒',
+              aliases: [],
+            },
+          },
+        ],
+      },
+    })
+    await request(owner, '/operations', {
+      id: crypto.randomUUID(),
+      operation: {
+        type: 'addItem',
+        productId: id,
+        quantity: 1,
+        unit: 'pc',
+        note: '',
+        accumulate: false,
+      },
+    })
+  }
+  await owner.goto(frontendUrl)
+  await settle(owner)
+  imageDelay = 8000
+  await hold(
+    owner,
+    owner.getByRole('button', { name: 'Check Recovery tomatoes', exact: true }),
+  )
+  await owner
+    .getByRole('button', { name: 'Generate icon', exact: true })
+    .first()
+    .click()
+  await owner.getByText(/Waiting to start|Generating your icon/).waitFor()
+  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await owner.getByRole('dialog').waitFor({ state: 'hidden' })
+  await hold(
+    owner,
+    owner.getByRole('button', { name: 'Check Recovery tomatoes', exact: true }),
+  )
+  await owner.waitForFunction(
+    () =>
+      !!document.querySelector('.image-field-preview[src^="/api/images/"]') ||
+      !!document.querySelector('.image-field [role="status"]'),
+  )
+  await owner.waitForFunction(
+    () => !!document.querySelector('.image-field-preview[src^="/api/images/"]'),
+    null,
+    { timeout: 45000 },
+  )
+  assert.equal(
+    await owner.getByRole('dialog').locator('.form-error').count(),
+    0,
+  )
+  await owner.getByRole('button', { name: 'Save details', exact: true }).click()
+  await owner.getByRole('dialog').waitFor({ state: 'hidden' })
+  await eventually(async () =>
+    (
+      (await request(owner, '/state', undefined, 'GET')).state.productImages?.[
+        'recovery-tomatoes'
+      ] ?? ''
+    ).startsWith('/api/images/'),
+  )
+  // A full reload (phone asleep or tab dropped) still recovers the job.
+  await hold(
+    owner,
+    owner.getByRole('button', { name: 'Check Recovery olives', exact: true }),
+  )
+  await owner
+    .getByRole('button', { name: 'Generate icon', exact: true })
+    .first()
+    .click()
+  await owner.getByText(/Waiting to start|Generating your icon/).waitFor()
+  await owner.reload()
+  await settle(owner)
+  await hold(
+    owner,
+    owner.getByRole('button', { name: 'Check Recovery olives', exact: true }),
+  )
+  await owner.waitForFunction(
+    () => !!document.querySelector('.image-field-preview[src^="/api/images/"]'),
+    null,
+    { timeout: 45000 },
+  )
+  await owner.getByRole('button', { name: 'Save details', exact: true }).click()
+  await owner.getByRole('dialog').waitFor({ state: 'hidden' })
+  await eventually(async () =>
+    (
+      (await request(owner, '/state', undefined, 'GET')).state.productImages?.[
+        'recovery-olives'
+      ] ?? ''
+    ).startsWith('/api/images/'),
+  )
+  assert.equal(
+    await owner.getByText('Failed to fetch', { exact: false }).count(),
+    0,
+    'A sleeping phone or reload never surfaces a raw fetch failure',
+  )
+  imageDelay = 0
+  await owner.goto(`${frontendUrl}/settings/stores`)
+  await settle(owner)
   await owner
     .getByRole('link', { name: 'Manage item groups', exact: true })
     .click()
@@ -1637,6 +1757,16 @@ try {
   await owner
     .getByRole('button', { name: 'Generate dish photo', exact: true })
     .click()
+  await owner
+    .getByRole('button', { name: 'Generating dish photo…', exact: true })
+    .waitFor()
+  // Closing and reopening the assistant keeps collecting the server-side job.
+  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await owner
+    .getByRole('button', { name: 'Open family assistant', exact: true })
+    .click()
+  if (!(await owner.locator('.proposal-recipe').evaluate((node) => node.open)))
+    await owner.locator('.proposal-recipe summary').click()
   await owner.locator('.proposal-dish-photo').waitFor()
   await owner
     .getByRole('button', { name: 'Generate icon', exact: true })

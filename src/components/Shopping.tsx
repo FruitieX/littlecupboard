@@ -637,6 +637,10 @@ function ItemEditor({
         ) : null}
         <ImageField
           kind="item"
+          scope={
+            item?.id || existing?.id ? `item:${item?.id ?? existing?.id}` : ''
+          }
+          productId={item?.id ?? existing?.id}
           value={image}
           onChange={setImage}
           subject={name}

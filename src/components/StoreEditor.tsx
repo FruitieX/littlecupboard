@@ -100,6 +100,7 @@ export function StoreEditor({
         </label>
         <ImageField
           kind="store"
+          scope={store?.id ? `store:${store.id}` : ''}
           subject={name}
           value={image}
           onChange={setImage}

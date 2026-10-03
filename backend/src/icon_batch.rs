@@ -13,7 +13,7 @@ use ts_rs::TS;
 use uuid::Uuid;
 
 pub const MAX_BATCH: usize = 16;
-#[derive(Deserialize, TS)]
+#[derive(Deserialize, Serialize, TS)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[ts(export, export_to = "../../src/lib/api/")]
 pub struct IconSubject {
@@ -28,7 +28,7 @@ pub struct BatchRequest {
     pub items: Vec<IconSubject>,
     pub proposal_id: Option<String>,
 }
-#[derive(Serialize, TS)]
+#[derive(Deserialize, Serialize, TS)]
 #[serde(rename_all = "camelCase")]
 #[ts(export, export_to = "../../src/lib/api/")]
 pub struct IconResult {
@@ -48,16 +48,41 @@ pub async fn generate(
     Json(input): Json<BatchRequest>,
 ) -> Result<Json<IconBatchResponse>> {
     let actor = authenticate(&server, &headers)?;
-    if input.items.is_empty()
-        || input.items.len() > MAX_BATCH
-        || input
-            .items
+    validate_items(&input.items)?;
+    let items: Vec<Product> = {
+        let conn = server.db.lock()?;
+        resolve_items(
+            &conn,
+            &actor.household_id,
+            &input.items,
+            input.proposal_id.as_deref(),
+        )?
+    };
+    server.rate_limit(&format!("ai-image:{}", actor.household_id), 20, 3600)?;
+    let images = render(&server, &actor.household_id, &items).await?;
+    // All crops and the proposal association commit together. A stale proposal
+    // stores nothing and private storage limits cannot leave a partial batch.
+    let mut conn = server.db.lock()?;
+    let results = commit_sheet(
+        &mut conn,
+        &actor.household_id,
+        input.proposal_id.as_deref(),
+        &items,
+        images,
+    )?;
+    Ok(Json(IconBatchResponse { icons: results }))
+}
+
+pub(crate) fn validate_items(items: &[IconSubject]) -> Result<()> {
+    if items.is_empty()
+        || items.len() > MAX_BATCH
+        || items
             .iter()
             .map(|i| &i.id)
             .collect::<std::collections::BTreeSet<_>>()
             .len()
-            != input.items.len()
-        || input.items.iter().any(|i| {
+            != items.len()
+        || items.iter().any(|i| {
             i.id.is_empty()
                 || i.id.len() > 100
                 || i.name.trim().is_empty()
@@ -69,51 +94,56 @@ pub async fn generate(
             "Choose 1–16 unique, named items for an icon batch.",
         ));
     }
-    let items: Vec<Product> = {
-        let conn = server.db.lock()?;
-        let state = Database::snapshot(&conn, &actor.household_id)?.state;
-        let proposal = input
-            .proposal_id
-            .as_ref()
-            .map(|id| ai::image_proposal(&conn, &actor.household_id, id))
-            .transpose()?;
-        input
-            .items
-            .iter()
-            .map(|i| {
-                if let Some(proposal) = &proposal {
-                    proposal
-                        .products
-                        .iter()
-                        .find(|p| p.id == i.id)
-                        .cloned()
-                        .ok_or_else(|| ApiError::bad("Choose new items in this proposal."))
-                } else if state.groups.contains(&i.category) {
-                    Ok(Product {
-                        id: i.id.clone(),
-                        name: i.name.trim().into(),
-                        category: i.category.clone(),
-                        icon: "🛒".into(),
-                        aliases: vec![],
-                        image: None,
-                        interval: None,
-                    })
-                } else {
-                    Err(ApiError::bad("Choose an existing household item group."))
-                }
-            })
-            .collect::<Result<_>>()?
-    };
-    server.rate_limit(&format!("ai-image:{}", actor.household_id), 20, 3600)?;
-    let images = render(&server, &actor.household_id, &items).await?;
-    // All crops and the proposal association commit together. A stale proposal
-    // stores nothing and private storage limits cannot leave a partial batch.
-    let mut conn = server.db.lock()?;
+    Ok(())
+}
+
+pub(crate) fn resolve_items(
+    conn: &rusqlite::Connection,
+    household: &str,
+    items: &[IconSubject],
+    proposal_id: Option<&str>,
+) -> Result<Vec<Product>> {
+    let state = Database::snapshot(conn, household)?.state;
+    let proposal = proposal_id
+        .map(|id| ai::image_proposal(conn, household, id))
+        .transpose()?;
+    items
+        .iter()
+        .map(|i| {
+            if let Some(proposal) = &proposal {
+                proposal
+                    .products
+                    .iter()
+                    .find(|p| p.id == i.id)
+                    .cloned()
+                    .ok_or_else(|| ApiError::bad("Choose new items in this proposal."))
+            } else if state.groups.contains(&i.category) {
+                Ok(Product {
+                    id: i.id.clone(),
+                    name: i.name.trim().into(),
+                    category: i.category.clone(),
+                    icon: "🛒".into(),
+                    aliases: vec![],
+                    image: None,
+                    interval: None,
+                })
+            } else {
+                Err(ApiError::bad("Choose an existing household item group."))
+            }
+        })
+        .collect::<Result<_>>()
+}
+
+pub(crate) fn commit_sheet(
+    conn: &mut rusqlite::Connection,
+    household: &str,
+    proposal_id: Option<&str>,
+    items: &[Product],
+    images: Vec<api::StoredImage>,
+) -> Result<Vec<IconResult>> {
     let tx = conn.transaction()?;
-    let mut proposal = input
-        .proposal_id
-        .as_ref()
-        .map(|id| ai::image_proposal(&tx, &actor.household_id, id))
+    let mut proposal = proposal_id
+        .map(|id| ai::image_proposal(&tx, household, id))
         .transpose()?;
     if proposal.as_ref().is_some_and(|proposal| {
         items.iter().any(|item| {
@@ -128,7 +158,7 @@ pub async fn generate(
     }
     let size: i64 = tx.query_row(
         "SELECT COALESCE(SUM(length(bytes)),0) FROM uploads WHERE household_id=?1",
-        [&actor.household_id],
+        [household],
         |r| r.get(0),
     )?;
     if size
@@ -150,7 +180,7 @@ pub async fn generate(
             "INSERT INTO uploads(id,household_id,mime,bytes,created_at) VALUES(?1,?2,?3,?4,?5)",
             params![
                 id,
-                actor.household_id,
+                household,
                 image.mime,
                 image.bytes,
                 chrono::Utc::now().to_rfc3339()
@@ -169,14 +199,14 @@ pub async fn generate(
             url,
         });
     }
-    if let (Some(id), Some(proposal)) = (&input.proposal_id, proposal) {
+    if let (Some(id), Some(proposal)) = (proposal_id, proposal) {
         tx.execute(
             "UPDATE ai_proposals SET proposal=?3 WHERE id=?1 AND household_id=?2",
-            params![id, actor.household_id, serde_json::to_string(&proposal)?],
+            params![id, household, serde_json::to_string(&proposal)?],
         )?;
     }
     tx.commit()?;
-    Ok(Json(IconBatchResponse { icons: results }))
+    Ok(results)
 }
 
 pub(crate) async fn render(

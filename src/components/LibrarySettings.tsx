@@ -372,6 +372,8 @@ export function ProductEditor({
           />
           <ImageField
             kind="item"
+            scope={product?.id ? `item:${product.id}` : ''}
+            productId={product?.id}
             subject={name}
             value={image}
             onChange={setImage}

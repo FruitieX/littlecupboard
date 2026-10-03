@@ -36,6 +36,7 @@ import { RecipeSources } from './RecipeSources'
 import { IngredientPicker } from './IngredientPicker'
 import { replaceRecipeIngredients } from '../lib/recipe-ingredients'
 import { generateIconBatches, needsItemIcon } from '../lib/icon-batches'
+import { fetchAiJobs, isJobActive, watchAiJob } from '../lib/ai-jobs'
 
 export function Recipes() {
   const { state, update, allRecipes } = useApp()
@@ -489,11 +490,55 @@ export function RecipeEditor({
     setUploadCount((count) => Math.max(0, count + (busy ? 1 : -1)))
   const [pictures, setPictures] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
+  const scope = recipe?.id ? `recipe:${recipe.id}` : ''
   const knownProducts = getProducts({
     ...state,
     customProducts: products,
     productImages: { ...state.productImages, ...pictures },
   })
+  // An icon batch that finished while this editor was closed still fills in
+  // its previews; already-chosen or saved pictures are never replaced.
+  useEffect(() => {
+    if (!scope) return
+    let active = true
+    const stops: (() => void)[] = []
+    void fetchAiJobs({ scope })
+      .then((jobs) => {
+        if (!active) return
+        const apply = (icons: { id: string; url: string }[]) =>
+          setPictures((current) => {
+            const next = { ...current }
+            for (const icon of icons) {
+              if (icon.id in next) continue
+              if (
+                knownProducts.find((product) => product.id === icon.id)?.image
+              )
+                continue
+              next[icon.id] = icon.url
+            }
+            return next
+          })
+        for (const job of jobs) {
+          if (job.kind !== 'sheet') continue
+          if (job.status === 'done' && job.icons?.length) apply(job.icons)
+          else if (isJobActive(job))
+            stops.push(
+              watchAiJob(job.id, (update) => {
+                if (update.status === 'done' && update.icons?.length)
+                  apply(update.icons)
+              }),
+            )
+        }
+      })
+      .catch(() => {
+        /* Recovery is best effort; the button still works. */
+      })
+    return () => {
+      active = false
+      stops.forEach((stop) => stop())
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope])
   const choices = knownProducts.filter(
     (product) => !state.archivedProductIds?.includes(product.id),
   )
@@ -527,11 +572,14 @@ export function RecipeEditor({
     setBatchBusy(true)
     pictureBusy(true)
     try {
-      await generateIconBatches(missing, (icons) =>
-        setPictures((current) => ({
-          ...current,
-          ...Object.fromEntries(icons.map((icon) => [icon.id, icon.url])),
-        })),
+      await generateIconBatches(
+        missing,
+        (icons) =>
+          setPictures((current) => ({
+            ...current,
+            ...Object.fromEntries(icons.map((icon) => [icon.id, icon.url])),
+          })),
+        { scope },
       )
     } catch (error) {
       setError(
@@ -724,6 +772,7 @@ export function RecipeEditor({
         </small>
         <RecipeSources sources={sources} onChange={setSources} />
         <ImageField
+          scope={scope}
           value={image}
           onChange={setImage}
           subject={name}
@@ -959,6 +1008,8 @@ export function RecipeEditor({
                     </label>
                     <ImageField
                       kind="item"
+                      scope={scope}
+                      productId={product.id}
                       value={pictures[product.id] || product.image || ''}
                       onChange={(image) =>
                         setPictures((current) => ({
