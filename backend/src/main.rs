@@ -10,6 +10,7 @@ mod icon_jobs;
 mod image_jobs;
 mod insights;
 mod model;
+mod stats;
 #[cfg(test)]
 mod tests;
 
@@ -101,6 +102,7 @@ pub fn app(server: Server) -> Router {
         .route("/api/events", get(api::stream))
         .route("/api/history", get(api::history))
         .route("/api/insights", get(insights::insights))
+        .route("/api/stats", get(stats::stats))
         .route("/api/images", post(api::upload))
         .route("/api/images/cleanup", post(api::cleanup_images))
         .route(

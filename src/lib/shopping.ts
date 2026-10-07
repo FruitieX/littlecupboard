@@ -129,3 +129,37 @@ export function householdDate(timeZone?: string, now = new Date()): Date {
     Number(parts.find((part) => part.type === name)?.value)
   return new Date(field('year'), field('month') - 1, field('day'), 12)
 }
+
+/**
+ * Orders catalog matches by how well the name matches, then by how often the
+ * household buys the product, so "m" offers the weekly milk before mango.
+ */
+export function rankProducts<T extends Product>(
+  products: T[],
+  query: string,
+  purchases: (id: string) => number,
+): T[] {
+  const needle = query.trim().toLowerCase()
+  if (!needle) return []
+  const score = (product: T) => {
+    const name = product.name.toLowerCase()
+    if (name === needle) return 0
+    if (name.startsWith(needle)) return 1
+    if (name.split(/[\s-]+/).some((word) => word.startsWith(needle))) return 2
+    if (name.includes(needle)) return 3
+    const aliases = (product.aliases ?? []).map((alias) => alias.toLowerCase())
+    if (aliases.some((alias) => alias.startsWith(needle))) return 4
+    if (aliases.some((alias) => alias.includes(needle))) return 5
+    return -1
+  }
+  return products
+    .map((product) => ({ product, rank: score(product) }))
+    .filter(({ rank }) => rank >= 0)
+    .sort(
+      (a, b) =>
+        a.rank - b.rank ||
+        purchases(b.product.id) - purchases(a.product.id) ||
+        a.product.name.localeCompare(b.product.name),
+    )
+    .map(({ product }) => product)
+}

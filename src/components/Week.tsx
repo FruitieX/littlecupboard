@@ -95,11 +95,12 @@ export function Week() {
           const key = dateKey(day)
           const recipe = allRecipes.find((r) => r.id === state.plan[key])
           const isToday = key === dateKey(now)
+          const isPast = key < dateKey(now)
           return (
             <motion.section
               layout
               key={key}
-              className={`day-card ${isToday ? 'is-today' : ''} ${!recipe ? 'unplanned' : ''}`}
+              className={`day-card ${isToday ? 'is-today' : ''} ${isPast ? 'is-past' : ''} ${!recipe ? 'unplanned' : ''}`}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.035 }}

@@ -424,3 +424,97 @@ pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
         consumption_rates: BTreeMap::new(),
     }
 }
+
+/// Best-effort projection of what remains at home. `amounts` subtracts the
+/// effective consumption rate since the last observation; `recorded` is the
+/// stored pantry amount. Nothing here changes meal coverage.
+#[derive(Clone, Debug, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct StockEstimate {
+    pub product_id: String,
+    pub name: String,
+    pub amounts: Vec<Amount>,
+    pub recorded: Vec<Amount>,
+    pub confirmed: bool,
+    pub observed_at: String,
+    pub expires_at: Option<String>,
+    pub daily_use: Option<Amount>,
+    pub days_left: Option<f64>,
+    pub runs_out_on: Option<String>,
+    /// Remaining share of a usual purchase, 0–1, when it can be compared.
+    pub level: Option<f64>,
+    /// `plenty`, `low`, `out`, `expired` or `unknown`.
+    pub status: String,
+    /// `manual`, `estimated` or `none`.
+    pub rate_source: String,
+}
+
+#[derive(Clone, Debug, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct NamedCount {
+    pub id: String,
+    pub name: String,
+    pub count: u32,
+}
+
+#[derive(Clone, Debug, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct WeekStat {
+    pub week_start: String,
+    pub items: u32,
+    pub trips: u32,
+}
+
+#[derive(Clone, Debug, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct ProductStat {
+    pub product_id: String,
+    pub name: String,
+    pub count: u32,
+    pub interval_days: Option<i64>,
+    pub last_bought: String,
+}
+
+#[derive(Clone, Debug, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct RecipeStat {
+    pub recipe_id: String,
+    pub name: String,
+    pub cooked: u32,
+    pub skipped: u32,
+    pub rating: Option<f64>,
+    pub last_cooked: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase")]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct HouseholdStats {
+    pub purchases: u32,
+    pub trips: u32,
+    pub distinct_products: u32,
+    pub average_trip_items: Option<f64>,
+    pub average_trip_minutes: Option<f64>,
+    pub median_days_between_trips: Option<i64>,
+    pub since: Option<String>,
+    /// The last twelve weeks, oldest first, starting on Mondays.
+    pub weeks: Vec<WeekStat>,
+    /// Shopping days per weekday, Monday first.
+    pub weekdays: Vec<u32>,
+    /// Checked items per local hour of day.
+    pub hours: Vec<u32>,
+    pub top_products: Vec<ProductStat>,
+    pub groups: Vec<NamedCount>,
+    pub stores: Vec<NamedCount>,
+    pub shoppers: Vec<NamedCount>,
+    pub meals_cooked: u32,
+    pub meals_skipped: u32,
+    pub top_recipes: Vec<RecipeStat>,
+    /// Bought before, not for at least three usual intervals.
+    pub lapsed: Vec<ProductStat>,
+}

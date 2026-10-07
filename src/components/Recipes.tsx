@@ -16,6 +16,7 @@ import {
   BookOpen,
   Sparkles,
   LoaderCircle,
+  Pencil,
 } from 'lucide-react'
 import { findProduct } from '../lib/data'
 import type { Recipe, Ingredient } from '../lib/data'
@@ -312,10 +313,21 @@ export function RecipeDetail({
             <Clock3 size={16} />
             {recipe.minutes} minutes
           </span>
-          <span
-            className={`recipe-tag ${recipe.tag === 'Vegetarian' ? 'vegetarian' : ''}`}
-          >
-            {recipe.tag}
+          <span className="detail-meta-actions">
+            <span
+              className={`recipe-tag ${recipe.tag === 'Vegetarian' ? 'vegetarian' : ''}`}
+            >
+              {recipe.tag}
+            </span>
+            {onEdit && (
+              <button
+                className="chip-button"
+                onClick={onEdit}
+                aria-label={`Edit ${recipe.name}`}
+              >
+                <Pencil size={14} /> Edit
+              </button>
+            )}
           </span>
         </div>
         <Markdown>{recipe.subtitle}</Markdown>

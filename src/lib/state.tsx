@@ -1,12 +1,20 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import type { ReactNode } from 'react'
 import { initialState, recipes } from './data'
-import type { AppState } from './data'
+import type { AppState, Recipe, ShoppingItem } from './data'
 import type { SessionInfo } from './api/SessionInfo'
 import type { Operation } from './api/Operation'
 import type { Mutation } from './api/Mutation'
 import { getShoppingItems } from './meal-shopping'
 import { diffState, optimistic } from './sync'
+import { replaceEqualDeep } from './structural'
 import { api, HttpError, post } from './http'
 import { AuthScreen } from '../components/AuthScreen'
 import { Modal } from '../components/ui'
@@ -29,6 +37,9 @@ type ContextValue = {
   resolvePending: (id: string, discard: boolean) => void
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
+  allRecipes: Recipe[]
+  shoppingItems: ShoppingItem[]
+  groups: string[]
 }
 const Context = createContext<ContextValue | null>(null)
 // Keep the original storage namespace: existing offline edits and preferences survive upgrades.
@@ -72,6 +83,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const activeSession = useRef<SessionInfo | null>(null)
   const refreshRef = useRef<() => Promise<void>>(async () => {})
   const flushRef = useRef<() => Promise<void>>(async () => {})
+  const cacheTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const derivedItems = useRef<ShoppingItem[]>([])
+
+  // Serializing the whole household snapshot is the most expensive part of an
+  // optimistic update. Write it after animations have started; the small
+  // outbox below stays synchronous so a closed tab never loses an operation.
+  function writeCache() {
+    if (cacheTimer.current) clearTimeout(cacheTimer.current)
+    cacheTimer.current = null
+    const me = activeSession.current
+    if (!me || !server.current) return
+    try {
+      write(cacheKey(me), server.current)
+    } catch {
+      setError(
+        'This device cannot save offline changes. Keep this tab open until changes sync.',
+      )
+    }
+  }
+  function scheduleCache() {
+    if (cacheTimer.current) return
+    cacheTimer.current = setTimeout(writeCache, 600)
+  }
 
   async function boot() {
     setError('')
@@ -127,14 +161,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       : next.stores.some((store) => store.id === next.storeId)
         ? next.storeId
         : next.stores[0].id
-    next = { ...next, storeId: selected }
-    current.current = next
-    setState(next)
-    setPending([...queue.current])
+    next = replaceEqualDeep(current.current, { ...next, storeId: selected })
+    if (next !== current.current) {
+      current.current = next
+      setState(next)
+    }
+    setPending((previous) =>
+      previous.length || queue.current.length ? [...queue.current] : previous,
+    )
     const me = activeSession.current
     if (me) {
+      scheduleCache()
       try {
-        write(cacheKey(me), base)
         write(queueKey(me, tab.current), queue.current)
       } catch {
         setError(
@@ -147,9 +185,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const identity = activeSession.current?.user.id
     const me = await api<SessionInfo>('/auth/me')
     if (identity !== activeSession.current?.user.id) return
-    activeSession.current = me
-    setSession(me)
-    write(cachedSession, me)
+    const shared = replaceEqualDeep(activeSession.current, me)
+    if (shared === activeSession.current) return
+    activeSession.current = shared
+    setSession(shared)
+    write(cachedSession, shared)
   }
   async function refresh() {
     if (!activeSession.current) return
@@ -309,8 +349,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setStatus(queue.current.length ? 'syncing' : 'live')
         void refreshRef.current()
       }
-      events.addEventListener('sync', () => {
-        void refreshRef.current()
+      events.addEventListener('sync', (event) => {
+        // Our own acknowledged writes already carried this revision.
+        const revision = Number((event as MessageEvent).data)
+        if (
+          !Number.isFinite(revision) ||
+          !server.current ||
+          revision > server.current.revision
+        )
+          void refreshRef.current()
         void refreshSession().catch(() => {})
       })
       events.addEventListener('signedOut', () => {
@@ -329,7 +376,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const offline = () => setStatus('offline')
     const visible = () => {
       if (!document.hidden) void refreshRef.current()
+      else writeCache()
     }
+    const pagehide = () => writeCache()
     void refresh()
     connect()
     const poll = window.setInterval(() => {
@@ -338,8 +387,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     window.addEventListener('online', online)
     window.addEventListener('offline', offline)
     document.addEventListener('visibilitychange', visible)
+    window.addEventListener('pagehide', pagehide)
     return () => {
       disposed = true
+      writeCache()
+      window.removeEventListener('pagehide', pagehide)
       releaseTab?.()
       events?.close()
       clearInterval(poll)
@@ -391,6 +443,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem(queueKey(session, tab.current))
     }
     localStorage.removeItem(cachedSession)
+    if (cacheTimer.current) clearTimeout(cacheTimer.current)
+    cacheTimer.current = null
     server.current = null
     setSession(null)
     setReady(false)
@@ -412,6 +466,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     publish()
     void flushRef.current()
   }
+
+  const allRecipes = useMemo(
+    () =>
+      state.recipeBook
+        ? [...state.recipeBook, ...state.customRecipes]
+        : [...recipes, ...state.customRecipes],
+    [state.recipeBook, state.customRecipes],
+  )
+  // Derived items get fresh objects on every derivation; share unchanged ones
+  // so memoized tiles only re-render when their own item changes.
+  const shoppingItems = useMemo(() => {
+    derivedItems.current = replaceEqualDeep(
+      derivedItems.current,
+      getShoppingItems(state),
+    )
+    return derivedItems.current
+  }, [state])
 
   if (!booted)
     return (
@@ -451,6 +522,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         refreshSession,
         retry: () => void refresh(),
         resolvePending,
+        allRecipes,
+        shoppingItems,
+        groups: state.groups ?? [],
       }}
     >
       {ready && <div data-app-ready="true">{children}</div>}
@@ -497,12 +571,5 @@ export function AppProvider({ children }: { children: ReactNode }) {
 export function useApp() {
   const context = useContext(Context)
   if (!context) throw new Error('AppProvider is required')
-  return {
-    ...context,
-    allRecipes: context.state.recipeBook
-      ? [...context.state.recipeBook, ...context.state.customRecipes]
-      : [...recipes, ...context.state.customRecipes],
-    shoppingItems: getShoppingItems(context.state),
-    groups: context.state.groups ?? [],
-  }
+  return context
 }

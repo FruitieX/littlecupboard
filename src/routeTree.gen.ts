@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CupboardRouteImport } from './routes/cupboard'
 import { Route as RecipesRouteImport } from './routes/recipes'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as WeekRouteImport } from './routes/week'
@@ -22,6 +23,11 @@ import { Route as SettingsStoresRouteImport } from './routes/settings.stores'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CupboardRoute = CupboardRouteImport.update({
+  id: '/cupboard',
+  path: '/cupboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RecipesRoute = RecipesRouteImport.update({
@@ -67,6 +73,7 @@ const SettingsStoresRoute = SettingsStoresRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cupboard': typeof CupboardRoute
   '/recipes': typeof RecipesRoute
   '/settings': typeof SettingsRouteWithChildren
   '/week': typeof WeekRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cupboard': typeof CupboardRoute
   '/recipes': typeof RecipesRoute
   '/week': typeof WeekRoute
   '/settings/groups': typeof SettingsGroupsRoute
@@ -89,6 +97,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cupboard': typeof CupboardRoute
   '/recipes': typeof RecipesRoute
   '/settings': typeof SettingsRouteWithChildren
   '/week': typeof WeekRoute
@@ -102,6 +111,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cupboard'
     | '/recipes'
     | '/settings'
     | '/week'
@@ -113,6 +123,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/cupboard'
     | '/recipes'
     | '/week'
     | '/settings/groups'
@@ -123,6 +134,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/cupboard'
     | '/recipes'
     | '/settings'
     | '/week'
@@ -135,6 +147,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CupboardRoute: typeof CupboardRoute
   RecipesRoute: typeof RecipesRoute
   SettingsRoute: typeof SettingsRouteWithChildren
   WeekRoute: typeof WeekRoute
@@ -147,6 +160,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cupboard': {
+      id: '/cupboard'
+      path: '/cupboard'
+      fullPath: '/cupboard'
+      preLoaderRoute: typeof CupboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/recipes': {
@@ -230,6 +250,7 @@ const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CupboardRoute: CupboardRoute,
   RecipesRoute: RecipesRoute,
   SettingsRoute: SettingsRouteWithChildren,
   WeekRoute: WeekRoute,

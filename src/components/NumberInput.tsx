@@ -1,4 +1,5 @@
 import { useEffect, useState, type ComponentProps } from 'react'
+import { Minus, Plus } from 'lucide-react'
 
 type Props = Omit<
   ComponentProps<'input'>,
@@ -56,5 +57,53 @@ export function NumberInput({
         onBlur?.(event)
       }}
     />
+  )
+}
+
+/** A sensible increment for common grocery units. */
+export function quantityStep(unit: string) {
+  const normalized = unit.trim().toLowerCase()
+  if (['g', 'ml'].includes(normalized)) return 100
+  if (['kg', 'l'].includes(normalized)) return 0.5
+  return 1
+}
+
+/** Number field with large touch-friendly decrement and increment buttons. */
+export function QuantityStepper({
+  value,
+  onValueChange,
+  unit,
+  label,
+  min = 0.01,
+  ...props
+}: Omit<Props, 'min'> & { unit: string; label: string; min?: number }) {
+  const step = quantityStep(unit)
+  const round = (next: number) => Math.round(next * 1000) / 1000
+  return (
+    <div className="quantity-stepper">
+      <button
+        type="button"
+        aria-label={`Less ${label}`}
+        disabled={value - step < min}
+        onClick={() => onValueChange(round(Math.max(min, value - step)))}
+      >
+        <Minus size={18} />
+      </button>
+      <NumberInput
+        {...props}
+        aria-label={label}
+        min={min}
+        step="any"
+        value={value}
+        onValueChange={onValueChange}
+      />
+      <button
+        type="button"
+        aria-label={`More ${label}`}
+        onClick={() => onValueChange(round(value + step))}
+      >
+        <Plus size={18} />
+      </button>
+    </div>
   )
 }

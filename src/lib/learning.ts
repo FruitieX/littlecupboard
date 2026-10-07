@@ -1,73 +1,141 @@
 import { getProducts } from './catalog'
-import { useEffect, useState } from 'react'
+import {
+  createContext,
+  createElement,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
+import type { ReactNode } from 'react'
 import { api } from './http'
 import { useApp } from './state'
+import { replaceEqualDeep } from './structural'
 import type { AppState, Product, Recipe } from './data'
 import type { ConsumptionRate } from './api/ConsumptionRate'
 import type { HistoryEvent } from './api/HistoryEvent'
+import type { HouseholdStats } from './api/HouseholdStats'
+import type { StockEstimate } from './api/StockEstimate'
 export type Restock = {
   product: Product
   quantity: number
   unit: string
   note: string
-  intervalDays: number
+  intervalDays: number | null
   daysSince: number
+  daysLeft?: number | null
   reason: string
   confidence: string
 }
+export type Habit = {
+  productId: string
+  name: string
+  purchases: number
+  intervalDays: number | null
+  estimatedConsumption: ConsumptionRate | null
+  consumptionRate: ConsumptionRate | null
+  consumptionSource: string
+  confidence: string
+  preferredNote: string
+  quantity: number | null
+  unit: string | null
+  storeId: string
+  lastBought: string
+}
 export type Insights = {
   restock: Restock[]
-  habits: {
-    productId: string
-    name: string
-    purchases: number
-    intervalDays: number | null
-    estimatedConsumption: ConsumptionRate | null
-    consumptionRate: ConsumptionRate | null
-    consumptionSource: string
-    confidence: string
-    preferredNote: string
-    quantity: number
-    unit: string
-    storeId: string
-  }[]
+  stock: StockEstimate[]
+  nextShoppingDay: string | null
+  habits: Habit[]
   shoppingDays: Record<string, number>
   associations: { products: string[]; daysTogether: number }[]
   purchaseCount: number
 }
-export function useLearning() {
+const emptyInsights: Insights = {
+  restock: [],
+  stock: [],
+  nextShoppingDay: null,
+  habits: [],
+  shoppingDays: {},
+  associations: [],
+  purchaseCount: 0,
+}
+type LearningValue = { insights: Insights; error: string; loaded: boolean }
+const LearningContext = createContext<LearningValue>({
+  insights: emptyInsights,
+  error: '',
+  loaded: false,
+})
+
+// Refetch derived server data once the household has been quiet for a moment.
+// Checking several items in a row then costs one request after the last tap,
+// instead of competing with every tile animation.
+function useQuietFetch<T>(
+  path: string | null,
+  initial: T,
+  delay = 1200,
+): { data: T; error: string; loaded: boolean } {
   const { state, status } = useApp()
-  const [insights, setInsights] = useState<Insights>({
-    restock: [],
-    habits: [],
-    shoppingDays: {},
-    associations: [],
-    purchaseCount: 0,
-  })
-  const [history, setHistory] = useState<HistoryEvent[]>([])
+  const [data, setData] = useState<T>(initial)
   const [error, setError] = useState('')
+  const [loaded, setLoaded] = useState(false)
+  const first = useRef(true)
   useEffect(() => {
+    first.current = true
+    setLoaded(false)
+  }, [path])
+  useEffect(() => {
+    if (!path || status === 'offline') return
     let active = true
-    if (status === 'offline') return
-    void Promise.all([
-      api<Insights>('/insights'),
-      api<HistoryEvent[]>('/history?limit=100'),
-    ])
-      .then(([insights, history]) => {
-        if (active) {
-          setInsights(insights)
-          setHistory(history)
-          setError('')
-        }
-      })
-      .catch((error) => {
-        if (active) setError(error.message)
-      })
+    const timer = setTimeout(
+      () => {
+        first.current = false
+        api<T>(path)
+          .then((next) => {
+            if (!active) return
+            setData((previous) => replaceEqualDeep(previous, next))
+            setError('')
+            setLoaded(true)
+          })
+          .catch((error: Error) => {
+            if (active) setError(error.message)
+          })
+      },
+      first.current ? 0 : delay,
+    )
     return () => {
       active = false
+      clearTimeout(timer)
     }
-  }, [state, status])
-  return { insights, history, error }
+  }, [path, state, status, delay])
+  return { data, error, loaded }
+}
+
+export function LearningProvider({ children }: { children: ReactNode }) {
+  const { data, error, loaded } = useQuietFetch('/insights', emptyInsights)
+  const value = useMemo(
+    () => ({ insights: { ...emptyInsights, ...data }, error, loaded }),
+    [data, error, loaded],
+  )
+  return createElement(LearningContext.Provider, { value }, children)
+}
+export function useLearning() {
+  return useContext(LearningContext)
+}
+export function useHistory(enabled = true) {
+  const { data, error, loaded } = useQuietFetch<HistoryEvent[]>(
+    enabled ? '/history?limit=100' : null,
+    [],
+  )
+  return { history: data, error, loaded }
+}
+export function useStats(enabled = true) {
+  return useQuietFetch<HouseholdStats | null>(
+    enabled ? '/stats' : null,
+    null,
+    2000,
+  )
 }
 export function recipeScore(
   recipe: Recipe,

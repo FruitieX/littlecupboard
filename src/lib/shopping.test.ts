@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { catalog, initialState, recipes } from './data'
-import { addIngredients, dateKey, mergeItem, mondayOfWeek } from './shopping'
+import {
+  addIngredients,
+  dateKey,
+  mergeItem,
+  mondayOfWeek,
+  rankProducts,
+} from './shopping'
 
 describe('shopping behavior', () => {
   it('merges matching ingredients and preserves quantities and descriptions', () => {
@@ -48,5 +54,32 @@ describe('shopping behavior', () => {
     const date = new Date(2026, 11, 31, 12)
     expect(dateKey(mondayOfWeek(date))).toBe('2026-12-28')
     expect(dateKey(mondayOfWeek(date, 1))).toBe('2027-01-04')
+  })
+})
+
+describe('rankProducts', () => {
+  const products = [
+    { id: 'mango', name: 'Mango', category: 'Fruits', icon: '🥭' },
+    { id: 'milk', name: 'Milk', category: 'Milk & eggs', icon: '🥛' },
+    { id: 'oat-milk', name: 'Oat milk', category: 'Milk & eggs', icon: '🥛' },
+    {
+      id: 'mince',
+      name: 'Minced meat',
+      category: 'Meat',
+      icon: '🥩',
+      aliases: ['ground beef'],
+    },
+  ]
+  it('prefers name prefixes, then frequently bought products', () => {
+    const counts: Record<string, number> = { milk: 12, mango: 1 }
+    expect(
+      rankProducts(products, 'm', (id) => counts[id] ?? 0).map((p) => p.id),
+    ).toEqual(['milk', 'mango', 'mince', 'oat-milk'])
+  })
+  it('matches aliases after names and ignores empty queries', () => {
+    expect(rankProducts(products, 'ground', () => 0).map((p) => p.id)).toEqual([
+      'mince',
+    ])
+    expect(rankProducts(products, '  ', () => 0)).toEqual([])
   })
 })

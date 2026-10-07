@@ -1,21 +1,25 @@
 import { useEffect, useRef } from 'react'
-import type { ButtonHTMLAttributes } from 'react'
+import type { ButtonHTMLAttributes, MouseEvent } from 'react'
 
 export function HoldButton({
   onPress,
   onHold,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  onPress: () => void
+  onPress: (event: MouseEvent<HTMLButtonElement>) => void
   onHold: () => void
 }) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const start = useRef<{ x: number; y: number } | null>(null)
   const ignoreClickUntil = useRef(0)
+  const element = useRef<HTMLButtonElement>(null)
+  // Pressing state lives in a data attribute so CSS can show the hold
+  // building up without re-rendering React on every touch.
   function cancel() {
     if (timer.current) clearTimeout(timer.current)
     timer.current = null
     start.current = null
+    delete element.current?.dataset.pressing
   }
   useEffect(
     () => () => {
@@ -31,12 +35,14 @@ export function HoldButton({
   return (
     <button
       {...props}
+      ref={element}
       type="button"
       title="Hold to edit · right-click or Shift+F10 on desktop"
       onPointerDown={(event) => {
         if (event.button !== 0 || !event.isPrimary) return
         cancel()
         start.current = { x: event.clientX, y: event.clientY }
+        event.currentTarget.dataset.pressing = 'true'
         timer.current = setTimeout(edit, 500)
       }}
       onPointerMove={(event) => {
@@ -70,7 +76,7 @@ export function HoldButton({
           event.preventDefault()
           return
         }
-        onPress()
+        onPress(event)
       }}
     />
   )
