@@ -18,6 +18,7 @@ export function ImageField({
   scope = '',
   productId,
   onBusyChange,
+  generateRequest,
 }: {
   value: string
   onChange: (value: string) => void
@@ -26,6 +27,8 @@ export function ImageField({
   scope?: string
   productId?: string
   onBusyChange?: (busy: boolean) => void
+  /** Starts a generation from outside, e.g. after AI fills in details. */
+  generateRequest?: { key: number; subject: string } | null
 }) {
   const { session, status } = useApp()
   const [uploading, setUploading] = useState(false)
@@ -112,7 +115,13 @@ export function ImageField({
       setUploading(false)
     }
   }
-  async function generate() {
+  const lastRequest = useRef(0)
+  useEffect(() => {
+    if (!generateRequest || generateRequest.key === lastRequest.current) return
+    lastRequest.current = generateRequest.key
+    if (!generating) void generate(generateRequest.subject)
+  }, [generateRequest?.key])
+  async function generate(prompt = subject) {
     setError('')
     setTrouble(false)
     setJob(null)
@@ -126,8 +135,8 @@ export function ImageField({
         scope,
         prompt:
           kind === 'store'
-            ? `A grocery storefront for the shop named ${subject}`
-            : subject,
+            ? `A grocery storefront for the shop named ${prompt}`
+            : prompt,
         productId,
       })
       requestId.current = null

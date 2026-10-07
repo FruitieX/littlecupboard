@@ -12,6 +12,7 @@ import {
   Clock3,
   MapPin,
   History,
+  LoaderCircle,
 } from 'lucide-react'
 import { categories } from '../lib/data'
 import type { AppState, Category, Product, ShoppingItem } from '../lib/data'
@@ -28,6 +29,8 @@ import { cleanItem } from '../lib/sync'
 import { useShoppingLayout } from '../lib/shopping-layout'
 import { Confetti, type Burst } from './Confetti'
 import { rankProducts } from '../lib/shopping'
+import { post } from '../lib/http'
+import type { ItemDetailsProposal } from '../lib/api/ItemDetailsProposal'
 
 const categoryColors: Partial<Record<Category, string>> = {
   'Fruit & vegetables': 'produce',
@@ -865,7 +868,7 @@ function ItemEditor({
   initialName?: string
   item?: ShoppingItem
 }) {
-  const { state, update, action, groups } = useApp()
+  const { state, update, action, groups, session, status } = useApp()
   const [name, setName] = useState(item?.name ?? initialName)
   const [category, setCategory] = useState<Category>(
     item?.category ?? groups[0],
@@ -882,6 +885,57 @@ function ItemEditor({
   )
   const multipleAmounts = (item?.amounts?.length ?? 0) > 1
   const [moreOpen, setMoreOpen] = useState(!item)
+  // Fields the family set themselves; AI suggestions never replace them.
+  const touched = useRef(new Set<string>())
+  const touch =
+    <T,>(field: string, set: (value: T) => void) =>
+    (value: T) => {
+      touched.current.add(field)
+      set(value)
+    }
+  const [filling, setFilling] = useState(false)
+  const [fillError, setFillError] = useState('')
+  const [iconRequest, setIconRequest] = useState<{
+    key: number
+    subject: string
+  } | null>(null)
+  async function fillWithAi() {
+    setFilling(true)
+    setFillError('')
+    const known = touched.current
+    try {
+      const details = await post<ItemDetailsProposal>('/ai/item-details', {
+        name: name.trim(),
+        quantity: known.has('quantity') ? quantity : null,
+        unit: known.has('unit') ? unit : null,
+        note: known.has('note') && note.trim() ? note : null,
+        group: existing
+          ? existing.category
+          : known.has('group')
+            ? category
+            : null,
+      })
+      if (!known.has('quantity')) setQuantity(details.quantity)
+      if (!known.has('unit')) setUnit(details.unit)
+      if (!known.has('note') || !note.trim()) setNote(details.note)
+      if (!existing && !known.has('group')) setCategory(details.group)
+      if (session.imageEnabled && !image)
+        setIconRequest({
+          key: Date.now(),
+          subject: `${name.trim()}: ${details.iconDescription}`,
+        })
+    } catch (error) {
+      setFillError(
+        error instanceof TypeError
+          ? 'Cannot reach the server. Check your connection and try again.'
+          : error instanceof Error
+            ? error.message
+            : 'Please try again.',
+      )
+    } finally {
+      setFilling(false)
+    }
+  }
   // Show a picture that is still generating (for example after reopening).
   useEffect(() => {
     if (pictureBusy) setMoreOpen(true)
@@ -955,6 +1009,33 @@ function ItemEditor({
             />
           </label>
         )}
+        {!item && session.aiEnabled && (
+          <div className="ai-fill">
+            <button
+              type="button"
+              className="ai-fill-button"
+              disabled={!name.trim() || filling || status === 'offline'}
+              onClick={() => void fillWithAi()}
+            >
+              {filling ? (
+                <LoaderCircle size={16} className="spin" />
+              ) : (
+                <Sparkles size={16} />
+              )}
+              {filling ? 'Filling in…' : 'Fill in with AI'}
+            </button>
+            <small>
+              Suggests the amount, unit, note and group
+              {session.imageEnabled ? ', then draws an icon' : ''}. Anything you
+              already chose is kept and used as a hint.
+            </small>
+            {fillError && (
+              <p className="form-error" role="alert">
+                {fillError}
+              </p>
+            )}
+          </div>
+        )}
         <div className="quantity-fields">
           <label className="quantity-field">
             Quantity
@@ -964,7 +1045,7 @@ function ItemEditor({
                 step="any"
                 required
                 value={quantity}
-                onValueChange={setQuantity}
+                onValueChange={touch('quantity', setQuantity)}
               />
             ) : (
               <QuantityStepper
@@ -972,7 +1053,7 @@ function ItemEditor({
                 unit={unit}
                 required
                 value={quantity}
-                onValueChange={setQuantity}
+                onValueChange={touch('quantity', setQuantity)}
               />
             )}
           </label>
@@ -981,7 +1062,7 @@ function ItemEditor({
             <input
               value={unit}
               required
-              onChange={(e) => setUnit(e.target.value)}
+              onChange={(e) => touch('unit', setUnit)(e.target.value)}
               placeholder="g, L, pack…"
               maxLength={20}
             />
@@ -994,7 +1075,7 @@ function ItemEditor({
               type="button"
               className={unit === option ? 'selected' : ''}
               aria-pressed={unit === option}
-              onClick={() => setUnit(option)}
+              onClick={() => touch('unit', setUnit)(option)}
             >
               {option}
             </button>
@@ -1004,7 +1085,7 @@ function ItemEditor({
           A little more detail
           <textarea
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => touch('note', setNote)(e.target.value)}
             placeholder="Brand, color, size, or a note for the family…"
             rows={2}
             maxLength={300}
@@ -1032,7 +1113,9 @@ function ItemEditor({
               <select
                 value={!item && existing ? existing.category : category}
                 disabled={!!existing && !item}
-                onChange={(e) => setCategory(e.target.value as Category)}
+                onChange={(e) =>
+                  touch('group', setCategory)(e.target.value as Category)
+                }
               >
                 {(groups.length ? groups : categories).map((c) => (
                   <option key={c}>{c}</option>
@@ -1051,6 +1134,7 @@ function ItemEditor({
               onChange={setImage}
               subject={name}
               onBusyChange={setPictureBusy}
+              generateRequest={iconRequest}
             />
           </div>
         </details>

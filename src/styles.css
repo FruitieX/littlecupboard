@@ -5317,3 +5317,32 @@ svg {
     flex-basis: 100%;
   }
 }
+
+/* AI fill for new items sits right under the name. */
+.ai-fill {
+  display: grid;
+  gap: 6px;
+  margin-top: -6px;
+}
+.ai-fill-button {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 7px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: #eaf1df;
+  box-shadow: inset 0 0 0 1px #d3e0c2;
+  color: var(--forest);
+  font-size: 14px;
+  font-weight: 600;
+}
+.ai-fill-button:disabled {
+  opacity: 0.55;
+}
+.ai-fill small {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}

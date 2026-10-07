@@ -4190,3 +4190,94 @@ async fn panicking_handlers_answer_with_an_internal_error() {
         "The operation could not be completed. Please try again."
     );
 }
+
+#[tokio::test]
+async fn item_details_fill_missing_fields_and_keep_family_choices() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::<Value>::new()));
+    let captured = seen.clone();
+    let answer = std::sync::Arc::new(std::sync::Mutex::new(
+        json!({"group":"Milk & eggs","quantity":2,"unit":"kg","note":"Model note","iconDescription":"A yellow tub with a green lid"}),
+    ));
+    let reply = answer.clone();
+    let fixture = Router::new().route(
+        "/v1/chat/completions",
+        post(move |Json(body): Json<Value>| {
+            let captured = captured.clone();
+            let reply = reply.clone();
+            async move {
+                captured.lock().unwrap().push(body);
+                let content = reply.lock().unwrap().to_string();
+                Json(json!({"choices":[{"message":{"content":content}}]}))
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let provider = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","reasoningEffort":"xhigh","imageModel":"","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit"});
+    let (status, body, _) = request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config,"apiKey":null}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    // The family chose "pack" and wrote a note; those survive the answer.
+    let (status, details, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/item-details",
+        json!({"name":"Margarine","unit":"pack","note":"Plant-based"}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{details}");
+    assert_eq!(details["unit"], "pack");
+    assert_eq!(details["note"], "Plant-based");
+    assert_eq!(details["group"], "Milk & eggs");
+    assert_eq!(details["quantity"], 2.0);
+    assert_eq!(details["iconDescription"], "A yellow tub with a green lid");
+    let sent = seen.lock().unwrap().last().cloned().unwrap();
+    assert_eq!(
+        sent["reasoning_effort"], "low",
+        "a quick task overrides deep reasoning"
+    );
+    assert_eq!(sent["response_format"]["type"], "json_schema");
+    let user = sent["messages"][1]["content"].as_str().unwrap();
+    assert!(user.contains("\"unit\":\"pack\"") && user.contains("Plant-based"));
+    // Invented groups are rejected rather than saved.
+    *answer.lock().unwrap() =
+        json!({"group":"Made up","quantity":1,"unit":"pc","note":"","iconDescription":"x"});
+    let (status, _, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/item-details",
+        json!({"name":"Margarine"}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let (status, _, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/item-details",
+        json!({"name":" "}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let (status, _, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/item-details",
+        json!({"name":"Margarine"}),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+    provider.abort();
+}

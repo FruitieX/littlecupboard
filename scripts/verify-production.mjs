@@ -866,84 +866,102 @@ try {
     const isStoreMap = input.messages?.[0]?.content?.includes(
       'Required store-map protocol:',
     )
-    const content = isStoreMap
+    const itemDetails = input.messages?.[0]?.content?.includes(
+      'Required item-details protocol:',
+    )
+      ? JSON.parse(
+          input.messages[1].content
+            .replace('Shopping item: ', '')
+            .split('\nSuggest')[0],
+        )
+      : null
+    const content = itemDetails
       ? JSON.stringify({
-          message:
-            'Start at produce, then dairy. Review the remaining aisles before saving.',
-          order: ['Fruits', 'Vegetables', 'Milk & eggs'],
+          group: itemDetails.groups.at(-1),
+          quantity: 500,
+          unit: 'g',
+          note: 'Fixture note',
+          iconDescription: 'A small blue box',
         })
-      : hasImages
+      : isStoreMap
         ? JSON.stringify({
-            message: 'Recipe transcribed. Review all quantities before saving.',
-            shopping: [],
-            plan: [],
-            recipes: [
-              {
-                name: 'Imported recipe',
-                subtitle:
-                  '## Notes\n\n**Keep chilled**.\n\n- Serve fresh\n- Stir gently',
-                minutes: 10,
-                servings: 4,
-                tags: ['Imported'],
-                ingredients: [
+            message:
+              'Start at produce, then dairy. Review the remaining aisles before saving.',
+            order: ['Fruits', 'Vegetables', 'Milk & eggs'],
+          })
+        : hasImages
+          ? JSON.stringify({
+              message:
+                'Recipe transcribed. Review all quantities before saving.',
+              shopping: [],
+              plan: [],
+              recipes: [
+                {
+                  name: 'Imported recipe',
+                  subtitle:
+                    '## Notes\n\n**Keep chilled**.\n\n- Serve fresh\n- Stir gently',
+                  minutes: 10,
+                  servings: 4,
+                  tags: ['Imported'],
+                  ingredients: [
+                    {
+                      name: 'Apples',
+                      productId: 'apples',
+                      category: null,
+                      quantity: 4,
+                      unit: 'pc',
+                      note: '',
+                    },
+                    {
+                      name: 'Bergamot powder',
+                      productId: null,
+                      category: null,
+                      quantity: 1,
+                      unit: 'g',
+                      note: 'Check the original',
+                    },
+                    {
+                      name: 'Calamansi peel',
+                      productId: null,
+                      category: null,
+                      quantity: 1,
+                      unit: 'g',
+                      note: '',
+                    },
+                    {
+                      name: 'Cassia buds',
+                      productId: null,
+                      category: null,
+                      quantity: 1,
+                      unit: 'g',
+                      note: '',
+                    },
+                  ],
+                  steps: [
+                    'Wash the apples.',
+                    'Stir in **bergamot**.',
+                    'Serve fresh.',
+                  ],
+                },
+              ],
+            })
+          : input.messages?.[0]?.role === 'user'
+            ? 'Connected'
+            : JSON.stringify({
+                message: 'Pick up a little fruit for lunch.',
+                shopping: [
                   {
                     name: 'Apples',
                     productId: 'apples',
                     category: null,
                     quantity: 4,
                     unit: 'pc',
-                    note: '',
-                  },
-                  {
-                    name: 'Bergamot powder',
-                    productId: null,
-                    category: null,
-                    quantity: 1,
-                    unit: 'g',
-                    note: 'Check the original',
-                  },
-                  {
-                    name: 'Calamansi peel',
-                    productId: null,
-                    category: null,
-                    quantity: 1,
-                    unit: 'g',
-                    note: '',
-                  },
-                  {
-                    name: 'Cassia buds',
-                    productId: null,
-                    category: null,
-                    quantity: 1,
-                    unit: 'g',
-                    note: '',
+                    note: 'Crisp',
                   },
                 ],
-                steps: [
-                  'Wash the apples.',
-                  'Stir in **bergamot**.',
-                  'Serve fresh.',
-                ],
-              },
-            ],
-          })
-        : input.messages?.[0]?.role === 'user'
-          ? 'Connected'
-          : JSON.stringify({
-              message: 'Pick up a little fruit for lunch.',
-              shopping: [
-                {
-                  name: 'Apples',
-                  productId: 'apples',
-                  category: null,
-                  quantity: 4,
-                  unit: 'pc',
-                  note: 'Crisp',
-                },
-              ],
-              recipes: [],
-              plan: [],
-            })
+                recipes: [],
+                plan: [],
+              })
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({ choices: [{ message: { content } }] }))
   })
@@ -1584,8 +1602,70 @@ try {
       },
     })
   }
+  // New items: AI fills untouched fields, keeps chosen ones and draws an icon.
   await owner.goto(frontendUrl)
   await settle(owner)
+  await owner
+    .getByRole('combobox', { name: 'Add a shopping item' })
+    .fill('Fixture margarine')
+  await owner
+    .getByRole('combobox', { name: 'Add a shopping item' })
+    .press('Enter')
+  const newItem = owner.getByRole('dialog', {
+    name: 'Something for the basket',
+  })
+  await newItem.getByRole('button', { name: 'pack', exact: true }).click()
+  await newItem.getByRole('button', { name: 'Fill in with AI' }).click()
+  await eventually(
+    async () =>
+      (await newItem.getByLabel('A little more detail').inputValue()) ===
+      'Fixture note',
+  )
+  assert.equal(
+    await newItem.getByLabel('Unit', { exact: true }).inputValue(),
+    'pack',
+  )
+  assert.equal(
+    await newItem.getByLabel('Quantity', { exact: true }).inputValue(),
+    '500',
+  )
+  const detailsRequest = providerRequests.findLast((entry) =>
+    entry.messages?.[0]?.content?.includes('Required item-details protocol:'),
+  )
+  const sentDetails = JSON.parse(
+    detailsRequest.messages[1].content
+      .replace('Shopping item: ', '')
+      .split('\nSuggest')[0],
+  )
+  assert.equal(sentDetails.unit, 'pack')
+  assert.equal(sentDetails.quantity, null)
+  assert.equal(
+    await newItem.locator('.editor-more select').inputValue(),
+    sentDetails.groups.at(-1),
+  )
+  await owner.waitForFunction(
+    () => !!document.querySelector('.image-field-preview[src^="/api/images/"]'),
+    null,
+    { timeout: 45000 },
+  )
+  assert.ok(
+    providerRequests.some((entry) =>
+      entry.prompt?.includes('Fixture margarine: A small blue box'),
+    ),
+    'The icon request uses the suggested visual description',
+  )
+  await newItem
+    .getByRole('button', { name: 'Add to shopping list', exact: true })
+    .click()
+  assert.match(
+    await owner
+      .getByRole('button', { name: 'Check Fixture margarine', exact: true })
+      .innerText(),
+    /500 pack[\s\S]*Fixture note/,
+  )
+  console.log(
+    'AI item details keep chosen fields and generate a matching icon.',
+  )
   imageDelay = 8000
   await hold(
     owner,

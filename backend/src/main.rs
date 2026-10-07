@@ -125,6 +125,7 @@ pub fn app(server: Server) -> Router {
         .route("/api/ai/test", post(ai::test))
         .route("/api/ai/assistant", post(ai::assistant))
         .route("/api/ai/store-layout", post(ai::store_layout))
+        .route("/api/ai/item-details", post(ai::item_details))
         .route("/api/ai/image", post(ai::generate_image))
         .route(
             "/api/ai/jobs",
