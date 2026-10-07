@@ -50,9 +50,10 @@ pub fn totals(values: &[Amount]) -> Vec<Amount> {
 pub fn product(state: &HouseholdState, id: &str) -> Result<Product> {
     let product = seed()
         .catalog
-        .into_iter()
-        .chain(state.custom_products.iter().cloned())
+        .iter()
+        .chain(state.custom_products.iter())
         .find(|product| product.id == id)
+        .cloned()
         .ok_or_else(|| ApiError::bad("This product no longer exists."))?;
     Ok(customize_product(state, product))
 }
@@ -71,9 +72,9 @@ fn customize_product(state: &HouseholdState, mut product: Product) -> Product {
     if product.image.is_none() && matches!(product.icon.trim(), "" | "🛒") {
         product.image = seed()
             .artwork_aliases
-            .into_iter()
+            .iter()
             .find(|(name, _)| name.eq_ignore_ascii_case(product.name.trim()))
-            .map(|(_, image)| image);
+            .map(|(_, image)| image.clone());
     }
     if let Some(group) = state.product_groups.get(&id) {
         product.category = group.clone();
@@ -83,10 +84,10 @@ fn customize_product(state: &HouseholdState, mut product: Product) -> Product {
 pub fn products(state: &HouseholdState, include_archived: bool) -> Vec<Product> {
     seed()
         .catalog
-        .into_iter()
-        .chain(state.custom_products.iter().cloned())
+        .iter()
+        .chain(state.custom_products.iter())
         .filter(|entry| include_archived || !state.archived_product_ids.contains(&entry.id))
-        .map(|entry| customize_product(state, entry))
+        .map(|entry| customize_product(state, entry.clone()))
         .collect()
 }
 fn recipe(state: &HouseholdState, id: &str) -> Option<Recipe> {
@@ -1197,7 +1198,7 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
                 .map(|product| product.id.clone()),
         )
         .collect::<BTreeSet<_>>();
-    let built_in_ids: BTreeSet<_> = seed().catalog.into_iter().map(|p| p.id).collect();
+    let built_in_ids: BTreeSet<_> = seed().catalog.iter().map(|p| p.id.clone()).collect();
     if state
         .archived_product_ids
         .iter()

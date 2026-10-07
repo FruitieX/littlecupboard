@@ -60,13 +60,23 @@ describe('settings catalog management', () => {
       '/images/catalog/generated/basil.webp',
       '/images/catalog/generated/grated-cheese.webp',
     ])
-    state.customProducts[0].icon = '🥛'
+    // Household updates always produce new snapshots.
+    const chosenIcon = {
+      ...state,
+      customProducts: state.customProducts.map((product, index) =>
+        index === 0 ? { ...product, icon: '🥛' } : product,
+      ),
+    }
     expect(
-      getProducts(state).find((product) => product.id === 'family-0')?.image,
+      getProducts(chosenIcon).find((product) => product.id === 'family-0')
+        ?.image,
     ).toBeUndefined()
-    state.productImages = { 'family-1': '/api/images/family-basil' }
+    const photo = {
+      ...chosenIcon,
+      productImages: { 'family-1': '/api/images/family-basil' },
+    }
     expect(
-      getProducts(state).find((product) => product.id === 'family-1')?.image,
+      getProducts(photo).find((product) => product.id === 'family-1')?.image,
     ).toBe('/api/images/family-basil')
   })
   it('fills artwork for old item customizations while retaining family photos', () => {
@@ -78,13 +88,24 @@ describe('settings catalog management', () => {
     expect(
       getProducts(state).find((product) => product.id === 'rice')?.image,
     ).toBe(rice.image)
-    state.productDetails.rice.image = '/api/images/family-rice'
+    const familyPhoto = {
+      ...state,
+      productDetails: {
+        rice: {
+          ...state.productDetails.rice,
+          image: '/api/images/family-rice',
+        },
+      },
+    }
     expect(
-      getProducts(state).find((product) => product.id === 'rice')?.image,
+      getProducts(familyPhoto).find((product) => product.id === 'rice')?.image,
     ).toBe('/api/images/family-rice')
-    state.productImages = { rice: '/api/images/new-rice' }
+    const newPhoto = {
+      ...familyPhoto,
+      productImages: { rice: '/api/images/new-rice' },
+    }
     expect(
-      getProducts(state).find((product) => product.id === 'rice')?.image,
+      getProducts(newPhoto).find((product) => product.id === 'rice')?.image,
     ).toBe('/api/images/new-rice')
   })
   it('keeps product identity and shopping details while overriding a bundled product', () => {
@@ -230,4 +251,17 @@ it('syncs per-product consumption rates and deletes them with a custom item', ()
   })
   expect(replayed.consumptionRates).toEqual(changed.consumptionRates)
   expect(deleteProduct(replayed, product.id).consumptionRates).toEqual({})
+})
+
+describe('getProducts cache', () => {
+  it('reuses the merged catalog for an unchanged snapshot only', () => {
+    const state = initialState()
+    expect(getProducts(state)).toBe(getProducts(state))
+    expect(getProducts(state, false)).not.toBe(getProducts(state))
+    const archived = { ...state, archivedProductIds: ['rice'] }
+    expect(getProducts(archived, false).some((p) => p.id === 'rice')).toBe(
+      false,
+    )
+    expect(getProducts(state, false).some((p) => p.id === 'rice')).toBe(true)
+  })
 })

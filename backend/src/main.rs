@@ -19,7 +19,7 @@ use axum::{
     extract::{DefaultBodyLimit, Request},
     http::{HeaderValue, StatusCode},
     middleware::{self, Next},
-    response::Response,
+    response::{IntoResponse, Response},
     routing::{delete, get, post, put},
 };
 use error::{ApiError, Result};
@@ -54,10 +54,11 @@ impl Server {
     }
     pub fn rate_limit(&self, key: &str, max: u32, window: i64) -> Result<()> {
         let now = chrono::Utc::now().timestamp();
-        let mut limits = self
-            .limits
-            .lock()
-            .map_err(|_| ApiError::internal("rate limiter lock poisoned"))?;
+        // Counters cannot be left half-updated, so a poisoned lock is safe to reuse.
+        let mut limits = self.limits.lock().unwrap_or_else(|poisoned| {
+            self.limits.clear_poison();
+            poisoned.into_inner()
+        });
         if limits.len() > 10000 {
             limits.retain(|_, (_, until)| *until > now);
         }
@@ -146,6 +147,11 @@ pub fn app(server: Server) -> Router {
         )
         .layer(DefaultBodyLimit::max(9 * 1024 * 1024))
         .layer(middleware::from_fn_with_state(server.clone(), protect))
+        // A panicking handler answers like any internal error instead of
+        // dropping the connection, which clients would read as being offline.
+        .layer(tower_http::catch_panic::CatchPanicLayer::custom(
+            panic_response,
+        ))
         .with_state(server);
     if let Ok(directory) = app_env("LITTLECUPBOARD_STATIC_DIR") {
         static_frontend(
@@ -158,6 +164,16 @@ pub fn app(server: Server) -> Router {
     } else {
         router
     }
+}
+/// A panicking handler answers like any internal error instead of dropping the
+/// connection, which clients would otherwise read as being offline.
+fn panic_response(panic: Box<dyn std::any::Any + Send + 'static>) -> Response {
+    let detail = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("unknown panic");
+    ApiError::internal(format!("request handler panicked: {detail}")).into_response()
 }
 fn static_frontend(router: Router, directory: &str) -> Router {
     router

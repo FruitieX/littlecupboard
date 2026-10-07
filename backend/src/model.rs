@@ -388,8 +388,13 @@ pub struct Seed {
     pub artwork_aliases: BTreeMap<String, String>,
 }
 
-pub fn seed() -> Seed {
-    serde_json::from_str(include_str!("../seed.json")).expect("valid compiled seed catalog")
+/// The bundled catalog, parsed once. Product lookups run inside request
+/// handlers while the database lock is held, so never reparse per call.
+pub fn seed() -> &'static Seed {
+    static SEED: std::sync::LazyLock<Seed> = std::sync::LazyLock::new(|| {
+        serde_json::from_str(include_str!("../seed.json")).expect("valid compiled seed catalog")
+    });
+    &SEED
 }
 pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
     let seed = seed();
@@ -410,8 +415,12 @@ pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
         favorite_recipe_ids: vec![],
         plan_coverage: BTreeMap::new(),
         purchased_coverage: BTreeMap::new(),
-        recipe_book: if samples { seed.recipes } else { vec![] },
-        groups: seed.categories,
+        recipe_book: if samples {
+            seed.recipes.clone()
+        } else {
+            vec![]
+        },
+        groups: seed.categories.clone(),
         pantry: BTreeMap::new(),
         servings: BTreeMap::new(),
         meal_feedback: BTreeMap::new(),

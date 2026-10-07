@@ -985,8 +985,9 @@ async fn household_catalog_overrides_are_validated_and_archives_keep_recipe_refe
     let cookie = owner(&server).await;
     let mut pasta = model::seed()
         .catalog
-        .into_iter()
+        .iter()
         .find(|product| product.id == "pasta")
+        .cloned()
         .unwrap();
     pasta.name = "Family pasta".into();
     pasta.aliases = vec!["family noodles".into()];
@@ -4130,4 +4131,62 @@ async fn wait_for_companion_job(server: &Server, headers: &axum::http::HeaderMap
     })
     .await
     .expect("The request did not enqueue a companion job within 30 seconds")
+}
+
+#[tokio::test]
+async fn a_panic_holding_the_database_lock_does_not_break_later_requests() {
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let db = server.db.clone();
+    let panicked = std::thread::spawn(move || {
+        let conn = db.lock().unwrap();
+        conn.execute_batch("BEGIN IMMEDIATE; UPDATE households SET revision=revision+1000;")
+            .unwrap();
+        panic!("simulated handler bug");
+    })
+    .join();
+    assert!(panicked.is_err());
+    assert!(server.db.0.is_poisoned());
+    {
+        let conn = server
+            .db
+            .lock()
+            .expect("a poisoned connection is recovered");
+        assert!(
+            conn.is_autocommit(),
+            "the unfinished transaction was rolled back"
+        );
+        let revision: i64 = conn
+            .query_row("SELECT MAX(revision) FROM households", [], |row| row.get(0))
+            .unwrap();
+        assert!(revision < 1000);
+    }
+    assert!(!server.db.0.is_poisoned());
+    let (status, _, _) = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    operation(
+        &server,
+        &owner,
+        json!({"type":"addItem","productId":"milk","quantity":1.0,"unit":"L","note":"","accumulate":false}),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn panicking_handlers_answer_with_an_internal_error() {
+    let response = super::panic_response(Box::new("boom"));
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let body: Value = serde_json::from_slice(&body).unwrap();
+    assert_eq!(
+        body["message"],
+        "The operation could not be completed. Please try again."
+    );
 }

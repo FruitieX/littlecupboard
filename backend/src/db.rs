@@ -140,10 +140,22 @@ impl Database {
         }
         Ok(Self(Arc::new(Mutex::new(conn))))
     }
+    /// A panic while the connection is held poisons the mutex. The
+    /// connection itself stays valid (dropped rusqlite transactions roll back
+    /// while unwinding), so recover it instead of failing every later request.
     pub fn lock(&self) -> Result<MutexGuard<'_, Connection>> {
-        self.0
-            .lock()
-            .map_err(|_| ApiError::internal("database lock poisoned"))
+        match self.0.lock() {
+            Ok(guard) => Ok(guard),
+            Err(poisoned) => {
+                tracing::error!("Recovering the database connection after a panic");
+                let guard = poisoned.into_inner();
+                self.0.clear_poison();
+                if !guard.is_autocommit() {
+                    guard.execute_batch("ROLLBACK")?;
+                }
+                Ok(guard)
+            }
+        }
     }
     pub fn snapshot(conn: &Connection, household: &str) -> Result<Snapshot> {
         let (revision, data): (u32, String) = conn.query_row(

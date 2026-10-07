@@ -519,8 +519,24 @@ pub fn start(server: Server) -> Result<()> {
     resume_interrupted(&server)?;
     tokio::spawn(async move {
         loop {
-            if let Err(error) = run_one(&server).await {
-                tracing::error!("AI image queue: {}", error.1);
+            // Run each pass in its own task so a panic cannot stop the queue.
+            let pass = server.clone();
+            match tokio::spawn(async move { run_one(&pass).await }).await {
+                Ok(Ok(_)) => {}
+                Ok(Err(error)) => tracing::error!("AI image queue: {}", error.1),
+                Err(error) => {
+                    tracing::error!("AI image queue pass panicked: {error}");
+                    // Only one job runs at a time; fail it so retry controls appear.
+                    if let Err(error) = server.db.lock().and_then(|conn| {
+                        conn.execute(
+                            "UPDATE ai_image_jobs SET status='failed',error='The generation failed unexpectedly. Try again.',finished_at=unixepoch() WHERE status='running'",
+                            [],
+                        )
+                        .map_err(Into::into)
+                    }) {
+                        tracing::error!("AI image queue: {}", error.1);
+                    }
+                }
             }
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }

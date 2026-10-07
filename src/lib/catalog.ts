@@ -1,10 +1,24 @@
 import { catalog, type AppState, type Product } from './data'
 import { defaultCatalogImage } from './catalog-artwork'
 
+// Household snapshots keep their identity until something changes, so cache
+// the merged catalog per snapshot. Treat the returned list as read-only.
+const productCache = new WeakMap<AppState, Map<boolean, Product[]>>()
+
 export function getProducts(
   state: AppState,
   includeArchived = true,
 ): Product[] {
+  let cached = productCache.get(state)
+  if (!cached) productCache.set(state, (cached = new Map()))
+  const hit = cached.get(includeArchived)
+  if (hit) return hit
+  const products = buildProducts(state, includeArchived)
+  cached.set(includeArchived, products)
+  return products
+}
+
+function buildProducts(state: AppState, includeArchived: boolean): Product[] {
   return [...catalog, ...state.customProducts]
     .filter(
       (product) =>
