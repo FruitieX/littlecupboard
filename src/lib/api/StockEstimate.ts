@@ -8,11 +8,15 @@ import type { Amount } from "./Amount";
  */
 export type StockEstimate = { productId: string, name: string, amounts: Array<Amount>, recorded: Array<Amount>, confirmed: boolean, observedAt: string, expiresAt: string | null, dailyUse: Amount | null, daysLeft: number | null, runsOutOn: string | null, 
 /**
+ * Days until the oldest remaining purchase passes its shelf life.
+ */
+useWithinDays: number | null, 
+/**
  * Remaining share of a usual purchase, 0–1, when it can be compared.
  */
 level: number | null, 
 /**
- * `plenty`, `low`, `out`, `expired` or `unknown`.
+ * `plenty`, `low`, `out`, `expiring`, `expired` or `unknown`.
  */
 status: string, 
 /**

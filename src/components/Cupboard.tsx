@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
@@ -8,6 +8,7 @@ import {
   Plus,
   RefreshCw,
   SlidersHorizontal,
+  Settings2,
   Trash2,
 } from 'lucide-react'
 import { NumberInput, QuantityStepper } from './NumberInput'
@@ -67,6 +68,22 @@ function daysLabel(days: number) {
   if (days < 1.5) return 'about a day left'
   if (days < 14) return `about ${Math.round(days)} days left`
   return `about ${Math.round(days / 7)} weeks left`
+}
+
+function useWithinLabel(
+  estimate: StockEstimate | undefined,
+  expiresAt: string | null,
+) {
+  const today = new Date().toISOString().slice(0, 10)
+  if (expiresAt && expiresAt < today) return `use by ${expiresAt} passed`
+  const days = estimate?.useWithinDays
+  if (days !== null && days !== undefined) {
+    if (days < 0) return 'probably past its best'
+    if (days < 1) return 'use today'
+    if (days < 1.5) return 'use within a day'
+    if (days <= 4) return `use within ~${Math.round(days)} days`
+  }
+  return expiresAt ? `use by ${expiresAt}` : null
 }
 
 export function Cupboard() {
@@ -158,9 +175,15 @@ function StockView() {
     )
   const groups = [
     {
+      title: 'Use soon',
+      rows: rows.filter((row) =>
+        ['expiring', 'expired'].includes(row.estimate?.status ?? ''),
+      ),
+    },
+    {
       title: 'Running low',
       rows: rows.filter((row) =>
-        ['low', 'out', 'expired'].includes(row.estimate?.status ?? ''),
+        ['low', 'out'].includes(row.estimate?.status ?? ''),
       ),
     },
     {
@@ -237,6 +260,8 @@ function StockView() {
                     onMore={() =>
                       setEditing(pantryEdit(state, id, product?.name ?? id))
                     }
+                    onSettings={() => setEditingItem(id)}
+                    shelfLife={state.shelfLifeDays?.[id]}
                     onRemove={() => {
                       setOpen(null)
                       update(
@@ -320,6 +345,8 @@ function StockRow({
   open,
   onToggle,
   onMore,
+  onSettings,
+  shelfLife,
   onRemove,
   onConfirm,
   onAddToList,
@@ -334,6 +361,8 @@ function StockRow({
   open: boolean
   onToggle: () => void
   onMore: () => void
+  onSettings: () => void
+  shelfLife?: number
   onRemove: () => void
   onConfirm: (amount: Amount) => void
   onAddToList: () => void
@@ -350,6 +379,11 @@ function StockRow({
     },
   )
   const [draft, setDraft] = useState<Amount>(initial)
+  const touched = useRef(false)
+  // Follow refreshed estimates until someone starts adjusting the amount.
+  useEffect(() => {
+    if (!touched.current) setDraft(initial)
+  }, [initial.quantity, initial.unit])
   const status = estimate?.status ?? 'unknown'
   const level = estimate?.level
   const meta = [
@@ -357,11 +391,8 @@ function StockRow({
     estimate?.daysLeft !== null && estimate?.daysLeft !== undefined
       ? daysLabel(estimate.daysLeft)
       : null,
-    status === 'expired'
-      ? `use by ${entry.expiresAt} passed`
-      : entry.expiresAt
-        ? `use by ${entry.expiresAt}`
-        : null,
+    useWithinLabel(estimate, entry.expiresAt),
+    entry.confirmed ? 'confirmed' : null,
   ].filter(Boolean)
   return (
     <div className={`stock-row status-${status} ${open ? 'open' : ''}`}>
@@ -370,7 +401,10 @@ function StockRow({
         aria-expanded={open}
         aria-controls={`stock-${id}`}
         onClick={() => {
-          if (!open) setDraft(initial)
+          if (!open) {
+            touched.current = false
+            setDraft(initial)
+          }
           onToggle()
         }}
       >
@@ -397,16 +431,6 @@ function StockRow({
               <span style={{ '--level': level } as CSSProperties} />
             </span>
           )}
-        </span>
-        <span
-          className={`stock-badge ${entry.confirmed ? 'confirmed' : ''}`}
-          title={
-            entry.confirmed
-              ? 'Confirmed by the family'
-              : 'Estimated from purchases — worth checking'
-          }
-        >
-          {entry.confirmed ? 'Confirmed' : 'Estimated'}
         </span>
         <ChevronDown size={18} className="stock-chevron" />
       </button>
@@ -437,9 +461,10 @@ function StockRow({
                         unit={draft.unit}
                         min={0}
                         value={draft.quantity}
-                        onValueChange={(quantity) =>
+                        onValueChange={(quantity) => {
+                          touched.current = true
                           setDraft((current) => ({ ...current, quantity }))
-                        }
+                        }}
                       />
                       <span className="stock-unit">{draft.unit}</span>
                     </span>
@@ -476,6 +501,9 @@ function StockRow({
                 >
                   <SlidersHorizontal size={15} /> More options
                 </button>
+                <button className="chip-button" onClick={onSettings}>
+                  <Settings2 size={15} /> Item settings
+                </button>
               </div>
               {estimate?.dailyUse && (
                 <p className="stock-explain">
@@ -493,6 +521,9 @@ function StockRow({
                   {entry.confirmed
                     ? 'your last confirmation'
                     : 'recent purchases'}
+                  {shelfLife
+                    ? `, using older purchases first and dropping anything kept longer than ${shelfLife} days`
+                    : ''}
                   .
                 </p>
               )}

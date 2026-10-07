@@ -29,6 +29,7 @@ const maps = [
   'productGroups',
   'productDetails',
   'consumptionRates',
+  'shelfLifeDays',
 ] as const
 const scalars = [
   'groups',

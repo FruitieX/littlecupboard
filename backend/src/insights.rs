@@ -223,11 +223,12 @@ pub fn project_stock(
             });
             // Stored estimates only ever add purchases, so replay them instead:
             // start at the last confirmed total, add each later purchase and
-            // subtract the daily rate in between. Without a confirmation the
-            // first purchase starts from empty.
+            // subtract the daily rate in between. Purchases are kept as
+            // batches: the oldest is used first and, with a shelf life, a
+            // batch that outlives it is counted as spoiled. Without a
+            // confirmation the first purchase starts from empty.
+            let shelf = state.shelf_life_days.get(id).copied();
             let tracked = daily.as_ref().and_then(|daily| {
-                let anchor = anchors.get(id);
-                let history = purchases.get(id).map(Vec::as_slice).unwrap_or(&[]);
                 let unit_of = |amounts: &[Amount]| {
                     amounts
                         .iter()
@@ -235,43 +236,89 @@ pub fn project_stock(
                         .map(|amount| amount.quantity)
                         .sum::<f64>()
                 };
-                let (mut level, mut since, mut peak) = match anchor {
-                    Some((at, amounts)) => (unit_of(amounts), Some(*at), unit_of(amounts)),
-                    None => (0.0, None, 0.0),
+                let mut batches = Vec::<(DateTime<Utc>, f64)>::new();
+                let mut clock: Option<DateTime<Utc>> = None;
+                let mut peak = 0.0_f64;
+                let advance = |batches: &mut Vec<(DateTime<Utc>, f64)>,
+                               clock: &mut Option<DateTime<Utc>>,
+                               to: DateTime<Utc>| {
+                    let Some(mut at) = *clock else {
+                        *clock = Some(to);
+                        return;
+                    };
+                    while at < to {
+                        let oldest = batches.first().map(|(bought, _)| *bought);
+                        let expiry = shelf.zip(oldest).map(|(days, bought)| {
+                            bought + chrono::Duration::minutes((days * 1440.0) as i64)
+                        });
+                        let step_to = expiry.filter(|expiry| *expiry < to).unwrap_or(to).max(at);
+                        let mut need =
+                            daily.quantity * (step_to - at).num_minutes() as f64 / 1440.0;
+                        while need > 0.0 && !batches.is_empty() {
+                            let used = need.min(batches[0].1);
+                            batches[0].1 -= used;
+                            need -= used;
+                            if batches[0].1 <= 1e-9 {
+                                batches.remove(0);
+                            }
+                        }
+                        // Discard only the batch whose shelf life ended here.
+                        if expiry.is_some_and(|expiry| expiry <= step_to)
+                            && batches.first().map(|(bought, _)| *bought) == oldest
+                        {
+                            batches.remove(0);
+                        }
+                        at = step_to;
+                    }
+                    *clock = Some(to);
                 };
+                let anchor = anchors.get(id);
+                if let Some((at, amounts)) = anchor {
+                    let quantity = unit_of(amounts);
+                    if quantity > 0.0 {
+                        batches.push((*at, quantity));
+                    }
+                    peak = quantity;
+                    clock = Some(*at);
+                }
                 let mut seen = anchor.is_some();
-                for (at, detail) in history {
-                    if since.is_some_and(|since| *at <= since) {
+                for (at, detail) in purchases.get(id).map(Vec::as_slice).unwrap_or(&[]) {
+                    if anchor.is_some_and(|(since, _)| at <= since) {
                         continue;
                     }
                     let bought = unit_of(&event_amounts(detail));
                     if bought <= 0.0 {
                         continue;
                     }
-                    if let Some(since) = since {
-                        let days = (*at - since).num_minutes() as f64 / 1440.0;
-                        level = (level - daily.quantity * days).max(0.0);
-                    }
-                    level += bought;
-                    peak = peak.max(level);
-                    since = Some(*at);
+                    advance(&mut batches, &mut clock, *at);
+                    batches.push((*at, bought));
+                    peak = peak.max(batches.iter().map(|(_, q)| q).sum());
                     seen = true;
                 }
                 if !seen {
                     // No evidence in this unit beyond the stored entry itself.
                     let start = recorded.iter().find(|amount| amount.unit == daily.unit)?;
-                    return Some((
-                        (start.quantity - daily.quantity * elapsed).max(0.0),
-                        start.quantity,
-                    ));
+                    batches.push((observed, start.quantity));
+                    peak = start.quantity;
+                    clock = Some(observed);
                 }
-                let days = since.map_or(0.0, |since| (now - since).num_minutes() as f64 / 1440.0);
-                Some(((level - daily.quantity * days.max(0.0)).max(0.0), peak))
+                advance(&mut batches, &mut clock, now);
+                let remaining = batches.iter().map(|(_, q)| q).sum::<f64>().max(0.0);
+                let use_within = shelf.and_then(|days| {
+                    batches
+                        .first()
+                        .map(|(bought, _)| days - (now - *bought).num_minutes() as f64 / 1440.0)
+                });
+                Some((remaining, peak, use_within))
             });
             let mut amounts = recorded.clone();
             let mut days_left = None;
             let mut level = None;
-            if let (Some(daily), Some((remaining, peak))) = (&daily, tracked) {
+            let mut use_within = shelf
+                .filter(|_| !recorded.is_empty())
+                .map(|days| days - elapsed);
+            if let (Some(daily), Some((remaining, peak, within))) = (&daily, tracked) {
+                use_within = within;
                 amounts.retain(|amount| amount.unit != daily.unit);
                 if remaining > 0.0 {
                     amounts.push(Amount {
@@ -292,8 +339,13 @@ pub fn project_stock(
                 .expires_at
                 .as_ref()
                 .is_some_and(|expiry| expiry.as_str() < today.to_string().as_str());
-            let status = if expired {
+            let use_within = use_within.map(|days| (days * 10.0).round() / 10.0);
+            let status = if expired || use_within.is_some_and(|days| days < 0.0) {
                 "expired"
+            } else if days_left.is_some_and(|days| days < 0.5) {
+                "out"
+            } else if use_within.is_some_and(|days| days <= 1.5) {
+                "expiring"
             } else {
                 match days_left {
                     Some(days) if days < 0.5 => "out",
@@ -317,6 +369,7 @@ pub fn project_stock(
                         .date_naive()
                         .to_string()
                 }),
+                use_within_days: use_within,
                 daily_use: daily.filter(|_| tracked.is_some()),
                 days_left,
                 level,
@@ -556,7 +609,19 @@ pub fn summarize(
                     .get(id)
                     .cloned()
                     .or_else(|| estimate.recorded.first().cloned());
-                let (rate, source) = &rates[id];
+                // Saved rates also apply to items never bought through the app.
+                let Some((rate, source)) = rates
+                    .get(id)
+                    .map(|(rate, source)| (rate.clone(), *source))
+                    .or_else(|| {
+                        state
+                            .consumption_rates
+                            .get(id)
+                            .map(|rate| (rate.clone(), "manual"))
+                    })
+                else {
+                    continue;
+                };
                 let days_left = estimate.days_left.unwrap_or(0.0);
                 let when = next_trip.map_or_else(String::new, |day| {
                     format!(" You usually shop on {}s.", weekday_name(day.weekday()))
@@ -581,7 +646,7 @@ pub fn summarize(
                     existing["daysLeft"] = json!(estimate.days_left);
                     continue;
                 }
-                candidates.insert(id.clone(), json!({"product":product,"quantity":package.as_ref().map(|p| p.quantity),"unit":package.as_ref().map(|p| p.unit.clone()),"note":"","intervalDays":Value::Null,"daysSince":(Utc::now() - last).num_days(),"daysLeft":estimate.days_left,"confidence":if *source == "manual" {"established"} else {"emerging"},"consumptionRate":rate,"consumptionSource":source,"reason":reason}));
+                candidates.insert(id.clone(), json!({"product":product,"quantity":package.as_ref().map(|p| p.quantity),"unit":package.as_ref().map(|p| p.unit.clone()),"note":"","intervalDays":Value::Null,"daysSince":(Utc::now() - last).num_days(),"daysLeft":estimate.days_left,"confidence":if source == "manual" {"established"} else {"emerging"},"consumptionRate":rate,"consumptionSource":source,"reason":reason}));
             }
             _ => {}
         }
@@ -812,6 +877,104 @@ mod tests {
         assert_eq!(untracked[0].status, "unknown");
         assert_eq!(untracked[0].days_left, None);
         assert_eq!(untracked[0].amounts, untracked[0].recorded);
+    }
+
+    fn slow_milk(per_day_ml: f64) -> BTreeMap<String, (ConsumptionRate, &'static str)> {
+        BTreeMap::from([(
+            "milk".to_string(),
+            (
+                ConsumptionRate {
+                    quantity: per_day_ml,
+                    unit: "ml".into(),
+                    days: 1.0,
+                },
+                "manual",
+            ),
+        )])
+    }
+
+    #[test]
+    fn shelf_life_flags_ageing_batches_and_discards_spoiled_ones() {
+        let mut state = stock_state(2000.0, "ml", false, "2026-09-01T12:00:00Z");
+        state.shelf_life_days.insert("milk".into(), 5.0);
+        let purchases = BTreeMap::from([("milk".to_string(), vec![purchase(0, 2.0, "L")])]);
+        let project = |day: i64| {
+            project_stock(
+                &state,
+                &slow_milk(1000.0 / 7.0),
+                &BTreeMap::new(),
+                &purchases,
+                &BTreeMap::new(),
+                at(day),
+                chrono_tz::UTC,
+                2.0,
+            )
+            .remove(0)
+        };
+        let ageing = project(4);
+        assert_eq!(ageing.status, "expiring");
+        assert_eq!(ageing.use_within_days, Some(1.0));
+        assert_eq!(
+            ageing.amounts,
+            vec![Amount {
+                quantity: 1428.57,
+                unit: "ml".into()
+            }]
+        );
+        let spoiled = project(6);
+        assert_eq!(
+            spoiled.status, "out",
+            "a carton past its shelf life is gone"
+        );
+        assert!(spoiled.amounts.is_empty());
+        assert_eq!(spoiled.use_within_days, None);
+    }
+
+    #[test]
+    fn shelf_life_uses_the_oldest_batch_first() {
+        let mut state = stock_state(2000.0, "ml", false, "2026-09-04T12:00:00Z");
+        state.shelf_life_days.insert("milk".into(), 5.0);
+        let purchases = BTreeMap::from([(
+            "milk".to_string(),
+            vec![purchase(0, 1.0, "L"), purchase(3, 1.0, "L")],
+        )]);
+        // Days 0–5 drink 500 ml from the first carton; its other half spoils
+        // on day 5, and day 6 drinks 100 ml from the second carton.
+        let milk = project_stock(
+            &state,
+            &slow_milk(100.0),
+            &BTreeMap::new(),
+            &purchases,
+            &BTreeMap::new(),
+            at(6),
+            chrono_tz::UTC,
+            2.0,
+        )
+        .remove(0);
+        assert_eq!(
+            milk.amounts,
+            vec![Amount {
+                quantity: 900.0,
+                unit: "ml".into()
+            }]
+        );
+        assert_eq!(milk.use_within_days, Some(2.0));
+        assert_eq!(milk.status, "plenty");
+        // Untracked items still get an age warning from the stored entry.
+        let mut plain = stock_state(1.0, "pc", false, "2026-09-01T12:00:00Z");
+        plain.shelf_life_days.insert("milk".into(), 3.0);
+        let old = project_stock(
+            &plain,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            at(5),
+            chrono_tz::UTC,
+            2.0,
+        );
+        assert_eq!(old[0].status, "expired");
+        assert_eq!(old[0].use_within_days, Some(-2.0));
     }
 
     #[test]

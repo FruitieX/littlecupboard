@@ -233,6 +233,9 @@ pub struct HouseholdState {
     pub archived_product_ids: Vec<String>,
     #[serde(default)]
     pub consumption_rates: BTreeMap<String, ConsumptionRate>,
+    /// Optional days an item keeps after buying, e.g. about 7 for milk.
+    #[serde(default)]
+    pub shelf_life_days: BTreeMap<String, f64>,
 }
 
 #[derive(Clone, Deserialize, Serialize, TS)]
@@ -422,6 +425,7 @@ pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
         product_details: BTreeMap::new(),
         archived_product_ids: vec![],
         consumption_rates: BTreeMap::new(),
+        shelf_life_days: BTreeMap::new(),
     }
 }
 
@@ -442,9 +446,11 @@ pub struct StockEstimate {
     pub daily_use: Option<Amount>,
     pub days_left: Option<f64>,
     pub runs_out_on: Option<String>,
+    /// Days until the oldest remaining purchase passes its shelf life.
+    pub use_within_days: Option<f64>,
     /// Remaining share of a usual purchase, 0–1, when it can be compared.
     pub level: Option<f64>,
-    /// `plenty`, `low`, `out`, `expired` or `unknown`.
+    /// `plenty`, `low`, `out`, `expiring`, `expired` or `unknown`.
     pub status: String,
     /// `manual`, `estimated` or `none`.
     pub rate_source: String,

@@ -1,7 +1,11 @@
 import { useState } from 'react'
 import { useLearning } from '../lib/learning'
 import type { ConsumptionRate } from '../lib/api/ConsumptionRate'
-import { ConsumptionFields, rateLabel } from './ConsumptionFields'
+import {
+  ConsumptionFields,
+  ShelfLifeFields,
+  rateLabel,
+} from './ConsumptionFields'
 import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useApp } from '../lib/state'
 import { catalog, type Product, type Recipe } from '../lib/data'
@@ -247,6 +251,12 @@ export function ProductEditor({
   const [consumptionRate, setConsumptionRate] = useState<
     ConsumptionRate | undefined
   >(originalRate)
+  const [originalShelfLife] = useState(
+    product ? state.shelfLifeDays?.[product.id] : undefined,
+  )
+  const [shelfLife, setShelfLife] = useState<number | undefined>(
+    originalShelfLife,
+  )
   const habit = insights.habits.find((entry) => entry.productId === product?.id)
   const [name, setName] = useState(product?.name ?? '')
   const [group, setGroup] = useState(product?.category ?? groups[0])
@@ -325,11 +335,28 @@ export function ProductEditor({
               )
               return
             }
+            if (
+              product &&
+              (originalShelfLife ?? null) !==
+                (state.shelfLifeDays?.[product.id] ?? null)
+            ) {
+              setError(
+                'The shelf life changed on another device. Reopen this item to review it.',
+              )
+              return
+            }
             update((current) => {
               const rates = { ...current.consumptionRates }
               if (consumptionRate) rates[saved.id] = consumptionRate
               else delete rates[saved.id]
-              return { ...saveProduct(current, saved), consumptionRates: rates }
+              const shelf = { ...current.shelfLifeDays }
+              if (shelfLife !== undefined) shelf[saved.id] = shelfLife
+              else delete shelf[saved.id]
+              return {
+                ...saveProduct(current, saved),
+                consumptionRates: rates,
+                shelfLifeDays: shelf,
+              }
             }, `Edit ${saved.name}`)
             onClose()
           }}
@@ -369,6 +396,11 @@ export function ProductEditor({
             onChange={setConsumptionRate}
             suggested={habit?.estimatedConsumption ?? undefined}
             purchases={habit?.purchases}
+          />
+          <ShelfLifeFields
+            value={shelfLife}
+            onChange={setShelfLife}
+            name={name}
           />
           <ImageField
             kind="item"

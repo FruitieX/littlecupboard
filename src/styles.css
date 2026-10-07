@@ -1641,14 +1641,16 @@ svg {
   max-height: 560px;
   overflow-y: auto;
 }
-.consumption-fields {
+.consumption-fields,
+.shelf-life-fields {
   border: 1px solid #dce4d4;
   border-radius: 12px;
   padding: 16px;
   margin: 0;
   min-width: 0;
 }
-.consumption-fields legend {
+.consumption-fields legend,
+.shelf-life-fields legend {
   font-weight: 650;
   color: #214e38;
   padding: 0 6px;
@@ -5224,4 +5226,21 @@ svg {
 }
 .bar-fill {
   max-width: 56px;
+}
+.shelf-life-row {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px !important;
+  margin-top: 12px;
+}
+.shelf-life-row input {
+  width: 84px !important;
+}
+.stock-row.status-expiring {
+  background: #fff7ef;
+  box-shadow: inset 0 0 0 1px #f1d9bd;
+}
+.status-expiring .stock-level span {
+  background: #d9894a;
 }

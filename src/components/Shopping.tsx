@@ -881,6 +881,11 @@ function ItemEditor({
     (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
   )
   const multipleAmounts = (item?.amounts?.length ?? 0) > 1
+  const [moreOpen, setMoreOpen] = useState(!item)
+  // Show a picture that is still generating (for example after reopening).
+  useEffect(() => {
+    if (pictureBusy) setMoreOpen(true)
+  }, [pictureBusy])
   return (
     <Modal
       open={open}
@@ -1015,7 +1020,11 @@ function ItemEditor({
             </span>
           </p>
         ) : null}
-        <details className="editor-more" open={!item}>
+        <details
+          className="editor-more"
+          open={moreOpen}
+          onToggle={(event) => setMoreOpen(event.currentTarget.open)}
+        >
           <summary>Group & picture</summary>
           <div className="editor-more-body">
             <label>

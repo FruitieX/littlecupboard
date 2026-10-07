@@ -63,6 +63,24 @@ async function replaceNumber(field, value) {
     'Typing must not prefix a forced zero',
   )
 }
+async function openCupboardAdd(page) {
+  await page.goto(`${frontendUrl}/cupboard`)
+  await settle(page)
+  await page
+    .getByRole('button', { name: 'Add what we have', exact: true })
+    .click()
+}
+async function openStockRow(page, name) {
+  const row = page.locator('.stock-row').filter({
+    has: page.locator('.stock-text strong', {
+      hasText: new RegExp(`^${name}$`),
+    }),
+  })
+  const toggle = row.locator('.stock-row-main')
+  if ((await toggle.getAttribute('aria-expanded')) !== 'true')
+    await toggle.click()
+  return row
+}
 async function dismissRecovery(page) {
   await page
     .getByRole('button', { name: 'I saved my code', exact: true })
@@ -343,9 +361,7 @@ try {
     .waitFor()
   console.log('Offline shopping queued and synchronized after reconnection.')
 
-  await owner.goto(frontendUrl)
-  await settle(owner)
-  await owner.getByRole('button', { name: 'Pantry', exact: true }).click()
+  await openCupboardAdd(owner)
   await owner.getByLabel('Pantry item', { exact: true }).fill('Rice')
   await replaceNumber(owner.getByLabel('Quantity', { exact: true }), '500')
   await owner.getByLabel('Unit', { exact: true }).fill('g')
@@ -353,14 +369,15 @@ try {
     .getByRole('button', { name: 'Confirm amount', exact: true })
     .click()
   await owner
-    .getByRole('dialog')
-    .getByText(/500 g · Confirmed/)
+    .locator('.stock-row')
+    .getByText(/500 g · confirmed/)
     .waitFor()
   await owner.waitForFunction(
     async () =>
       (await (await fetch('/api/state')).json()).state.pantry.rice?.amounts[0]
         ?.quantity === 500,
   )
+  await openStockRow(owner, 'Rice')
   await owner
     .getByRole('button', { name: 'Edit Rice in pantry', exact: true })
     .click()
@@ -470,6 +487,7 @@ try {
     else await route.continue()
   }
   await owner.route('**/api/operations', rejectPantryOnce)
+  await openStockRow(owner, 'Rice')
   await owner
     .getByRole('button', { name: 'Remove Rice from pantry', exact: true })
     .click()
@@ -478,7 +496,6 @@ try {
     .filter({ hasText: 'Review changes' })
     .first()
     .waitFor({ state: 'attached' })
-  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
   await owner.unroute('**/api/operations', rejectPantryOnce)
   await owner
     .getByRole('button', { name: /Review changes/ })
@@ -504,11 +521,8 @@ try {
   )
   await owner.reload()
   await settle(owner)
-  await owner.getByRole('button', { name: 'Pantry', exact: true }).click()
   assert.equal(
-    await owner
-      .getByRole('button', { name: 'Remove Rice from pantry', exact: true })
-      .count(),
+    await owner.locator('.stock-text strong', { hasText: /^Rice$/ }).count(),
     0,
   )
   assert.equal(await owner.getByText(/Review changes/).count(), 0)
@@ -516,6 +530,9 @@ try {
     (await request(wife, '/state', undefined, 'GET')).state.pantry.rice,
     undefined,
   )
+  await owner
+    .getByRole('button', { name: 'Add what we have', exact: true })
+    .click()
   await owner.getByLabel('Pantry item', { exact: true }).fill('Rice')
   await owner.getByLabel('Quantity', { exact: true }).fill('500')
   await owner.getByLabel('Unit', { exact: true }).fill('g')
@@ -523,10 +540,9 @@ try {
     .getByRole('button', { name: 'Confirm amount', exact: true })
     .click()
   await owner
-    .getByRole('dialog')
-    .getByText(/500 g · Confirmed/)
+    .locator('.stock-row')
+    .getByText(/500 g · confirmed/)
     .waitFor()
-  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
   await owner.goto(frontendUrl + '/recipes')
   await settle(owner)
   await owner.getByRole('button', { name: 'Add recipe', exact: true }).click()
@@ -1557,6 +1573,7 @@ try {
     owner,
     owner.getByRole('button', { name: 'Check Recovery tomatoes', exact: true }),
   )
+  await owner.getByText('Group & picture', { exact: true }).click()
   await owner
     .getByRole('button', { name: 'Generate icon', exact: true })
     .first()
@@ -1596,6 +1613,7 @@ try {
     owner,
     owner.getByRole('button', { name: 'Check Recovery olives', exact: true }),
   )
+  await owner.getByText('Group & picture', { exact: true }).click()
   await owner
     .getByRole('button', { name: 'Generate icon', exact: true })
     .first()
@@ -2620,14 +2638,50 @@ try {
       exact: true,
     })
     .click()
+  await owner
+    .getByRole('checkbox', { name: 'Spoils after a while', exact: true })
+    .check()
+  assert.equal(
+    await owner.getByLabel('Shelf life (days)', { exact: true }).inputValue(),
+    '21',
+    'Apples suggest a typical shelf life',
+  )
+  await replaceNumber(
+    owner.getByLabel('Shelf life (days)', { exact: true }),
+    '10',
+  )
+  await owner.getByRole('button', { name: 'Save item', exact: true }).click()
+  await eventually(
+    async () =>
+      (await request(wife, '/state', undefined, 'GET')).state.shelfLifeDays
+        ?.apples === 10,
+  )
+  await owner.reload()
+  await settle(owner)
+  await owner
+    .getByLabel('Search managed items', { exact: true })
+    .fill('Eating apples')
+  await owner
+    .getByRole('button', {
+      name: 'Edit catalog item Eating apples',
+      exact: true,
+    })
+    .click()
   assert.equal(
     await owner
       .getByLabel('Consumption quantity', { exact: true })
       .inputValue(),
     '6',
   )
+  assert.equal(
+    await owner.getByLabel('Shelf life (days)', { exact: true }).inputValue(),
+    '10',
+  )
   await owner
     .getByRole('checkbox', { name: 'Set consumption rate', exact: true })
+    .uncheck()
+  await owner
+    .getByRole('checkbox', { name: 'Spoils after a while', exact: true })
     .uncheck()
   await owner.getByRole('button', { name: 'Save item', exact: true }).click()
   // Start a fresh purchase quantity; a non-accumulating add preserves an existing active tile.
@@ -2705,12 +2759,49 @@ try {
   console.log(
     'Consumption settings persist across reload/devices; learned quantities stay estimates until explicitly accepted.',
   )
+  // Three weekly purchases at the accepted 6 pc / 7 days leave none by now.
+  await owner.goto(frontendUrl)
+  await settle(owner)
+  const lowApples = owner
+    .locator('.running-low')
+    .getByRole('button', { name: /^Add (Eating )?apples, /, exact: false })
+  await lowApples.waitFor()
+  await lowApples.click()
+  const appleTile = owner.locator('.item-tile .tile-check').filter({
+    hasText: /apples/i,
+  })
+  await appleTile.waitFor()
+  assert.match(await appleTile.innerText(), /6 pc/)
+  await appleTile.click()
+  await owner.getByRole('button', { name: 'Finish trip' }).click()
+  const trip = owner.getByRole('dialog', { name: 'Trip complete!' })
+  await trip.waitFor()
+  assert.match(await trip.textContent(), /Items\s*\d+/i)
+  await trip.getByRole('button', { name: 'Done', exact: true }).click()
+  await owner.goto(frontendUrl + '/cupboard')
+  await settle(owner)
+  await owner
+    .locator('.stock-row')
+    .filter({ hasText: /apples/i })
+    .waitFor()
+  await owner.getByRole('tab', { name: 'Trends', exact: true }).click()
+  await owner.getByText('Items bought per week', { exact: true }).waitFor()
+  assert.ok((await owner.locator('.bar-chart .bar').count()) >= 19)
+  await owner.getByRole('tab', { name: 'History', exact: true }).click()
+  await owner
+    .getByText(/Finished shopping · \d+ items/)
+    .first()
+    .waitFor()
+  console.log(
+    'Running-low projection, usual quantities, trip summary, cupboard trends and history passed.',
+  )
   for (const width of [320, 390, 768, 1440]) {
     await owner.setViewportSize({ width, height: 900 })
     for (const path of [
       '/',
       '/week',
       '/recipes',
+      '/cupboard',
       '/settings',
       '/settings/stores',
       '/settings/groups',
@@ -2893,11 +2984,9 @@ try {
     await owner.getByRole('combobox', { name: 'Shopping at' }).fill('Pr')
     await owner.screenshot({ path: 'mockups/shop-picker-mobile.png' })
     await owner.getByRole('combobox', { name: 'Shopping at' }).press('Escape')
-    await owner.getByRole('button', { name: 'Pantry', exact: true }).click()
+    await owner.goto(frontendUrl + '/cupboard')
+    await settle(owner)
     await owner.screenshot({ path: 'mockups/pantry-mobile.png' })
-    await owner
-      .getByRole('button', { name: 'Close dialog', exact: true })
-      .click()
     await owner.setViewportSize({ width: 1440, height: 1100 })
     await owner.goto(frontendUrl)
     await settle(owner)

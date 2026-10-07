@@ -1776,8 +1776,10 @@ async fn backup_restore_is_guarded_atomic_and_owner_only() {
 async fn learned_intervals_ignore_restores_and_undone_purchases() {
     let (server, _dir) = server();
     let owner = owner(&server).await;
-    for days in [24, 16, 8] {
-        operation(&server,&owner,json!({"type":"addItem","productId":"oat-milk","quantity":if days == 8 {4} else {2},"unit":"L","note":"Barista","accumulate":false})).await;
+    // 2 L, 2 L, then 4 L at a learned 2 L per 8 days: the larger last
+    // purchase lasts 16 days, so it is used up by now and due again.
+    for days in [32, 24, 16] {
+        operation(&server,&owner,json!({"type":"addItem","productId":"oat-milk","quantity":if days == 16 {4} else {2},"unit":"L","note":"Barista","accumulate":false})).await;
         operation(
             &server,
             &owner,
@@ -1819,6 +1821,8 @@ async fn learned_intervals_ignore_restores_and_undone_purchases() {
     assert_eq!(insights["restock"][0]["note"], "Barista");
     assert_eq!(insights["restock"][0]["quantity"].as_f64(), Some(2.0));
     assert_eq!(insights["restock"][0]["unit"], "L");
+    assert_eq!(insights["restock"][0]["daysLeft"], 0.0);
+    assert_eq!(insights["stock"][0]["status"], "out");
     assert_eq!(insights["purchaseCount"], 3);
     operation(
         &server,
@@ -3002,6 +3006,81 @@ async fn households_cannot_read_each_others_state_history_or_private_images() {
 }
 
 #[tokio::test]
+async fn saved_rates_project_stock_without_purchase_history_and_shelf_life_is_validated() {
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    operation(&server,&owner,json!({"type":"patch","label":"Set consumption","changes":[{"collection":"consumptionRates","key":"coffee","field":null,"before":null,"after":{"quantity":1.0,"unit":"pc","days":1.0}}]})).await;
+    operation(
+        &server,
+        &owner,
+        json!({"type":"observePantry","productId":"coffee","quantity":1.0,"unit":"pc","expiresAt":null}),
+    )
+    .await;
+    let (status, insights, _) = request(
+        &server,
+        Method::GET,
+        "/api/insights",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{insights}");
+    assert_eq!(insights["stock"][0]["productId"], "coffee");
+    assert_eq!(insights["stock"][0]["status"], "low");
+    assert_eq!(insights["stock"][0]["rateSource"], "manual");
+    assert_eq!(insights["restock"][0]["product"]["id"], "coffee");
+    assert!(
+        insights["restock"][0]["reason"]
+            .as_str()
+            .unwrap()
+            .contains("left")
+    );
+    // A failed projection must never poison the shared database lock.
+    let (status, _, _) = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let shelf = |after: Value| json!({"type":"patch","label":"Shelf life","changes":[{"collection":"shelfLifeDays","key":"coffee","field":null,"before":null,"after":after}]});
+    for invalid in [json!(0.1), json!(5000.0)] {
+        let (status, _, _) = request(
+            &server,
+            Method::POST,
+            "/api/operations",
+            json!({"id":uuid::Uuid::new_v4().to_string(),"operation":shelf(invalid)}),
+            Some(&owner),
+        )
+        .await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+    }
+    operation(&server, &owner, shelf(json!(7.0))).await;
+    let snapshot = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert_eq!(snapshot["state"]["shelfLifeDays"]["coffee"], 7.0);
+    let insights = request(
+        &server,
+        Method::GET,
+        "/api/insights",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    assert_eq!(insights["stock"][0]["useWithinDays"], 7.0);
+}
+
+#[tokio::test]
 async fn configured_consumption_is_guarded_validated_and_controls_restock_without_learning() {
     let (server, _dir) = server();
     let owner = owner(&server).await;
@@ -3237,7 +3316,7 @@ async fn partial_store_routes_are_guarded_validated_and_survive_backup_restore()
                 0
             ))
             .unwrap(),
-        10
+        11
     );
     // Old catalog customizations lacking images inherit new bundled art.
     let mut household: model::HouseholdState =

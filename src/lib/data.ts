@@ -108,6 +108,7 @@ export type AppState = {
     string,
     import('./api/ConsumptionRate').ConsumptionRate
   >
+  shelfLifeDays?: Record<string, number>
 }
 
 const productGroups: [Category, string, string[]][] = [

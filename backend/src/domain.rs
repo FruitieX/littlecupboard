@@ -913,6 +913,7 @@ fn patch(state: &mut Value, change: &Change) -> Result<()> {
         "productGroups",
         "productDetails",
         "consumptionRates",
+        "shelfLifeDays",
     ];
     let scalars = [
         "groups",
@@ -1097,6 +1098,7 @@ pub fn changes(before: &HouseholdState, after: &HouseholdState) -> Result<Vec<Ch
         "productGroups",
         "productDetails",
         "consumptionRates",
+        "shelfLifeDays",
         "purchases",
     ] {
         let old = a[collection].as_object().expect("model map");
@@ -1402,6 +1404,15 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
                 "Choose a consumption period between 0.1 and 3650 days.",
             ));
         }
+    }
+    if state.shelf_life_days.len() > products.len()
+        || state.shelf_life_days.iter().any(|(id, days)| {
+            !products.contains(id) || !days.is_finite() || *days < 0.5 || *days > 3650.0
+        })
+    {
+        return Err(ApiError::bad(
+            "Choose a shelf life between 0.5 and 3650 days.",
+        ));
     }
     for (id, pantry) in &state.pantry {
         if !products.contains(id)
