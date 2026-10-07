@@ -17,6 +17,8 @@ type ProviderConfig = {
   responseFormat: string
   tokenParameter: string
   prompts: { assistant: string; itemImage: string; recipeImage: string }
+  quickModel: string
+  quickReasoningEffort: string
 }
 export function AISettings() {
   const { session, refreshSession } = useApp()
@@ -364,6 +366,51 @@ export function AISettings() {
           >
             Load available models from saved provider
           </button>
+          <fieldset className="quick-task-fields">
+            <legend>Quick tasks</legend>
+            <p className="quiet-label">
+              Small jobs that should answer fast, such as Fill in with AI for
+              new items.
+            </p>
+            <label>
+              Quick-task model
+              <input
+                list="provider-models"
+                value={config.quickModel ?? ''}
+                onChange={(event) => field('quickModel', event.target.value)}
+                placeholder={config.model || 'Same as the chat model'}
+                maxLength={200}
+              />
+              <small>Leave blank to use the chat model.</small>
+            </label>
+            <label>
+              Quick-task reasoning
+              <select
+                aria-label="Quick-task reasoning effort"
+                value={config.quickReasoningEffort ?? ''}
+                onChange={(event) =>
+                  field('quickReasoningEffort', event.target.value)
+                }
+              >
+                <option value="">
+                  Automatic ({config.reasoningEffort ? 'low' : 'model default'})
+                </option>
+                {[
+                  'none',
+                  'minimal',
+                  'low',
+                  'medium',
+                  'high',
+                  'xhigh',
+                  'max',
+                ].map((effort) => (
+                  <option key={effort} value={effort}>
+                    {effort}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </fieldset>
           <details className="settings-disclosure">
             <summary>Compatibility & image generation</summary>
             <label>

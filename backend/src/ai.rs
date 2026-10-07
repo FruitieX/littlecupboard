@@ -40,6 +40,30 @@ pub struct ProviderConfig {
     pub token_parameter: String,
     #[serde(default)]
     pub prompts: SystemPrompts,
+    /// Model for small, quick tasks such as filling in item details. Blank
+    /// uses the chat model.
+    #[serde(default)]
+    pub quick_model: String,
+    /// Reasoning effort for quick tasks. Blank means automatic: `low` when
+    /// the chat setting uses reasoning, otherwise not sent.
+    #[serde(default)]
+    pub quick_reasoning_effort: String,
+}
+impl ProviderConfig {
+    /// Model and reasoning effort for small tasks that should answer fast.
+    pub fn quick(&self) -> (&str, Option<&str>) {
+        let model = if self.quick_model.trim().is_empty() {
+            &self.model
+        } else {
+            self.quick_model.trim()
+        };
+        let effort = match self.quick_reasoning_effort.as_str() {
+            "" if self.reasoning_effort.is_empty() => None,
+            "" => Some("low"),
+            effort => Some(effort),
+        };
+        (model, effort)
+    }
 }
 #[derive(Clone, Debug, Serialize, TS, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -103,6 +127,8 @@ impl Default for ProviderConfig {
             response_format: "json".into(),
             token_parameter: "max_completion_tokens".into(),
             prompts: SystemPrompts::default(),
+            quick_model: String::new(),
+            quick_reasoning_effort: String::new(),
         }
     }
 }
@@ -113,11 +139,16 @@ pub struct ProviderInput {
     pub api_key: Option<String>,
 }
 fn validate_config(config: &ProviderConfig) -> Result<()> {
-    if !matches!(config.transport.as_str(), "api" | "companion")
-        || !matches!(
-            config.reasoning_effort.as_str(),
+    let effort = |value: &str| {
+        matches!(
+            value,
             "" | "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
         )
+    };
+    if !matches!(config.transport.as_str(), "api" | "companion")
+        || !effort(&config.reasoning_effort)
+        || !effort(&config.quick_reasoning_effort)
+        || config.quick_model.len() > 200
     {
         return Err(ApiError::bad(
             "Choose a valid provider and reasoning effort.",
@@ -1008,10 +1039,11 @@ pub async fn item_details(
         config.prompts.assistant
     );
     let context = json!({"name":name,"quantity":input.quantity,"unit":input.unit,"note":input.note,"group":input.group,"groups":state.groups});
-    let mut body = json!({"model":config.model,"messages":[{"role":"system","content":instruction},{"role":"user","content":format!("Shopping item: {context}\nSuggest the missing details.")}]});
-    if !config.reasoning_effort.is_empty() {
-        // A small classification task; keep it quick even with deep defaults.
-        body["reasoning_effort"] = json!("low");
+    // A small classification task: use the quick-task model and effort.
+    let (model, effort) = config.quick();
+    let mut body = json!({"model":model,"messages":[{"role":"system","content":instruction},{"role":"user","content":format!("Shopping item: {context}\nSuggest the missing details.")}]});
+    if let Some(effort) = effort {
+        body["reasoning_effort"] = json!(effort);
     }
     if config.token_parameter != "omit" {
         body[&config.token_parameter] = json!(1500);

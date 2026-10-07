@@ -59,7 +59,7 @@ impl Database {
             [],
             |row| row.get(0),
         )?;
-        if version > 11 {
+        if version > 12 {
             return Err(ApiError::internal(
                 "This database was created by a newer LittleCupboard version. Restore a compatible backup before downgrading.",
             ));
@@ -117,6 +117,11 @@ impl Database {
         if version < 11 {
             conn.execute_batch("BEGIN IMMEDIATE")?;
             conn.execute_batch(include_str!("../migrations/011_shelf_life.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 12 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/012_quick_tasks.sql"))?;
             conn.execute_batch("COMMIT")?;
         }
         conn.execute(

@@ -3317,7 +3317,7 @@ async fn partial_store_routes_are_guarded_validated_and_survive_backup_restore()
                 0
             ))
             .unwrap(),
-        11
+        12
     );
     // Old catalog customizations lacking images inherit new bundled art.
     let mut household: model::HouseholdState =
@@ -4246,6 +4246,76 @@ async fn item_details_fill_missing_fields_and_keep_family_choices() {
         sent["reasoning_effort"], "low",
         "a quick task overrides deep reasoning"
     );
+    assert_eq!(
+        sent["model"], "fixture-chat",
+        "blank quick model uses the chat model"
+    );
+    // An explicit quick-task model and effort are used as configured.
+    let mut quick = config.clone();
+    quick["quickModel"] = json!("fixture-quick");
+    quick["quickReasoningEffort"] = json!("medium");
+    let (status, body, _) = request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":quick,"apiKey":null}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    request(
+        &server,
+        Method::POST,
+        "/api/ai/item-details",
+        json!({"name":"Margarine"}),
+        Some(&cookie),
+    )
+    .await;
+    let sent = seen.lock().unwrap().last().cloned().unwrap();
+    assert_eq!(sent["model"], "fixture-quick");
+    assert_eq!(sent["reasoning_effort"], "medium");
+    // Without any reasoning setting, automatic mode sends none.
+    let mut plain = config.clone();
+    plain["reasoningEffort"] = json!("");
+    request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":plain,"apiKey":null}),
+        Some(&cookie),
+    )
+    .await;
+    request(
+        &server,
+        Method::POST,
+        "/api/ai/item-details",
+        json!({"name":"Margarine"}),
+        Some(&cookie),
+    )
+    .await;
+    let sent = seen.lock().unwrap().last().cloned().unwrap();
+    assert!(sent.get("reasoning_effort").is_none());
+    let mut invalid = config.clone();
+    invalid["quickReasoningEffort"] = json!("turbo");
+    let (status, _, _) = request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":invalid,"apiKey":null}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config,"apiKey":null}),
+        Some(&cookie),
+    )
+    .await;
+    // The first request carried the family's chosen fields.
+    let sent = seen.lock().unwrap()[0].clone();
     assert_eq!(sent["response_format"]["type"], "json_schema");
     let user = sent["messages"][1]["content"].as_str().unwrap();
     assert!(user.contains("\"unit\":\"pack\"") && user.contains("Plant-based"));
