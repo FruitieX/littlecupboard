@@ -8,4 +8,9 @@ export type ItemDetailsProposal = { group: string, quantity: number, unit: strin
 /**
  * A short visual description used to generate the item's icon.
  */
-iconDescription: string, };
+iconDescription: string, 
+/**
+ * Approximate days the item keeps after buying; null when it keeps for
+ * months or does not spoil.
+ */
+shelfLifeDays: number | null, };

@@ -164,6 +164,10 @@ pub struct MealFeedback {
     pub at: String,
     pub rating: Option<u8>,
     pub consumed: bool,
+    /// Recorded by the daily routine that uses a planned meal's ingredients;
+    /// the family can still mark the meal skipped or rate it.
+    #[serde(default)]
+    pub automatic: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS, PartialEq)]
@@ -386,6 +390,9 @@ pub struct Seed {
     pub categories: Vec<String>,
     #[serde(rename = "artworkAliases")]
     pub artwork_aliases: BTreeMap<String, String>,
+    /// Approximate built-in shelf lives in days, keyed by product id.
+    #[serde(default, rename = "shelfLife")]
+    pub shelf_life: BTreeMap<String, f64>,
 }
 
 /// The bundled catalog, parsed once. Product lookups run inside request

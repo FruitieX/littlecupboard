@@ -2,7 +2,7 @@ use crate::{
     error::{ApiError, Result},
     model::*,
 };
-use chrono::{Datelike, Duration, NaiveDate, Utc};
+use chrono::{Datelike, Duration, NaiveDate, Timelike, Utc};
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -46,6 +46,15 @@ pub fn totals(values: &[Amount]) -> Vec<Amount> {
             quantity: (quantity * 10000.0).round() / 10000.0,
         })
         .collect()
+}
+/// Effective shelf life: a household setting wins (0 turns a built-in default
+/// off), otherwise the bundled default.
+pub fn shelf_life(state: &HouseholdState, id: &str) -> Option<f64> {
+    match state.shelf_life_days.get(id) {
+        Some(days) if *days > 0.0 => Some(*days),
+        Some(_) => None,
+        None => seed().shelf_life.get(id).copied(),
+    }
 }
 pub fn product(state: &HouseholdState, id: &str) -> Result<Product> {
     let product = seed()
@@ -607,6 +616,42 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
             }) {
                 return Ok(json!({"unchanged":true}));
             }
+            if let Some(previous) = state
+                .meal_feedback
+                .get(day)
+                .filter(|feedback| feedback.automatic && feedback.recipe_id == *recipe_id)
+                .cloned()
+            {
+                // The daily routine assumed the meal was made; the family's
+                // answer replaces that guess.
+                if status == "cooked" {
+                    let feedback = state.meal_feedback.get_mut(day).expect("feedback exists");
+                    feedback.automatic = false;
+                    feedback.rating = *rating;
+                    feedback.at = Utc::now().to_rfc3339();
+                } else {
+                    if previous.consumed {
+                        let recipe = recipe(state, recipe_id)
+                            .ok_or_else(|| ApiError::bad("This recipe no longer exists."))?;
+                        consume_meal(state, day, &recipe, previous.servings, 1.0);
+                    }
+                    state.meal_feedback.insert(
+                        day.clone(),
+                        MealFeedback {
+                            status: status.clone(),
+                            consumed: false,
+                            automatic: false,
+                            rating: None,
+                            at: Utc::now().to_rfc3339(),
+                            ..previous
+                        },
+                    );
+                }
+                reconcile_reservations(state);
+                return Ok(
+                    json!({"day":day,"recipeId":recipe_id,"status":status,"rating":rating,"replacedAutomatic":true}),
+                );
+            }
             if state.meal_feedback.contains_key(day) {
                 return Err(ApiError::bad(
                     "Undo the previous meal feedback before changing it.",
@@ -620,41 +665,7 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
                 .copied()
                 .unwrap_or(state.preferences.servings);
             if *consume && status == "cooked" {
-                for ingredient in &recipe.ingredients {
-                    let required = ingredient.quantity * servings / recipe.servings;
-                    let credit = state
-                        .plan_coverage
-                        .get(day)
-                        .and_then(|day| day.get(&ingredient.product_id))
-                        .map(|amounts| {
-                            totals(amounts)
-                                .iter()
-                                .filter(|amount| {
-                                    amount.unit
-                                        == normalize(&Amount {
-                                            quantity: required,
-                                            unit: ingredient.unit.clone(),
-                                        })
-                                        .unit
-                                })
-                                .map(|amount| amount.quantity)
-                                .sum::<f64>()
-                        })
-                        .unwrap_or(0.0);
-                    let normalized = normalize(&Amount {
-                        quantity: required,
-                        unit: ingredient.unit.clone(),
-                    });
-                    adjust_stock(
-                        state,
-                        &ingredient.product_id,
-                        &[Amount {
-                            quantity: (normalized.quantity - credit).max(0.0),
-                            unit: normalized.unit,
-                        }],
-                        -1.0,
-                    );
-                }
+                consume_meal(state, day, &recipe, servings, -1.0);
             }
             state.meal_feedback.insert(
                 day.clone(),
@@ -665,6 +676,7 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
                     at: Utc::now().to_rfc3339(),
                     rating: *rating,
                     consumed: *consume && status == "cooked",
+                    automatic: false,
                 },
             );
             reconcile_reservations(state);
@@ -1408,7 +1420,10 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
     }
     if state.shelf_life_days.len() > products.len()
         || state.shelf_life_days.iter().any(|(id, days)| {
-            !products.contains(id) || !days.is_finite() || *days < 0.5 || *days > 3650.0
+            // 0 turns a built-in default off.
+            !products.contains(id)
+                || !days.is_finite()
+                || *days != 0.0 && (*days < 0.5 || *days > 3650.0)
         })
     {
         return Err(ApiError::bad(
@@ -1467,6 +1482,98 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Uses (direction -1) or returns (+1) a planned meal's ingredients in the
+/// cupboard. Amounts bought for that day are reserved credits, not pantry
+/// stock, so only the remainder changes the pantry.
+fn consume_meal(
+    state: &mut HouseholdState,
+    day: &str,
+    recipe: &Recipe,
+    servings: f64,
+    direction: f64,
+) {
+    for ingredient in &recipe.ingredients {
+        let required = normalize(&Amount {
+            quantity: ingredient.quantity * servings / recipe.servings,
+            unit: ingredient.unit.clone(),
+        });
+        let credit = state
+            .plan_coverage
+            .get(day)
+            .and_then(|day| day.get(&ingredient.product_id))
+            .map(|amounts| {
+                totals(amounts)
+                    .iter()
+                    .filter(|amount| amount.unit == required.unit)
+                    .map(|amount| amount.quantity)
+                    .sum::<f64>()
+            })
+            .unwrap_or(0.0);
+        let quantity = (required.quantity - credit).max(0.0);
+        if quantity <= 0.0 || direction > 0.0 && !state.pantry.contains_key(&ingredient.product_id)
+        {
+            continue;
+        }
+        adjust_stock(
+            state,
+            &ingredient.product_id,
+            &[Amount {
+                quantity,
+                unit: required.unit,
+            }],
+            direction,
+        );
+    }
+}
+
+/// Marks planned meals as made once their time has passed and uses their
+/// ingredients from the cupboard: today's lunch after 15:00, and the two
+/// previous days in case the server was down. Older plans are left alone so
+/// enabling this never empties the cupboard retroactively. Returns the days.
+pub fn auto_consume(state: &mut HouseholdState, now: chrono::NaiveDateTime) -> Vec<String> {
+    let today = now.date();
+    let days = state
+        .plan
+        .iter()
+        .filter(|(day, _)| !state.meal_feedback.contains_key(*day))
+        .filter_map(|(day, id)| {
+            let date = NaiveDate::parse_from_str(day, "%Y-%m-%d").ok()?;
+            let due =
+                date == today && now.hour() >= 15 || date < today && (today - date).num_days() <= 2;
+            due.then(|| (day.clone(), id.clone()))
+        })
+        .collect::<Vec<_>>();
+    let mut consumed = vec![];
+    for (day, id) in days {
+        let Some(recipe) = recipe(state, &id) else {
+            continue;
+        };
+        let servings = state
+            .servings
+            .get(&day)
+            .copied()
+            .unwrap_or(state.preferences.servings);
+        consume_meal(state, &day, &recipe, servings, -1.0);
+        state.meal_feedback.insert(
+            day.clone(),
+            MealFeedback {
+                recipe_id: id,
+                status: "cooked".into(),
+                servings,
+                at: Utc::now().to_rfc3339(),
+                rating: None,
+                consumed: true,
+                automatic: true,
+            },
+        );
+        consumed.push(day);
+    }
+    if !consumed.is_empty() {
+        reconcile_reservations(state);
+    }
+    consumed
 }
 
 // Keep purchased ingredients useful when plans change, without counting them twice.

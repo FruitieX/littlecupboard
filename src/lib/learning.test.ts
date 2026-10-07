@@ -58,6 +58,7 @@ describe('household meal suggestions', () => {
         at: '2026-09-29T12:00:00Z',
         rating: 5,
         consumed: true,
+        automatic: false,
       },
     }
     const score = recipeScore(recipes[0], household, Date.parse('2026-09-30'))

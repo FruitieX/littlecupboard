@@ -1,12 +1,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLearning } from '../lib/learning'
 import type { ConsumptionRate } from '../lib/api/ConsumptionRate'
+import { AliasInput } from './AliasInput'
+import { defaultShelfLifeDays, shelfLifeDays } from '../lib/shelf-life'
 import {
   ConsumptionFields,
   ShelfLifeFields,
   rateLabel,
 } from './ConsumptionFields'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { LoaderCircle, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { post } from '../lib/http'
+import type { ShelfLifeEstimate } from '../lib/api/ShelfLifeEstimate'
 import { useApp } from '../lib/state'
 import { catalog, type Product, type Recipe } from '../lib/data'
 import {
@@ -22,7 +26,7 @@ import { ImageField } from './ImageField'
 import { RecipeEditor } from './Recipes'
 
 export function LibrarySettings({ section }: { section: 'items' | 'recipes' }) {
-  const { state, allRecipes, update } = useApp()
+  const { state, allRecipes, update, session, status } = useApp()
   const { insights } = useLearning()
   const [query, setQuery] = useState('')
   const [recipeQuery, setRecipeQuery] = useState('')
@@ -31,6 +35,49 @@ export function LibrarySettings({ section }: { section: 'items' | 'recipes' }) {
   const [recipe, setRecipe] = useState<Recipe | 'new' | null>(null)
   const [removeRecipe, setRemoveRecipe] = useState<Recipe | null>(null)
   const [limit, setLimit] = useState(30)
+  const [estimating, setEstimating] = useState(false)
+  const [estimateMessage, setEstimateMessage] = useState('')
+  // Built-in items come with shelf lives; ask the assistant for our own.
+  async function estimateShelfLives() {
+    setEstimating(true)
+    setEstimateMessage('')
+    try {
+      const estimates = await post<ShelfLifeEstimate[]>('/ai/shelf-lives', {})
+      const known = estimates.filter(
+        (estimate): estimate is ShelfLifeEstimate & { days: number } =>
+          estimate.days !== null,
+      )
+      if (known.length)
+        update(
+          (current) => ({
+            ...current,
+            shelfLifeDays: {
+              ...current.shelfLifeDays,
+              ...Object.fromEntries(
+                known
+                  .filter(
+                    (estimate) =>
+                      current.shelfLifeDays?.[estimate.productId] === undefined,
+                  )
+                  .map((estimate) => [estimate.productId, estimate.days]),
+              ),
+            },
+          }),
+          'Estimate shelf lives',
+        )
+      setEstimateMessage(
+        estimates.length
+          ? `Set shelf lives for ${known.length} of your items; ${estimates.length - known.length} keep for months or don’t spoil. Undo from Cupboard → History.`
+          : 'All of your own items already have a shelf life setting.',
+      )
+    } catch (error) {
+      setEstimateMessage(
+        error instanceof Error ? error.message : 'Please try again.',
+      )
+    } finally {
+      setEstimating(false)
+    }
+  }
   const products = getProducts(state)
     .filter(
       (entry) =>
@@ -82,6 +129,28 @@ export function LibrarySettings({ section }: { section: 'items' | 'recipes' }) {
                 />
                 Show archived items
               </label>
+              {session.aiEnabled && (
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={estimating || status === 'offline'}
+                  onClick={() => void estimateShelfLives()}
+                >
+                  {estimating ? (
+                    <LoaderCircle size={16} className="spin" />
+                  ) : (
+                    <Sparkles size={16} />
+                  )}
+                  {estimating
+                    ? 'Estimating shelf lives…'
+                    : 'Estimate shelf lives with AI'}
+                </button>
+              )}
+              {estimateMessage && (
+                <p className="quiet-label" role="status">
+                  {estimateMessage}
+                </p>
+              )}
               <button
                 className="secondary-button"
                 onClick={() => setProduct('new')}
@@ -251,13 +320,17 @@ export function ProductEditor({
   const [originalShelfLife] = useState(
     product ? state.shelfLifeDays?.[product.id] : undefined,
   )
-  const [shelfLife, setShelfLife] = useState<number | undefined>(
-    originalShelfLife,
+  const builtInShelfLife = product
+    ? defaultShelfLifeDays[product.id]
+    : undefined
+  const [shelfLife, setShelfLife] = useState<number | undefined>(() =>
+    product ? shelfLifeDays(state, product.id) : undefined,
   )
   const habit = insights.habits.find((entry) => entry.productId === product?.id)
   const [name, setName] = useState(product?.name ?? '')
   const [group, setGroup] = useState(product?.category ?? groups[0])
-  const [aliases, setAliases] = useState(product?.aliases?.join(', ') ?? '')
+  const [aliases, setAliases] = useState<string[]>(product?.aliases ?? [])
+  const [aliasDraft, setAliasDraft] = useState('')
   const [image, setImage] = useState(product?.image ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -300,8 +373,7 @@ export function ProductEditor({
             }
             const searchAliases = [
               ...new Set(
-                aliases
-                  .split(',')
+                [...aliases, ...aliasDraft.split(',')]
                   .map((value) => value.trim())
                   .filter(Boolean),
               ),
@@ -346,9 +418,11 @@ export function ProductEditor({
               const rates = { ...current.consumptionRates }
               if (consumptionRate) rates[saved.id] = consumptionRate
               else delete rates[saved.id]
+              // Store only differences from the built-in default; 0 turns it off.
               const shelf = { ...current.shelfLifeDays }
-              if (shelfLife !== undefined) shelf[saved.id] = shelfLife
-              else delete shelf[saved.id]
+              if (shelfLife === builtInShelfLife) delete shelf[saved.id]
+              else if (shelfLife === undefined) shelf[saved.id] = 0
+              else shelf[saved.id] = shelfLife
               return {
                 ...saveProduct(current, saved),
                 consumptionRates: rates,
@@ -361,7 +435,6 @@ export function ProductEditor({
           <label>
             Item name
             <input
-              autoFocus
               required
               maxLength={100}
               value={name}
@@ -379,15 +452,12 @@ export function ProductEditor({
               ))}
             </select>
           </label>
-          <label>
-            Search aliases
-            <input
-              value={aliases}
-              maxLength={2400}
-              onChange={(event) => setAliases(event.target.value)}
-              placeholder="Alternate names, separated by commas"
-            />
-          </label>
+          <AliasInput
+            aliases={aliases}
+            onChange={setAliases}
+            draft={aliasDraft}
+            onDraftChange={setAliasDraft}
+          />
           <ConsumptionFields
             value={consumptionRate}
             onChange={setConsumptionRate}
@@ -398,6 +468,7 @@ export function ProductEditor({
             value={shelfLife}
             onChange={setShelfLife}
             name={name}
+            typical={builtInShelfLife}
           />
           <ImageField
             kind="item"

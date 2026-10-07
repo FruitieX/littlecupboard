@@ -128,12 +128,15 @@ export function ShelfLifeFields({
   value,
   onChange,
   name,
+  typical: builtIn,
 }: {
   value?: number
   onChange: (days: number | undefined) => void
   name: string
+  /** The built-in default for catalog items, if any. */
+  typical?: number
 }) {
-  const typical = typicalShelfLifeDays(name)
+  const typical = builtIn ?? typicalShelfLifeDays(name)
   return (
     <fieldset className="shelf-life-fields">
       <legend>Shelf life</legend>

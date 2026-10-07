@@ -425,6 +425,14 @@ try {
   await owner
     .getByRole('button', { name: 'Edit item details', exact: true })
     .click()
+  await catalogDialog
+    .getByRole('button', { name: 'Remove Cupboard rice', exact: true })
+    .waitFor()
+  assert.notEqual(
+    await owner.evaluate(() => document.activeElement?.tagName),
+    'INPUT',
+    'The catalog editor does not focus a text field (no phone keyboard)',
+  )
   await catalogDialog.getByLabel('Item name', { exact: true }).fill('Rice')
   await catalogDialog
     .getByRole('button', { name: 'Save item', exact: true })
@@ -882,86 +890,96 @@ try {
           unit: 'g',
           note: 'Fixture note',
           iconDescription: 'A small blue box',
+          shelfLifeDays: 10,
         })
-      : isStoreMap
+      : input.messages?.[0]?.content?.includes('Required shelf-life protocol:')
         ? JSON.stringify({
-            message:
-              'Start at produce, then dairy. Review the remaining aisles before saving.',
-            order: ['Fruits', 'Vegetables', 'Milk & eggs'],
+            items: JSON.parse(
+              input.messages[1].content.replace('Items: ', ''),
+            ).map((item, index) => ({
+              productId: item.productId,
+              days: index % 2 ? null : 5,
+            })),
           })
-        : hasImages
+        : isStoreMap
           ? JSON.stringify({
               message:
-                'Recipe transcribed. Review all quantities before saving.',
-              shopping: [],
-              plan: [],
-              recipes: [
-                {
-                  name: 'Imported recipe',
-                  subtitle:
-                    '## Notes\n\n**Keep chilled**.\n\n- Serve fresh\n- Stir gently',
-                  minutes: 10,
-                  servings: 4,
-                  tags: ['Imported'],
-                  ingredients: [
+                'Start at produce, then dairy. Review the remaining aisles before saving.',
+              order: ['Fruits', 'Vegetables', 'Milk & eggs'],
+            })
+          : hasImages
+            ? JSON.stringify({
+                message:
+                  'Recipe transcribed. Review all quantities before saving.',
+                shopping: [],
+                plan: [],
+                recipes: [
+                  {
+                    name: 'Imported recipe',
+                    subtitle:
+                      '## Notes\n\n**Keep chilled**.\n\n- Serve fresh\n- Stir gently',
+                    minutes: 10,
+                    servings: 4,
+                    tags: ['Imported'],
+                    ingredients: [
+                      {
+                        name: 'Apples',
+                        productId: 'apples',
+                        category: null,
+                        quantity: 4,
+                        unit: 'pc',
+                        note: '',
+                      },
+                      {
+                        name: 'Bergamot powder',
+                        productId: null,
+                        category: null,
+                        quantity: 1,
+                        unit: 'g',
+                        note: 'Check the original',
+                      },
+                      {
+                        name: 'Calamansi peel',
+                        productId: null,
+                        category: null,
+                        quantity: 1,
+                        unit: 'g',
+                        note: '',
+                      },
+                      {
+                        name: 'Cassia buds',
+                        productId: null,
+                        category: null,
+                        quantity: 1,
+                        unit: 'g',
+                        note: '',
+                      },
+                    ],
+                    steps: [
+                      'Wash the apples.',
+                      'Stir in **bergamot**.',
+                      'Serve fresh.',
+                    ],
+                  },
+                ],
+              })
+            : input.messages?.[0]?.role === 'user'
+              ? 'Connected'
+              : JSON.stringify({
+                  message: 'Pick up a little fruit for lunch.',
+                  shopping: [
                     {
                       name: 'Apples',
                       productId: 'apples',
                       category: null,
                       quantity: 4,
                       unit: 'pc',
-                      note: '',
-                    },
-                    {
-                      name: 'Bergamot powder',
-                      productId: null,
-                      category: null,
-                      quantity: 1,
-                      unit: 'g',
-                      note: 'Check the original',
-                    },
-                    {
-                      name: 'Calamansi peel',
-                      productId: null,
-                      category: null,
-                      quantity: 1,
-                      unit: 'g',
-                      note: '',
-                    },
-                    {
-                      name: 'Cassia buds',
-                      productId: null,
-                      category: null,
-                      quantity: 1,
-                      unit: 'g',
-                      note: '',
+                      note: 'Crisp',
                     },
                   ],
-                  steps: [
-                    'Wash the apples.',
-                    'Stir in **bergamot**.',
-                    'Serve fresh.',
-                  ],
-                },
-              ],
-            })
-          : input.messages?.[0]?.role === 'user'
-            ? 'Connected'
-            : JSON.stringify({
-                message: 'Pick up a little fruit for lunch.',
-                shopping: [
-                  {
-                    name: 'Apples',
-                    productId: 'apples',
-                    category: null,
-                    quantity: 4,
-                    unit: 'pc',
-                    note: 'Crisp',
-                  },
-                ],
-                recipes: [],
-                plan: [],
-              })
+                  recipes: [],
+                  plan: [],
+                })
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify({ choices: [{ message: { content } }] }))
   })
@@ -1663,9 +1681,32 @@ try {
       .innerText(),
     /500 pack[\s\S]*Fixture note/,
   )
-  console.log(
-    'AI item details keep chosen fields and generate a matching icon.',
+  const fixtureMargarine = (
+    await request(owner, '/state', undefined, 'GET')
+  ).state.customProducts.find((product) => product.name === 'Fixture margarine')
+  assert.equal(
+    (await request(owner, '/state', undefined, 'GET')).state.shelfLifeDays?.[
+      fixtureMargarine.id
+    ],
+    10,
+    'The suggested shelf life is saved with the new item',
   )
+  await owner.goto(`${frontendUrl}/settings/items`)
+  await settle(owner)
+  await owner
+    .getByRole('button', { name: 'Estimate shelf lives with AI' })
+    .click()
+  await owner.getByText(/Set shelf lives for \d+ of your items/).waitFor()
+  const estimated = (await request(owner, '/state', undefined, 'GET')).state
+  assert.ok(
+    Object.values(estimated.shelfLifeDays ?? {}).includes(5),
+    'Bulk estimates are applied',
+  )
+  console.log(
+    'AI item details keep chosen fields, save a shelf life and generate a matching icon; bulk shelf-life estimates apply.',
+  )
+  await owner.goto(frontendUrl)
+  await settle(owner)
   imageDelay = 8000
   await hold(
     owner,
@@ -2736,13 +2777,15 @@ try {
       exact: true,
     })
     .click()
-  await owner
-    .getByRole('checkbox', { name: 'Spoils after a while', exact: true })
-    .check()
+  assert.ok(
+    await owner
+      .getByRole('checkbox', { name: 'Spoils after a while', exact: true })
+      .isChecked(),
+    'Built-in apples come with a shelf life',
+  )
   assert.equal(
     await owner.getByLabel('Shelf life (days)', { exact: true }).inputValue(),
-    '21',
-    'Apples suggest a typical shelf life',
+    '28',
   )
   await replaceNumber(
     owner.getByLabel('Shelf life (days)', { exact: true }),
@@ -2782,6 +2825,11 @@ try {
     .getByRole('checkbox', { name: 'Spoils after a while', exact: true })
     .uncheck()
   await owner.getByRole('button', { name: 'Save item', exact: true }).click()
+  await eventually(
+    async () =>
+      (await request(wife, '/state', undefined, 'GET')).state.shelfLifeDays
+        ?.apples === 0,
+  )
   // Start a fresh purchase quantity; a non-accumulating add preserves an existing active tile.
   await request(owner, '/operations', {
     id: crypto.randomUUID(),

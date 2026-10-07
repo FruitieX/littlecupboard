@@ -195,7 +195,12 @@ export function optimistic(state: AppState, operation: Operation): AppState {
               4,
             at: new Date().toISOString(),
             rating: operation.rating,
-            consumed: operation.consume,
+            consumed:
+              state.mealFeedback?.[operation.day]?.automatic &&
+              operation.status === 'cooked'
+                ? true
+                : operation.consume,
+            automatic: false,
           },
         },
       }

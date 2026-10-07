@@ -227,7 +227,7 @@ pub fn project_stock(
             // batches: the oldest is used first and, with a shelf life, a
             // batch that outlives it is counted as spoiled. Without a
             // confirmation the first purchase starts from empty.
-            let shelf = state.shelf_life_days.get(id).copied();
+            let shelf = crate::domain::shelf_life(state, id);
             let tracked = daily.as_ref().and_then(|daily| {
                 let unit_of = |amounts: &[Amount]| {
                     amounts

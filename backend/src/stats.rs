@@ -372,6 +372,7 @@ mod tests {
                 at: "2026-09-02T12:00:00Z".into(),
                 rating: Some(5),
                 consumed: true,
+                automatic: false,
             },
         );
         let now = DateTime::parse_from_rfc3339("2026-09-07T12:00:00Z")

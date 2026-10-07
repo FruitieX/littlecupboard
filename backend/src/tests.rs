@@ -3317,7 +3317,7 @@ async fn partial_store_routes_are_guarded_validated_and_survive_backup_restore()
                 0
             ))
             .unwrap(),
-        12
+        13
     );
     // Old catalog customizations lacking images inherit new bundled art.
     let mut household: model::HouseholdState =
@@ -4198,7 +4198,7 @@ async fn item_details_fill_missing_fields_and_keep_family_choices() {
     let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::<Value>::new()));
     let captured = seen.clone();
     let answer = std::sync::Arc::new(std::sync::Mutex::new(
-        json!({"group":"Milk & eggs","quantity":2,"unit":"kg","note":"Model note","iconDescription":"A yellow tub with a green lid"}),
+        json!({"group":"Milk & eggs","quantity":2,"unit":"kg","note":"Model note","iconDescription":"A yellow tub with a green lid","shelfLifeDays":44.8}),
     ));
     let reply = answer.clone();
     let fixture = Router::new().route(
@@ -4241,6 +4241,7 @@ async fn item_details_fill_missing_fields_and_keep_family_choices() {
     assert_eq!(details["group"], "Milk & eggs");
     assert_eq!(details["quantity"], 2.0);
     assert_eq!(details["iconDescription"], "A yellow tub with a green lid");
+    assert_eq!(details["shelfLifeDays"], 45.0, "rounded to half days");
     let sent = seen.lock().unwrap().last().cloned().unwrap();
     assert_eq!(
         sent["reasoning_effort"], "low",
@@ -4349,5 +4350,215 @@ async fn item_details_fill_missing_fields_and_keep_family_choices() {
     )
     .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
+    provider.abort();
+}
+
+#[test]
+fn automatic_meal_consumption_waits_for_lunch_and_never_backfills_old_plans() {
+    let mut state = model::fresh_state(true, "UTC".into());
+    let recipe = state.recipe_book[0].clone();
+    let at = |text: &str| chrono::NaiveDateTime::parse_from_str(text, "%Y-%m-%d %H:%M").unwrap();
+    for day in [
+        "2026-10-01",
+        "2026-10-05",
+        "2026-10-06",
+        "2026-10-07",
+        "2026-10-08",
+    ] {
+        state.plan.insert(day.into(), recipe.id.clone());
+    }
+    // Before lunch today only the two catch-up days are used.
+    assert_eq!(
+        domain::auto_consume(&mut state, at("2026-10-07 09:00")),
+        vec!["2026-10-05".to_string(), "2026-10-06".to_string()]
+    );
+    assert!(state.meal_feedback["2026-10-06"].automatic);
+    // After 15:00 today's lunch counts too; old and future plans never do.
+    assert_eq!(
+        domain::auto_consume(&mut state, at("2026-10-07 15:30")),
+        vec!["2026-10-07".to_string()]
+    );
+    assert!(!state.meal_feedback.contains_key("2026-10-01"));
+    assert!(!state.meal_feedback.contains_key("2026-10-08"));
+    assert!(domain::auto_consume(&mut state, at("2026-10-07 18:00")).is_empty());
+}
+
+#[tokio::test]
+async fn planned_meals_use_cupboard_ingredients_and_can_still_be_skipped() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let snapshot = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    let zone: chrono_tz::Tz = snapshot["state"]["preferences"]["timeZone"]
+        .as_str()
+        .unwrap()
+        .parse()
+        .unwrap();
+    let servings = snapshot["state"]["preferences"]["servings"]
+        .as_f64()
+        .unwrap();
+    let today = chrono::Utc::now().with_timezone(&zone).date_naive();
+    let yesterday = (today - chrono::Duration::days(1)).to_string();
+    let old = (today - chrono::Duration::days(6)).to_string();
+    operation(&server, &cookie, json!({"type":"observePantry","productId":"pasta","quantity":1000.0,"unit":"g","expiresAt":null})).await;
+    for day in [&yesterday, &old] {
+        let (status, body) = operation(&server, &cookie, json!({"type":"patch","label":"Plan lunch","changes":[{"collection":"plan","key":day,"field":null,"before":null,"after":"green-pasta"}]})).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+    }
+    crate::meal_consumption::run(&server).unwrap();
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1["state"]
+        .clone();
+    let expected = 1000.0 - 400.0 * servings / 4.0;
+    assert_eq!(
+        state["pantry"]["pasta"]["amounts"][0]["quantity"].as_f64(),
+        Some(expected)
+    );
+    assert_eq!(state["mealFeedback"][&yesterday]["automatic"], true);
+    assert_eq!(state["mealFeedback"][&yesterday]["status"], "cooked");
+    assert!(
+        state["mealFeedback"][&old].is_null(),
+        "older plans are not backfilled"
+    );
+    let history = request(
+        &server,
+        Method::GET,
+        "/api/history",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert_eq!(history[0]["kind"], "autoConsume");
+    // Running again changes nothing.
+    crate::meal_consumption::run(&server).unwrap();
+    let history = request(
+        &server,
+        Method::GET,
+        "/api/history",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert_eq!(
+        history
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|event| event["kind"] == "autoConsume")
+            .count(),
+        1
+    );
+    // Saying the meal was skipped returns the ingredients.
+    let (status, body) = operation(&server, &cookie, json!({"type":"mealFeedback","day":yesterday,"recipeId":"green-pasta","status":"skipped","consume":false,"rating":null})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1["state"]
+        .clone();
+    assert_eq!(
+        state["pantry"]["pasta"]["amounts"][0]["quantity"].as_f64(),
+        Some(1000.0)
+    );
+    assert_eq!(state["mealFeedback"][&yesterday]["status"], "skipped");
+    assert_eq!(state["mealFeedback"][&yesterday]["automatic"], false);
+}
+
+#[tokio::test]
+async fn built_in_shelf_lives_can_be_turned_off_and_custom_items_estimated() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1["state"]
+        .clone();
+    let mut household: model::HouseholdState = serde_json::from_value(state).unwrap();
+    assert_eq!(domain::shelf_life(&household, "milk"), Some(7.0));
+    assert_eq!(domain::shelf_life(&household, "flour"), None);
+    household.shelf_life_days.insert("milk".into(), 0.0);
+    assert_eq!(
+        domain::shelf_life(&household, "milk"),
+        None,
+        "0 turns a default off"
+    );
+    domain::validate(&household).unwrap();
+    household.shelf_life_days.insert("milk".into(), 0.2);
+    assert!(domain::validate(&household).is_err());
+    // The bulk estimate covers only the household's own items without a value.
+    let custom = |id: &str, name: &str| json!({"collection":"customProducts","key":id,"field":null,"before":null,"after":{"id":id,"name":name,"category":"Snacks","icon":"🛒","aliases":[]}});
+    let (status, body) = operation(&server, &cookie, json!({"type":"patch","label":"Add items","changes":[custom("homemade-dip","Homemade dip"), custom("salt-flakes","Salt flakes"), custom("known","Known item"), {"collection":"shelfLifeDays","key":"known","field":null,"before":null,"after":3.0}]})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::<Value>::new()));
+    let captured = seen.clone();
+    let fixture = Router::new().route(
+        "/v1/chat/completions",
+        post(move |Json(body): Json<Value>| {
+            let captured = captured.clone();
+            async move {
+                captured.lock().unwrap().push(body);
+                let content = json!({"items":[{"productId":"homemade-dip","days":4.2},{"productId":"salt-flakes","days":null},{"productId":"milk","days":9},{"productId":"homemade-dip","days":1}]}).to_string();
+                Json(json!({"choices":[{"message":{"content":content}}]}))
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let provider = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit"});
+    request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config,"apiKey":null}),
+        Some(&cookie),
+    )
+    .await;
+    let (status, estimates, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/shelf-lives",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{estimates}");
+    assert_eq!(
+        estimates,
+        json!([{"productId":"homemade-dip","days":4.0},{"productId":"salt-flakes","days":null}]),
+        "unknown ids and duplicates are dropped, values rounded"
+    );
+    let sent = seen.lock().unwrap()[0].to_string();
+    assert!(sent.contains("homemade-dip") && sent.contains("salt-flakes"));
+    assert!(
+        !sent.contains("Known item"),
+        "items with a value are not re-estimated"
+    );
     provider.abort();
 }

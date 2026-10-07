@@ -9,6 +9,7 @@ mod icon_batch;
 mod icon_jobs;
 mod image_jobs;
 mod insights;
+mod meal_consumption;
 mod model;
 mod stats;
 #[cfg(test)]
@@ -126,6 +127,7 @@ pub fn app(server: Server) -> Router {
         .route("/api/ai/assistant", post(ai::assistant))
         .route("/api/ai/store-layout", post(ai::store_layout))
         .route("/api/ai/item-details", post(ai::item_details))
+        .route("/api/ai/shelf-lives", post(ai::shelf_lives))
         .route("/api/ai/image", post(ai::generate_image))
         .route(
             "/api/ai/jobs",
@@ -463,6 +465,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     tracing::info!("LittleCupboard API listening on {bind}");
     icon_jobs::start(server.clone()).map_err(|error| error.1)?;
     image_jobs::start(server.clone()).map_err(|error| error.1)?;
+    meal_consumption::start(server.clone());
     axum::serve(listener, app(server))
         .with_graceful_shutdown(async {
             #[cfg(unix)]

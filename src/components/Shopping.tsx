@@ -894,6 +894,9 @@ function ItemEditor({
       set(value)
     }
   const [filling, setFilling] = useState(false)
+  const [suggestedShelfLife, setSuggestedShelfLife] = useState<number | null>(
+    null,
+  )
   const [fillError, setFillError] = useState('')
   const [iconRequest, setIconRequest] = useState<{
     key: number
@@ -919,6 +922,7 @@ function ItemEditor({
       if (!known.has('unit')) setUnit(details.unit)
       if (!known.has('note') || !note.trim()) setNote(details.note)
       if (!existing && !known.has('group')) setCategory(details.group)
+      setSuggestedShelfLife(details.shelfLifeDays ?? null)
       if (session.imageEnabled && !image)
         setIconRequest({
           key: Date.now(),
@@ -979,6 +983,14 @@ function ItemEditor({
               update((s) => ({
                 ...s,
                 customProducts: [...s.customProducts, product],
+                ...(suggestedShelfLife
+                  ? {
+                      shelfLifeDays: {
+                        ...s.shelfLifeDays,
+                        [product.id]: suggestedShelfLife,
+                      },
+                    }
+                  : {}),
               }))
             action({
               type: 'addItem',

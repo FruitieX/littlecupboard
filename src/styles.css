@@ -5360,3 +5360,59 @@ svg {
   font-weight: 650;
   color: #214e38;
 }
+
+/* Other names as chips. */
+.alias-input {
+  display: grid;
+  gap: 8px;
+}
+.alias-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #566b4e;
+}
+.alias-help {
+  margin-top: -4px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.alias-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.alias-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px 4px 12px;
+  border-radius: 999px;
+  background: #eef2e4;
+  color: #3f5636;
+  font-size: 14px;
+}
+.alias-chips button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: transparent;
+  color: #6c7862;
+}
+.alias-entry {
+  display: flex;
+  gap: 8px;
+}
+.alias-entry input {
+  flex: 1;
+  min-width: 0;
+}
+.alias-entry .secondary-button {
+  min-height: 43px;
+  padding: 0 16px;
+}

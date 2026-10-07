@@ -991,9 +991,11 @@ function HistoryView() {
                             ? `Added ${name(detail.productId)}`
                             : event.kind === 'observePantry'
                               ? `Confirmed ${name(detail.productId)} at home`
-                              : event.kind === 'generateItemIcon'
-                                ? `Generated icon for ${detail.name ?? 'an item'}`
-                                : event.kind}
+                              : event.kind === 'autoConsume'
+                                ? 'Used ingredients for planned lunch'
+                                : event.kind === 'generateItemIcon'
+                                  ? `Generated icon for ${detail.name ?? 'an item'}`
+                                  : event.kind}
                 </strong>
                 <small>
                   {event.actor} ·{' '}

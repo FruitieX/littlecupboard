@@ -190,9 +190,20 @@ export function Week() {
                   <button
                     className="text-button"
                     onClick={() => setFeedbackDay(key)}
-                    disabled={!!state.mealFeedback?.[key]}
+                    disabled={
+                      !!state.mealFeedback?.[key] &&
+                      !state.mealFeedback[key].automatic
+                    }
+                    title={
+                      state.mealFeedback?.[key]?.automatic
+                        ? 'Ingredients were used from the cupboard. Tap to rate it or mark it skipped.'
+                        : undefined
+                    }
                   >
-                    {state.mealFeedback?.[key]?.status ?? 'Cooked / skipped'}
+                    {state.mealFeedback?.[key]?.automatic
+                      ? 'Made · rate or change'
+                      : (state.mealFeedback?.[key]?.status ??
+                        'Cooked / skipped')}
                   </button>
                 </div>
               )}
@@ -342,14 +353,21 @@ export function Week() {
         description="Cooking feedback helps future suggestions. Confirm whether to reduce estimated pantry ingredients."
       >
         <div className="editor-form">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={consume}
-              onChange={(e) => setConsume(e.target.checked)}
-            />
-            Used pantry ingredients
-          </label>
+          {feedbackDay && state.mealFeedback?.[feedbackDay]?.automatic ? (
+            <p className="quiet-label">
+              Its ingredients were already used from the cupboard. Skipping puts
+              them back.
+            </p>
+          ) : (
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={consume}
+                onChange={(e) => setConsume(e.target.checked)}
+              />
+              Used pantry ingredients
+            </label>
+          )}
           <label>
             Family rating
             <select
