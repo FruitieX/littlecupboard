@@ -1456,9 +1456,27 @@ try {
     'Accepting fills the editor draft; Save shop persists it',
   )
   await owner.getByText('Aisles in this shop · 3', { exact: true }).click()
-  await owner
-    .getByRole('button', { name: 'Move Vegetables up', exact: true })
-    .click()
+  const aisleNames = () =>
+    owner.getByRole('dialog').locator('.aisle-row strong').allTextContents()
+  const vegetablesHandle = owner.getByRole('button', {
+    name: /^Reorder Vegetables, position/,
+  })
+  // Keyboard reordering on the drag handle: down, then back up.
+  await vegetablesHandle.focus()
+  await vegetablesHandle.press('ArrowDown')
+  await eventually(async () => (await aisleNames())[2] === 'Vegetables')
+  await vegetablesHandle.press('ArrowUp')
+  await eventually(async () => (await aisleNames())[1] === 'Vegetables')
+  // A real pointer drag moves Vegetables above Fruits.
+  const from = await vegetablesHandle.boundingBox()
+  const to = await owner
+    .getByRole('button', { name: /^Reorder Fruits, position/ })
+    .boundingBox()
+  await owner.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await owner.mouse.down()
+  await owner.mouse.move(from.x + from.width / 2, to.y + 4, { steps: 12 })
+  await owner.mouse.up()
+  await eventually(async () => (await aisleNames())[0] === 'Vegetables')
   await owner
     .getByRole('button', { name: 'Remove Milk & eggs from shop', exact: true })
     .click()

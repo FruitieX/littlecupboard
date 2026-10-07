@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLearning } from '../lib/learning'
 import type { ConsumptionRate } from '../lib/api/ConsumptionRate'
 import {
@@ -122,12 +122,9 @@ export function LibrarySettings({ section }: { section: 'items' | 'recipes' }) {
               <p className="quiet-label">No matching items.</p>
             )}
             {products.length > limit && (
-              <button
-                className="text-button"
-                onClick={() => setLimit((current) => current + 30)}
-              >
-                Show more items ({products.length - limit})
-              </button>
+              <LoadMore onVisible={() => setLimit((current) => current + 30)}>
+                Loading more items ({products.length - limit})
+              </LoadMore>
             )}
           </div>
         </section>
@@ -156,22 +153,22 @@ export function LibrarySettings({ section }: { section: 'items' | 'recipes' }) {
             <div className="settings-managed-list">
               {recipes.map((entry) => (
                 <div key={entry.id} className="settings-managed-entry">
-                  <img
-                    className="settings-managed-image"
-                    src={entry.image}
-                    alt=""
-                  />
-                  <span>
-                    <strong>{entry.name}</strong>
-                    <small>
-                      {entry.minutes} minutes · {entry.servings} servings
-                    </small>
-                  </span>
                   <button
-                    className="icon-button"
+                    className="settings-managed-main"
                     aria-label={`Edit saved recipe ${entry.name}`}
                     onClick={() => setRecipe(entry)}
                   >
+                    <img
+                      className="settings-managed-image"
+                      src={entry.image}
+                      alt=""
+                    />
+                    <span>
+                      <strong>{entry.name}</strong>
+                      <small>
+                        {entry.minutes} minutes · {entry.servings} servings
+                      </small>
+                    </span>
                     <Pencil size={17} />
                   </button>
                   <button
@@ -511,5 +508,40 @@ export function ProductEditor({
         </div>
       </Modal>
     </>
+  )
+}
+
+/** Loads the next page as the end of a long list approaches the viewport. */
+function LoadMore({
+  onVisible,
+  children,
+}: {
+  onVisible: () => void
+  children: ReactNode
+}) {
+  const sentinel = useRef<HTMLButtonElement>(null)
+  const latest = useRef(onVisible)
+  latest.current = onVisible
+  useEffect(() => {
+    const element = sentinel.current
+    if (!element || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) latest.current()
+      },
+      { rootMargin: '600px 0px' },
+    )
+    observer.observe(element)
+    return () => observer.disconnect()
+  })
+  // Still a button, so keyboard and assistive technology can load more too.
+  return (
+    <button
+      ref={sentinel}
+      className="text-button load-more"
+      onClick={() => latest.current()}
+    >
+      {children}
+    </button>
   )
 }

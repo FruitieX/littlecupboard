@@ -1,9 +1,27 @@
 @import 'tailwindcss';
 
+/* Dedicated settings pages scroll as a whole; no nested scroll boxes. */
 .settings-managed-list {
-  max-height: 360px;
-  overflow-y: auto;
   margin: 16px 0;
+}
+.settings-managed-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.settings-managed-main > span {
+  flex: 1;
+  min-width: 0;
+}
+.settings-managed-main > svg {
+  flex-shrink: 0;
+  color: #7c8771;
 }
 .settings-managed-entry {
   display: flex;
@@ -5243,4 +5261,59 @@ svg {
 }
 .status-expiring .stock-level span {
   background: #d9894a;
+}
+.load-more {
+  width: 100%;
+  padding: 14px 0;
+  color: #8a937e;
+}
+
+/* Aisle order: drag handles instead of up/down buttons. */
+.aisle-list li.aisle-row {
+  position: relative;
+  gap: 10px;
+  padding: 6px 0;
+  background: var(--cream);
+}
+.aisle-row strong {
+  font-size: 15px;
+}
+.aisle-handle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  height: 44px;
+  margin-left: -8px;
+  border-radius: 10px;
+  background: transparent;
+  color: #9aa48c;
+  cursor: grab;
+  touch-action: none;
+}
+.aisle-handle:active {
+  cursor: grabbing;
+  background: #eef2e4;
+  color: var(--forest);
+}
+.aisle-handle:focus-visible {
+  outline: 2px solid var(--forest);
+  outline-offset: -2px;
+}
+/* Section actions never break mid-word; they wrap under the title instead. */
+.section-heading {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+.section-heading > :not(h2) {
+  white-space: nowrap;
+}
+.aisle-card .section-heading > :not(h2) {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+@media (max-width: 760px) {
+  .aisle-card .section-heading h2 {
+    flex-basis: 100%;
+  }
 }

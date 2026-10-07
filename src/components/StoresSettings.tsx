@@ -61,15 +61,17 @@ export function StoresSettings() {
             </section>
             <section className="settings-card aisle-card">
               <SectionTitle title={`${store.name} · aisle order`}>
-                <button
-                  className="text-button"
-                  onClick={() => setEditor(store)}
-                >
-                  <Pencil size={16} /> Edit shop
-                </button>
-                <span className="saved-label">
-                  <Check size={13} />
-                  Saved
+                <span className="section-actions">
+                  <button
+                    className="text-button"
+                    onClick={() => setEditor(store)}
+                  >
+                    <Pencil size={16} /> Edit shop
+                  </button>
+                  <span className="saved-label">
+                    <Check size={13} />
+                    Saved
+                  </span>
                 </span>
               </SectionTitle>
               <p className="settings-description">

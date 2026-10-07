@@ -1,5 +1,7 @@
-import { useState } from 'react'
-import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import type { PointerEvent } from 'react'
+import { Reorder, useDragControls } from 'motion/react'
+import { GripVertical, Plus, X } from 'lucide-react'
 
 export function AisleOrder({
   order,
@@ -11,59 +13,56 @@ export function AisleOrder({
   onChange: (order: string[]) => void
 }) {
   const [query, setQuery] = useState('')
+  // Reorder locally while dragging and save once on drop.
+  const [items, setItems] = useState(order)
+  const dragging = useRef(false)
+  const latest = useRef(items)
+  latest.current = items
+  useEffect(() => {
+    if (!dragging.current) setItems(order)
+  }, [order])
   const available = groups.filter(
     (group) =>
       !order.includes(group) &&
       group.toLowerCase().includes(query.trim().toLowerCase()),
   )
+  function commit() {
+    dragging.current = false
+    if (latest.current.join('\n') !== order.join('\n')) onChange(latest.current)
+  }
   function move(index: number, direction: number) {
+    const target = index + direction
+    if (target < 0 || target >= order.length) return
     const next = [...order]
-    ;[next[index], next[index + direction]] = [
-      next[index + direction],
-      next[index],
-    ]
+    ;[next[index], next[target]] = [next[target], next[index]]
     onChange(next)
   }
   return (
     <div className="aisle-editor">
-      <ol className="aisle-list" aria-label="Shop aisle order">
-        {order.map((group, index) => (
-          <li key={group}>
-            <span className="aisle-number">
-              {String(index + 1).padStart(2, '0')}
-            </span>
-            <strong>{group}</strong>
-            <div>
-              <button
-                type="button"
-                className="icon-button"
-                disabled={index === 0}
-                onClick={() => move(index, -1)}
-                aria-label={`Move ${group} up`}
-              >
-                <ArrowUp size={16} />
-              </button>
-              <button
-                type="button"
-                className="icon-button"
-                disabled={index === order.length - 1}
-                onClick={() => move(index, 1)}
-                aria-label={`Move ${group} down`}
-              >
-                <ArrowDown size={16} />
-              </button>
-              <button
-                type="button"
-                className="icon-button"
-                onClick={() => onChange(order.filter((name) => name !== group))}
-                aria-label={`Remove ${group} from shop`}
-              >
-                <X size={16} />
-              </button>
-            </div>
-          </li>
+      <p id="aisle-reorder-help" className="sr-only">
+        Drag the handle to reorder, or focus it and use the up and down arrow
+        keys.
+      </p>
+      <Reorder.Group
+        as="ol"
+        axis="y"
+        values={items}
+        onReorder={setItems}
+        className="aisle-list"
+        aria-label="Shop aisle order"
+      >
+        {items.map((group, index) => (
+          <AisleRow
+            key={group}
+            group={group}
+            index={index}
+            onDragStart={() => (dragging.current = true)}
+            onDragEnd={commit}
+            onMove={(direction) => move(order.indexOf(group), direction)}
+            onRemove={() => onChange(order.filter((name) => name !== group))}
+          />
         ))}
-      </ol>
+      </Reorder.Group>
       {!order.length && (
         <p className="quiet-label">
           No aisles selected. Items use the list’s default order.
@@ -106,5 +105,71 @@ export function AisleOrder({
         </details>
       )}
     </div>
+  )
+}
+
+function AisleRow({
+  group,
+  index,
+  onDragStart,
+  onDragEnd,
+  onMove,
+  onRemove,
+}: {
+  group: string
+  index: number
+  onDragStart: () => void
+  onDragEnd: () => void
+  onMove: (direction: number) => void
+  onRemove: () => void
+}) {
+  const controls = useDragControls()
+  return (
+    <Reorder.Item
+      value={group}
+      dragListener={false}
+      dragControls={controls}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      whileDrag={{
+        scale: 1.02,
+        borderRadius: 12,
+        boxShadow: '0 10px 24px #293b3024',
+      }}
+      transition={{ type: 'spring', stiffness: 600, damping: 40 }}
+      className="aisle-row"
+    >
+      <button
+        type="button"
+        className="aisle-handle"
+        aria-label={`Reorder ${group}, position ${index + 1}`}
+        aria-describedby="aisle-reorder-help"
+        onPointerDown={(event: PointerEvent<HTMLButtonElement>) => {
+          event.preventDefault()
+          controls.start(event)
+        }}
+        onKeyDown={(event) => {
+          if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+            event.preventDefault()
+            onMove(event.key === 'ArrowUp' ? -1 : 1)
+            // Keep focus on the moved row's handle after it re-renders.
+            const button = event.currentTarget
+            requestAnimationFrame(() => button.focus())
+          }
+        }}
+      >
+        <GripVertical size={18} />
+      </button>
+      <span className="aisle-number">{String(index + 1).padStart(2, '0')}</span>
+      <strong>{group}</strong>
+      <button
+        type="button"
+        className="icon-button"
+        onClick={onRemove}
+        aria-label={`Remove ${group} from shop`}
+      >
+        <X size={16} />
+      </button>
+    </Reorder.Item>
   )
 }
