@@ -11,7 +11,7 @@ export function isJobActive(job: AiJobView) {
 }
 
 export function createAiJob(input: {
-  kind: 'item' | 'recipe' | 'store' | 'sheet'
+  kind: 'item' | 'recipe' | 'store' | 'sheet' | 'photo'
   scope?: string
   prompt?: string
   proposalId?: string

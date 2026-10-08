@@ -19,6 +19,7 @@ export function ImageField({
   productId,
   onBusyChange,
   generateRequest,
+  onGenerated,
 }: {
   value: string
   onChange: (value: string) => void
@@ -29,6 +30,8 @@ export function ImageField({
   onBusyChange?: (busy: boolean) => void
   /** Starts a generation from outside, e.g. after AI fills in details. */
   generateRequest?: { key: number; subject: string } | null
+  /** Saves a finished generation right away instead of waiting for Save. */
+  onGenerated?: (url: string) => void
 }) {
   const { session, status } = useApp()
   const [uploading, setUploading] = useState(false)
@@ -39,6 +42,8 @@ export function ImageField({
   const [, setTick] = useState(0)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
+  const onGeneratedRef = useRef(onGenerated)
+  onGeneratedRef.current = onGenerated
   const valueRef = useRef(value)
   valueRef.current = value
   const requestId = useRef<string | null>(null)
@@ -89,9 +94,10 @@ export function ImageField({
         setJob(update)
         setTrouble(false)
         if (isJobActive(update)) return
-        if (update.status === 'done' && update.url)
+        if (update.status === 'done' && update.url) {
           onChangeRef.current(update.url)
-        else if (update.status === 'failed')
+          onGeneratedRef.current?.(update.url)
+        } else if (update.status === 'failed')
           setError(update.error || 'The picture could not be generated.')
         setJobId(null)
         setJob(null)

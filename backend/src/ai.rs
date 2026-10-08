@@ -1025,7 +1025,20 @@ pub async fn item_details(
 ) -> Result<Json<ItemDetailsProposal>> {
     let actor = authenticate(&server, &headers)?;
     server.rate_limit(&format!("item-details:{}", actor.household_id), 120, 3600)?;
-    let state = Database::snapshot(&*server.db.lock()?, &actor.household_id)?.state;
+    Ok(Json(
+        suggest_item(&server, &actor.household_id, input).await?,
+    ))
+}
+
+/// Suggests details for a shopping item from its name and/or photos and finds
+/// the existing household item it matches. Shared by the editor and the
+/// background photo-purchase job.
+pub async fn suggest_item(
+    server: &Server,
+    household: &str,
+    input: ItemDetailsRequest,
+) -> Result<ItemDetailsProposal> {
+    let state = Database::snapshot(&*server.db.lock()?, household)?.state;
     let name = input.name.trim().to_string();
     if name.is_empty() && input.images.is_empty()
         || name.chars().count() > 80
@@ -1048,8 +1061,8 @@ pub async fn item_details(
     {
         return Err(ApiError::bad("Enter an item name or add a photo."));
     }
-    let attachments = assistant_images(&server, &actor.household_id, &input.images).await?;
-    let (config, key) = provider(&server, &actor.household_id)?;
+    let attachments = assistant_images(server, household, &input.images).await?;
+    let (config, key) = provider(server, household)?;
     if !config.enabled {
         return Err(ApiError::bad("The assistant is disabled in settings."));
     }
@@ -1097,8 +1110,8 @@ pub async fn item_details(
         _ => {}
     }
     let response = send(
-        &server,
-        &actor.household_id,
+        server,
+        household,
         &config,
         &key,
         "chat/completions",
@@ -1175,7 +1188,7 @@ pub async fn item_details(
             "The assistant suggested invalid details. Nothing was changed.",
         ));
     }
-    Ok(Json(proposal))
+    Ok(proposal)
 }
 
 #[derive(Deserialize, Serialize, TS)]

@@ -1721,6 +1721,23 @@ try {
       state.itemPhotos?.oats?.[0]?.startsWith('/api/images/')
     )
   })
+  // Fire-and-forget: a photo marks Oats bought without any further taps.
+  await owner.getByRole('button', { name: 'Snap an item', exact: true }).click()
+  await owner.screenshot({ path: 'test-results/photo-capture-mobile.png' })
+  await owner
+    .getByRole('dialog', { name: 'Snap an item' })
+    .getByLabel('I’m buying it now')
+    .setInputFiles('public/images/pasta.jpg')
+  await owner.getByRole('dialog', { name: 'Snap an item' }).waitFor({
+    state: 'hidden',
+  })
+  await owner.screenshot({ path: 'test-results/photo-pending-mobile.png' })
+  await owner
+    .getByRole('button', { name: 'Restore Oats', exact: true })
+    .waitFor({ timeout: 30000 })
+  console.log(
+    'Fire-and-forget photo purchase recognized Oats and checked it off.',
+  )
   await owner.goto(`${frontendUrl}/settings/items`)
   await settle(owner)
   await owner

@@ -4772,3 +4772,162 @@ async fn item_photos_identify_existing_items_and_stay_private() {
     );
     provider.abort();
 }
+
+#[tokio::test]
+async fn photo_jobs_add_or_buy_items_in_the_background_and_icons_apply_themselves() {
+    use base64::Engine;
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let answer = std::sync::Arc::new(std::sync::Mutex::new(Value::Null));
+    let reply = answer.clone();
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::new_rgba8(32, 32)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    let encoded = base64::engine::general_purpose::STANDARD.encode(png.into_inner());
+    let fixture = Router::new()
+        .route(
+            "/v1/chat/completions",
+            post(move || {
+                let reply = reply.clone();
+                async move {
+                    let content = reply.lock().unwrap().to_string();
+                    Json(json!({"choices":[{"message":{"content":content}}]}))
+                }
+            }),
+        )
+        .route(
+            "/v1/images/generations",
+            post(move || {
+                let encoded = encoded.clone();
+                async move { Json(json!({"data":[{"b64_json":encoded}]})) }
+            }),
+        );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let provider = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"fixture-image","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit"});
+    request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config,"apiKey":null}),
+        Some(&cookie),
+    )
+    .await;
+    // "I'm buying it now" for something new.
+    *answer.lock().unwrap() = json!({"name":"Dragon fruit","productId":null,"group":"Fruits","quantity":2,"unit":"pc","note":"Ripe","iconDescription":"A pink fruit","shelfLifeDays":5});
+    let photo = upload_png(&server, &cookie).await;
+    let (status, created, _) = request(&server, Method::POST, "/api/ai/jobs", json!({"kind":"photo","scope":"photo","prompt":json!({"photo":photo,"mode":"bought"}).to_string(),"requestId":null,"proposalId":null,"recipeId":null,"productId":null,"items":null}), Some(&cookie)).await;
+    assert_eq!(status, StatusCode::OK, "{created}");
+    assert!(crate::image_jobs::run_one(&server).await.unwrap());
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1["state"]
+        .clone();
+    let product = state["customProducts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["name"] == "Dragon fruit")
+        .unwrap()
+        .clone();
+    let id = product["id"].as_str().unwrap();
+    let item = state["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["id"] == id)
+        .unwrap();
+    assert_eq!(
+        item["checked"], true,
+        "bought items land in Recently checked"
+    );
+    assert_eq!(item["quantity"], 2.0);
+    assert_eq!(state["itemPhotos"][id][0], photo.as_str());
+    assert_eq!(state["shelfLifeDays"][id], 5.0);
+    let history = request(
+        &server,
+        Method::GET,
+        "/api/history",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert_eq!(history[0]["kind"], "checkItem");
+    assert_eq!(history[0]["actor"], "Owner");
+    let jobs = request(
+        &server,
+        Method::GET,
+        "/api/ai/jobs?scope=photo",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert_eq!(jobs["jobs"][0]["name"], "Dragon fruit");
+    // The queued icon attaches itself because the item had no picture.
+    assert!(crate::image_jobs::run_one(&server).await.unwrap());
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1["state"]
+        .clone();
+    assert!(
+        state["productImages"][id]
+            .as_str()
+            .unwrap()
+            .starts_with("/api/images/")
+    );
+    // "Add to list" for a known item reuses it, unchecked, with no icon job.
+    *answer.lock().unwrap() = json!({"name":"Oats","productId":"oats","group":"Fruits","quantity":1,"unit":"pack","note":"","iconDescription":"x","shelfLifeDays":null});
+    let photo = upload_png(&server, &cookie).await;
+    request(&server, Method::POST, "/api/ai/jobs", json!({"kind":"photo","scope":"photo","prompt":json!({"photo":photo,"mode":"list"}).to_string(),"requestId":null,"proposalId":null,"recipeId":null,"productId":null,"items":null}), Some(&cookie)).await;
+    assert!(crate::image_jobs::run_one(&server).await.unwrap());
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1["state"]
+        .clone();
+    let oats = state["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["id"] == "oats")
+        .unwrap();
+    assert_eq!(oats["checked"], false);
+    assert_eq!(
+        state["customProducts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|p| p["name"] == "Oats")
+            .count(),
+        0
+    );
+    assert!(
+        !crate::image_jobs::run_one(&server).await.unwrap(),
+        "no icon job for an existing item"
+    );
+    // Photos from elsewhere are refused before any work is queued.
+    let (status, _, _) = request(&server, Method::POST, "/api/ai/jobs", json!({"kind":"photo","scope":"photo","prompt":json!({"photo":"/api/images/00000000-0000-4000-8000-000000000000","mode":"bought"}).to_string(),"requestId":null,"proposalId":null,"recipeId":null,"productId":null,"items":null}), Some(&cookie)).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    provider.abort();
+}

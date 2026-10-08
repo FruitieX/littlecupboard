@@ -478,6 +478,16 @@ export function ProductEditor({
             value={image}
             onChange={setImage}
             onBusyChange={setBusy}
+            onGenerated={(url) => {
+              if (product)
+                update((current) => ({
+                  ...current,
+                  productImages: {
+                    ...current.productImages,
+                    [product.id]: url,
+                  },
+                }))
+            }}
           />
           {error && (
             <p className="form-error" role="alert">

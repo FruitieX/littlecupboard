@@ -5494,3 +5494,96 @@ svg {
   color: #8a937e;
   font-weight: 500;
 }
+
+/* Fire-and-forget photo capture. */
+.add-photo {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  height: 44px;
+  margin-right: 6px;
+  border-radius: 12px;
+  background: #eef2e4;
+  color: var(--forest);
+}
+.photo-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 0;
+}
+.photo-status button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #eef2e4;
+  color: #48683c;
+  font-size: 13px;
+  font-weight: 600;
+}
+.photo-status button.failed {
+  background: #fbeee8;
+  color: #9a4b34;
+}
+.photo-choices {
+  display: grid;
+  gap: 10px;
+}
+.photo-choice {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 72px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f1f4e8;
+  box-shadow: inset 0 0 0 1px #dfe6d2;
+  color: var(--forest);
+  cursor: pointer;
+}
+.photo-choice input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.photo-choice.busy {
+  opacity: 0.7;
+}
+.photo-choice strong,
+.photo-choice small {
+  display: block;
+}
+.photo-choice strong {
+  font-size: 16px;
+  font-weight: 650;
+}
+.photo-choice small {
+  margin-top: 2px;
+  color: #6c7862;
+  font-size: 13px;
+}
+.photo-jobs {
+  display: grid;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: #55684a;
+}
+.photo-jobs li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.photo-jobs li.failed {
+  color: #9a4b34;
+}
+.photo-jobs li span {
+  flex: 1;
+}

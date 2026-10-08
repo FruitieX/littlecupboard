@@ -29,6 +29,7 @@ import { shoppingQuantity } from '../lib/meal-shopping'
 import { cleanItem } from '../lib/sync'
 import { useShoppingLayout } from '../lib/shopping-layout'
 import { Confetti, type Burst } from './Confetti'
+import { PhotoCapture } from './PhotoCapture'
 import { rankProducts } from '../lib/shopping'
 import { post, uploadImage } from '../lib/http'
 import type { ItemDetailsProposal } from '../lib/api/ItemDetailsProposal'
@@ -364,6 +365,7 @@ export function Shopping() {
                   }
                 }}
               />
+              <PhotoCapture onQueued={(text) => announce(text)} />
               <button
                 type="submit"
                 className="add-submit"
@@ -372,6 +374,7 @@ export function Shopping() {
                 <Plus size={22} />
               </button>
             </form>
+            <div id="photo-status-slot" />
             {listOpen && (
               <div
                 className="suggestions"
@@ -1238,6 +1241,14 @@ function ItemEditor({
               subject={name}
               onBusyChange={setPictureBusy}
               generateRequest={iconRequest}
+              onGenerated={(url) => {
+                const id = item?.id ?? existing?.id
+                if (id)
+                  update((current) => ({
+                    ...current,
+                    productImages: { ...current.productImages, [id]: url },
+                  }))
+              }}
             />
           </div>
         </details>

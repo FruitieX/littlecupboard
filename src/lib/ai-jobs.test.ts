@@ -13,6 +13,7 @@ function job(overrides: Partial<AiJobView> = {}): AiJobView {
     productId: null,
     url: null,
     icons: null,
+    name: null,
     error: null,
     createdAt: 1700000000,
     ...overrides,
