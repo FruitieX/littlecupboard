@@ -164,3 +164,36 @@ export function rankProducts<T extends Product>(
     )
     .map(({ product }) => product)
 }
+
+/**
+ * "peppermint tea" → Tea with the note "peppermint": finds the longest known
+ * item name (or other name) inside a longer query and keeps the rest as the
+ * note, so a variety does not need its own item.
+ */
+export function splitVariant<T extends Product>(
+  products: T[],
+  query: string,
+): { product: T; note: string } | null {
+  const words = normalizeSearch(query).split(/\s+/).filter(Boolean)
+  const original = query.trim().split(/\s+/).filter(Boolean)
+  if (words.length < 2) return null
+  let best: { product: T; start: number; length: number } | null = null
+  for (const product of products)
+    for (const name of [product.name, ...(product.aliases ?? [])]) {
+      const parts = normalizeSearch(name).split(/\s+/).filter(Boolean)
+      if (!parts.length || parts.length >= words.length) continue
+      for (let start = 0; start + parts.length <= words.length; start++)
+        if (
+          parts.every((part, index) => words[start + index] === part) &&
+          (!best || parts.length > best.length)
+        )
+          best = { product, start, length: parts.length }
+    }
+  if (!best) return null
+  const note = original
+    .filter(
+      (_, index) => index < best.start || index >= best.start + best.length,
+    )
+    .join(' ')
+  return { product: best.product, note }
+}

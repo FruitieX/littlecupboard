@@ -6,6 +6,7 @@ import {
   mergeItem,
   mondayOfWeek,
   rankProducts,
+  splitVariant,
 } from './shopping'
 
 describe('shopping behavior', () => {
@@ -81,5 +82,42 @@ describe('rankProducts', () => {
       'mince',
     ])
     expect(rankProducts(products, '  ', () => 0)).toEqual([])
+  })
+})
+
+describe('splitVariant', () => {
+  const products = [
+    { id: 'tea', name: 'Tea', category: 'Beverages', icon: '🍵' },
+    {
+      id: 'green-tea',
+      name: 'Green tea',
+      category: 'Beverages',
+      icon: '🍵',
+    },
+    {
+      id: 'yogurt',
+      name: 'Yogurt',
+      category: 'Milk & eggs',
+      icon: '🥛',
+      aliases: ['jogurtti'],
+    },
+  ]
+  it('keeps the extra words as a note for the longest known name', () => {
+    expect(splitVariant(products, 'Peppermint tea')).toMatchObject({
+      product: { id: 'tea' },
+      note: 'Peppermint',
+    })
+    expect(splitVariant(products, 'organic green tea')).toMatchObject({
+      product: { id: 'green-tea' },
+      note: 'organic',
+    })
+    expect(splitVariant(products, 'mango jogurtti')).toMatchObject({
+      product: { id: 'yogurt' },
+      note: 'mango',
+    })
+  })
+  it('needs extra words and a known name', () => {
+    expect(splitVariant(products, 'tea')).toBeNull()
+    expect(splitVariant(products, 'dragon fruit')).toBeNull()
   })
 })

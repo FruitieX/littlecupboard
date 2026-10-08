@@ -1770,6 +1770,17 @@ try {
   console.log(
     'Fire-and-forget photos check off or stock items, stay marked AI until approved.',
   )
+  // A variety of a known item becomes that item with a note.
+  await owner
+    .getByRole('combobox', { name: 'Add a shopping item' })
+    .fill('peppermint tea')
+  await owner.getByRole('option', { name: /Note: peppermint/ }).click()
+  assert.match(
+    await owner
+      .getByRole('button', { name: 'Check Tea', exact: true })
+      .innerText(),
+    /peppermint/,
+  )
   await owner.goto(`${frontendUrl}/settings/items`)
   await settle(owner)
   await owner

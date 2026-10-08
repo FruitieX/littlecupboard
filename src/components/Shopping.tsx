@@ -32,7 +32,7 @@ import { Confetti, type Burst } from './Confetti'
 import { PhotoCapture } from './PhotoCapture'
 import { PhotoButton } from './PhotoButton'
 import { approveAiAdded } from '../lib/ai-added'
-import { rankProducts } from '../lib/shopping'
+import { rankProducts, splitVariant } from '../lib/shopping'
 import { post, uploadImage } from '../lib/http'
 import type { ItemDetailsProposal } from '../lib/api/ItemDetailsProposal'
 
@@ -162,7 +162,11 @@ export function Shopping() {
   const canCreate =
     !!trimmed &&
     !products.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())
-  const optionCount = suggestions.length + Number(canCreate)
+  // "peppermint tea" also offers the existing Tea with a note.
+  const variant = canCreate ? splitVariant(products, trimmed) : null
+  const variantIndex = variant ? suggestions.length : -1
+  const createIndex = suggestions.length + Number(!!variant)
+  const optionCount = createIndex + Number(canCreate)
   const listOpen = isFocused && optionCount > 0
   const restock = insights.restock.filter(
     (suggestion) => !onList.has(suggestion.product.id),
@@ -174,20 +178,24 @@ export function Shopping() {
     if (messageTimer.current) clearTimeout(messageTimer.current)
     messageTimer.current = setTimeout(() => setMessage(''), 3200)
   }
-  function add(product: Product) {
+  function add(product: Product, note?: string) {
     const habit = habits.get(product.id)
     action({
       type: 'addItem',
       productId: product.id,
       quantity: habit?.quantity || 1,
       unit: habit?.unit || 'pc',
-      note: habit?.preferredNote ?? '',
+      note: note ?? habit?.preferredNote ?? '',
       accumulate: false,
     })
     setQuery('')
     setSuggestionIndex(-1)
     input.current?.focus()
-    announce(`${product.name} added to your list`)
+    announce(
+      note
+        ? `${product.name} (${note}) added to your list`
+        : `${product.name} added to your list`,
+    )
   }
   function addRestock(suggestion: Restock) {
     action({
@@ -363,6 +371,8 @@ export function Shopping() {
                     e.preventDefault()
                     if (suggestionIndex < suggestions.length)
                       add(suggestions[suggestionIndex])
+                    else if (variant && suggestionIndex === variantIndex)
+                      add(variant.product, variant.note)
                     else setAddOpen(true)
                   }
                 }}
@@ -422,11 +432,33 @@ export function Shopping() {
                     </button>
                   )
                 })}
+                {variant && (
+                  <button
+                    id={`suggestion-${variantIndex}`}
+                    role="option"
+                    aria-selected={suggestionIndex === variantIndex}
+                    onClick={() => add(variant.product, variant.note)}
+                  >
+                    <span className="suggestion-icon">
+                      <FoodIcon
+                        image={productImage(state, variant.product)}
+                        value={variant.product.icon}
+                        productId={variant.product.id}
+                        name={variant.product.name}
+                      />
+                    </span>
+                    <span>
+                      <strong>{variant.product.name}</strong>
+                      <small>Note: {variant.note}</small>
+                    </span>
+                    <Plus size={18} />
+                  </button>
+                )}
                 {canCreate && (
                   <button
-                    id={`suggestion-${suggestions.length}`}
+                    id={`suggestion-${createIndex}`}
                     role="option"
-                    aria-selected={suggestionIndex === suggestions.length}
+                    aria-selected={suggestionIndex === createIndex}
                     onClick={() => setAddOpen(true)}
                   >
                     <span className="suggestion-icon">
