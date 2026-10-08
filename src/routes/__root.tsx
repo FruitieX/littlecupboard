@@ -15,7 +15,10 @@ export const Route = createRootRoute({
       { charSet: 'utf-8' },
       {
         name: 'viewport',
-        content: 'width=device-width, initial-scale=1, viewport-fit=cover',
+        // App-like: no pinch or double-tap zoom. System text size and
+        // accessibility zoom still apply.
+        content:
+          'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover',
       },
       { title: `${APP_NAME} · Shopping, recipes & meals` },
       { name: 'theme-color', content: '#1e4938' },
