@@ -21,6 +21,7 @@ import {
 import { findProduct } from '../lib/data'
 import type { Recipe, Ingredient } from '../lib/data'
 import { useApp } from '../lib/state'
+import { matchesSearch, recipeSearchFields } from '../lib/search'
 import { EmptyState, Modal } from './ui'
 import { FoodIcon } from './FoodIcon'
 import { ImageField } from './ImageField'
@@ -60,9 +61,7 @@ export function Recipes() {
   }, [filter, tags.join('\n')])
   const visible = allRecipes.filter(
     (r) =>
-      `${r.name} ${r.subtitle} ${recipeTags(r).join(' ')}`
-        .toLowerCase()
-        .includes(query.toLowerCase()) &&
+      matchesSearch(recipeSearchFields(state, r), query) &&
       (filter.kind === 'all' ||
         (filter.kind === 'favorites' &&
           state.favoriteRecipeIds.includes(r.id)) ||

@@ -30,6 +30,8 @@ import { cleanItem } from '../lib/sync'
 import { useShoppingLayout } from '../lib/shopping-layout'
 import { Confetti, type Burst } from './Confetti'
 import { PhotoCapture } from './PhotoCapture'
+import { PhotoButton } from './PhotoButton'
+import { approveAiAdded } from '../lib/ai-added'
 import { rankProducts } from '../lib/shopping'
 import { post, uploadImage } from '../lib/http'
 import type { ItemDetailsProposal } from '../lib/api/ItemDetailsProposal'
@@ -539,6 +541,7 @@ export function Shopping() {
                           <ItemTile
                             key={item.id}
                             item={item}
+                            aiAdded={!!state.aiAdded?.[item.id]}
                             image={state.productImages?.[item.id] || item.image}
                             onToggle={onToggle}
                             onEdit={onEdit}
@@ -598,6 +601,13 @@ export function Shopping() {
                             />
                           </span>
                           <span>{item.name}</span>
+                          {state.aiAdded?.[item.id] && (
+                            <Sparkles
+                              size={13}
+                              className="ai-chip-mark"
+                              aria-label="Added by AI"
+                            />
+                          )}
                           <Check size={14} />
                         </HoldButton>
                       </motion.div>
@@ -693,12 +703,14 @@ export function Shopping() {
 
 const ItemTile = memo(function ItemTile({
   item,
+  aiAdded,
   image,
   onToggle,
   onEdit,
   reduced,
 }: {
   item: ShoppingItem
+  aiAdded: boolean
   image?: string
   onToggle: (item: ShoppingItem, origin?: { x: number; y: number }) => void
   onEdit: (item: ShoppingItem) => void
@@ -723,7 +735,7 @@ const ItemTile = memo(function ItemTile({
         transition: { duration: 0.18, ease: [0.4, 0, 1, 1] },
       }}
       transition={{ type: 'spring', stiffness: 520, damping: 38, mass: 0.8 }}
-      className={`item-tile ${categoryColors[item.category] ?? 'other'} ${item.autoAdded ? 'auto-added' : ''} ${tap ? 'is-checking' : ''}`}
+      className={`item-tile ${categoryColors[item.category] ?? 'other'} ${item.autoAdded ? 'auto-added' : ''} ${aiAdded ? 'ai-added' : ''} ${tap ? 'is-checking' : ''}`}
       style={
         tap
           ? ({
@@ -769,6 +781,12 @@ const ItemTile = memo(function ItemTile({
           <span className="meal-plan-badge">
             <CalendarDays size={10} />
             Meal plan
+          </span>
+        )}
+        {aiAdded && (
+          <span className="ai-badge" title="Added by AI from a photo">
+            <Sparkles size={10} />
+            AI
           </span>
         )}
         <span className="tile-burst" aria-hidden="true">
@@ -1004,6 +1022,8 @@ function ItemEditor({
               category,
               icon: '🛒',
             }
+          if (item && state.aiAdded?.[item.id])
+            update((s) => approveAiAdded(s, item.id), `Approve ${item.name}`)
           if (item)
             action({
               type: 'editItem',
@@ -1060,6 +1080,27 @@ function ItemEditor({
           onClose()
         }}
       >
+        {item && state.aiAdded?.[item.id] && (
+          <div className="ai-review">
+            <Sparkles size={16} />
+            <span>
+              Added by AI from a photo. Check the name, amount and group.
+            </span>
+            <button
+              type="button"
+              className="chip-button"
+              onClick={() => {
+                update(
+                  (s) => approveAiAdded(s, item.id),
+                  `Approve ${item.name}`,
+                )
+                onClose()
+              }}
+            >
+              <Check size={14} /> Looks right
+            </button>
+          </div>
+        )}
         {!item && (
           <div className="item-name-row">
             <label>
@@ -1077,28 +1118,12 @@ function ItemEditor({
                 maxLength={80}
               />
             </label>
-            <label
-              className={`photo-button ${busy ? 'busy' : ''}`}
-              title="Take or choose a photo"
-            >
-              {uploading ? (
-                <LoaderCircle size={20} className="spin" />
-              ) : (
-                <Camera size={20} />
-              )}
-              <span className="sr-only">Add from a photo</span>
-              <input
-                aria-label="Add from a photo"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                disabled={busy || status === 'offline'}
-                onChange={(event) => {
-                  const file = event.target.files?.[0]
-                  if (file) void addPhoto(file)
-                  event.target.value = ''
-                }}
-              />
-            </label>
+            <PhotoButton
+              label="Add from a photo"
+              busy={uploading}
+              disabled={busy || status === 'offline'}
+              onFile={(file) => void addPhoto(file)}
+            />
           </div>
         )}
         {!item && (photos.length > 0 || session.aiEnabled) && (

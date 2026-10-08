@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import { Plus } from 'lucide-react'
 import type { Product } from '../lib/data'
+import { matchesSearch } from '../lib/search'
 import { FoodIcon } from './FoodIcon'
 
 export function IngredientPicker({
@@ -22,8 +23,9 @@ export function IngredientPicker({
   const query = value.trim().toLowerCase()
   const matches = products
     .filter((product) =>
-      [product.name, ...(product.aliases ?? [])].some((name) =>
-        name.toLowerCase().includes(query),
+      matchesSearch(
+        [product.name, product.category, ...(product.aliases ?? [])],
+        query,
       ),
     )
     .sort(

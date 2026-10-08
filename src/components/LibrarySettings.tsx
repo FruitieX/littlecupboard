@@ -2,6 +2,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLearning } from '../lib/learning'
 import type { ConsumptionRate } from '../lib/api/ConsumptionRate'
 import { AliasInput } from './AliasInput'
+import {
+  matchesSearch,
+  productSearchFields,
+  recipeSearchFields,
+} from '../lib/search'
+import { approveAiAdded } from '../lib/ai-added'
 import { defaultShelfLifeDays, shelfLifeDays } from '../lib/shelf-life'
 import {
   ConsumptionFields,
@@ -83,14 +89,10 @@ export function LibrarySettings({ section }: { section: 'items' | 'recipes' }) {
       (entry) =>
         !!state.archivedProductIds?.includes(entry.id) === showArchived,
     )
-    .filter((entry) =>
-      [entry.name, entry.category, ...(entry.aliases ?? [])].some((value) =>
-        value.toLowerCase().includes(query.toLowerCase()),
-      ),
-    )
+    .filter((entry) => matchesSearch(productSearchFields(state, entry), query))
     .sort((a, b) => a.name.localeCompare(b.name))
   const recipes = allRecipes.filter((entry) =>
-    entry.name.toLowerCase().includes(recipeQuery.toLowerCase()),
+    matchesSearch(recipeSearchFields(state, entry), recipeQuery),
   )
   return (
     <>
@@ -423,11 +425,14 @@ export function ProductEditor({
               if (shelfLife === builtInShelfLife) delete shelf[saved.id]
               else if (shelfLife === undefined) shelf[saved.id] = 0
               else shelf[saved.id] = shelfLife
-              return {
-                ...saveProduct(current, saved),
-                consumptionRates: rates,
-                shelfLifeDays: shelf,
-              }
+              return approveAiAdded(
+                {
+                  ...saveProduct(current, saved),
+                  consumptionRates: rates,
+                  shelfLifeDays: shelf,
+                },
+                saved.id,
+              )
             }, `Edit ${saved.name}`)
             onClose()
           }}

@@ -741,9 +741,13 @@ svg {
   transform: translate(-50%, -50%);
   width: min(520px, calc(100vw - 40px));
   max-height: 88dvh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: var(--cream);
-  padding: 31px;
+  --modal-pad-x: 31px;
+  --modal-pad-y: 31px;
+  padding: 0;
   border-radius: 23px;
   box-shadow: 0 30px 100px #0003;
   animation: modal-in 0.25s ease;
@@ -1411,12 +1415,13 @@ svg {
 }
 .recipe-detail {
   width: min(610px, calc(100vw - 40px));
-  padding: 0;
+  --modal-pad-x: 0px;
+  --modal-pad-y: 0px;
 }
-.recipe-detail > .modal-title {
+.recipe-detail .modal-title {
   padding: 28px 28px 0;
 }
-.recipe-detail > .modal-description {
+.recipe-detail .modal-description {
   margin: 9px 28px 20px;
 }
 .recipe-detail-image {
@@ -2207,7 +2212,8 @@ svg {
   .modal-content {
     width: calc(100vw - 24px);
     max-height: 88dvh;
-    padding: 27px 22px;
+    --modal-pad-x: 22px;
+    --modal-pad-y: 27px;
     border-radius: 20px;
   }
   .modal-title {
@@ -2519,13 +2525,14 @@ svg {
     height: 12px;
   }
   .recipe-detail {
-    padding: 0;
+    --modal-pad-x: 0px;
+    --modal-pad-y: 0px;
   }
-  .recipe-detail > .modal-title {
+  .recipe-detail .modal-title {
     padding: 26px 22px 0;
     font-size: 27px;
   }
-  .recipe-detail > .modal-description {
+  .recipe-detail .modal-description {
     margin: 8px 22px 20px;
     font-size: 12px;
   }
@@ -4557,14 +4564,16 @@ svg {
 }
 .editor-actions {
   position: sticky;
-  bottom: -31px;
+  bottom: calc(-1 * var(--modal-pad-y, 31px));
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin: 0 -31px -31px;
-  padding: 14px 31px calc(16px + env(safe-area-inset-bottom));
+  margin: 0 calc(-1 * var(--modal-pad-x, 31px))
+    calc(-1 * var(--modal-pad-y, 31px));
+  padding: 14px var(--modal-pad-x, 31px)
+    calc(16px + env(safe-area-inset-bottom));
   background: linear-gradient(#fbfaf600, var(--cream) 30%);
 }
 .editor-actions .primary-button {
@@ -5102,9 +5111,7 @@ svg {
     font-size: 13px;
   }
   .editor-actions {
-    bottom: -27px;
-    margin: 0 -22px -27px;
-    padding: 12px 22px calc(14px + env(safe-area-inset-bottom));
+    padding-top: 12px;
   }
   .cupboard-toolbar {
     justify-content: flex-start;
@@ -5185,9 +5192,8 @@ svg {
   position: sticky;
   bottom: 0;
   z-index: 3;
-  box-shadow:
-    0 -14px 14px -2px var(--cream),
-    0 14px 0 14px var(--cream);
+  /* Fade content scrolling underneath, without covering what follows. */
+  box-shadow: 0 -14px 14px -2px var(--cream);
 }
 .detail-meta-actions {
   display: inline-flex;
@@ -5535,15 +5541,31 @@ svg {
 .photo-choice {
   position: relative;
   display: flex;
-  align-items: center;
-  gap: 14px;
+  align-items: stretch;
   min-height: 72px;
-  padding: 14px 16px;
   border-radius: 16px;
   background: #f1f4e8;
   box-shadow: inset 0 0 0 1px #dfe6d2;
   color: var(--forest);
   cursor: pointer;
+}
+.photo-choice-main,
+.photo-choice-gallery {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+.photo-choice-main {
+  flex: 1;
+  gap: 14px;
+  padding: 14px 16px;
+}
+.photo-choice-gallery {
+  justify-content: center;
+  width: 56px;
+  border-left: 1px solid #dfe6d2;
+  color: #55684a;
 }
 .photo-choice input {
   position: absolute;
@@ -5586,4 +5608,143 @@ svg {
 }
 .photo-jobs li span {
   flex: 1;
+}
+
+/* Camera split button with a gallery option. */
+.photo-split {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  border-radius: 12px;
+  background: #eaf1df;
+  box-shadow: inset 0 0 0 1px #d3e0c2;
+  color: var(--forest);
+}
+.photo-split.busy {
+  opacity: 0.6;
+}
+.photo-split-main {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.photo-split-main input,
+.photo-split-menu input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.photo-split-more {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  border-left: 1px solid #d3e0c2;
+  border-radius: 0 12px 12px 0;
+  background: transparent;
+  color: var(--forest);
+}
+.photo-split-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  display: grid;
+  min-width: 210px;
+  padding: 6px;
+  border-radius: 14px;
+  background: white;
+  box-shadow:
+    0 14px 32px #293b3026,
+    0 0 0 1px #e6e9de;
+}
+.photo-split-menu label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 15px;
+  cursor: pointer;
+}
+.photo-split-menu label:hover {
+  background: #f2f5eb;
+}
+.cupboard-toolbar {
+  gap: 10px;
+  align-items: center;
+}
+.snap-message {
+  margin: -14px 0 18px;
+  color: #55684a;
+  font-size: 13.5px;
+}
+
+/* Items a photo job added stay marked until someone checks them. */
+.item-tile.ai-added {
+  box-shadow: inset 0 0 0 1.5px #b9a7e4;
+}
+.ai-badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #efe9fb;
+  color: #5b46a0;
+  font-size: 9.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+.ai-badge.inline {
+  position: static;
+  margin-left: 8px;
+  vertical-align: 2px;
+}
+.ai-chip-mark {
+  color: #6f59b8;
+}
+.ai-review {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f4f0fc;
+  color: #4e3d8f;
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.ai-review > span {
+  flex: 1;
+  min-width: 160px;
+}
+
+.modal-header {
+  position: relative;
+  flex-shrink: 0;
+  padding: var(--modal-pad-y) var(--modal-pad-x) 0;
+}
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 var(--modal-pad-x) var(--modal-pad-y);
+}
+.recipe-detail .modal-header {
+  border-bottom: 1px solid #ecede4;
+}
+.recipe-detail .modal-description {
+  margin-bottom: 16px;
 }

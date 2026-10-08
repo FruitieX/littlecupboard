@@ -1,13 +1,39 @@
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Camera, Check, LoaderCircle, ShoppingBasket, X } from 'lucide-react'
+import {
+  Camera,
+  Check,
+  Image as ImageIcon,
+  LoaderCircle,
+  ShoppingBasket,
+  X,
+} from 'lucide-react'
 import { uploadImage } from '../lib/http'
 import { createAiJob, fetchAiJobs, isJobActive } from '../lib/ai-jobs'
 import type { AiJobView } from '../lib/ai-jobs'
 import { useApp } from '../lib/state'
 import { Modal } from './ui'
 
-type Mode = 'list' | 'bought'
+export type PhotoMode = 'list' | 'bought' | 'pantry'
+type Mode = PhotoMode
+
+/** Uploads a photo privately and queues the background job for it. */
+export async function queuePhotoJob(file: File, mode: PhotoMode) {
+  const url = await uploadImage(file, true)
+  await createAiJob({
+    kind: 'photo',
+    scope: 'photo',
+    prompt: JSON.stringify({ photo: url, mode }),
+  })
+}
+
+export function photoError(error: unknown) {
+  return error instanceof TypeError
+    ? 'Cannot reach the server. Check your connection and try again.'
+    : error instanceof Error
+      ? error.message
+      : 'Please try again.'
+}
 
 /**
  * Fire-and-forget photo capture: snap an item and put the phone away. The
@@ -50,12 +76,7 @@ export function PhotoCapture({
     setUploading(mode)
     setError('')
     try {
-      const url = await uploadImage(file, true)
-      await createAiJob({
-        kind: 'photo',
-        scope: 'photo',
-        prompt: JSON.stringify({ photo: url, mode }),
-      })
+      await queuePhotoJob(file, mode)
       setOpen(false)
       onQueued(
         mode === 'bought'
@@ -64,43 +85,54 @@ export function PhotoCapture({
       )
       refresh()
     } catch (error) {
-      setError(
-        error instanceof TypeError
-          ? 'Cannot reach the server. Check your connection and try again.'
-          : error instanceof Error
-            ? error.message
-            : 'Please try again.',
-      )
+      setError(photoError(error))
     } finally {
       setUploading(null)
     }
   }
   const choice = (mode: Mode, label: string, hint: string) => (
-    <label className={`photo-choice ${uploading ? 'busy' : ''}`}>
-      {uploading === mode ? (
-        <LoaderCircle size={22} className="spin" />
-      ) : mode === 'bought' ? (
-        <ShoppingBasket size={22} />
-      ) : (
-        <Camera size={22} />
-      )}
-      <span>
-        <strong>{label}</strong>
-        <small>{uploading === mode ? 'Uploading the photo…' : hint}</small>
-      </span>
-      <input
-        aria-label={label}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        disabled={!!uploading || status === 'offline'}
-        onChange={(event) => {
-          const file = event.target.files?.[0]
-          if (file) void capture(mode, file)
-          event.target.value = ''
-        }}
-      />
-    </label>
+    <div className={`photo-choice ${uploading ? 'busy' : ''}`}>
+      <label className="photo-choice-main">
+        {uploading === mode ? (
+          <LoaderCircle size={22} className="spin" />
+        ) : mode === 'bought' ? (
+          <ShoppingBasket size={22} />
+        ) : (
+          <Camera size={22} />
+        )}
+        <span>
+          <strong>{label}</strong>
+          <small>{uploading === mode ? 'Uploading the photo…' : hint}</small>
+        </span>
+        <input
+          aria-label={label}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          disabled={!!uploading || status === 'offline'}
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            if (file) void capture(mode, file)
+            event.target.value = ''
+          }}
+        />
+      </label>
+      <label className="photo-choice-gallery" title="Choose from gallery">
+        <ImageIcon size={18} />
+        <span className="sr-only">{label} from gallery</span>
+        <input
+          aria-label={`${label} from gallery`}
+          type="file"
+          accept="image/*"
+          disabled={!!uploading || status === 'offline'}
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            if (file) void capture(mode, file)
+            event.target.value = ''
+          }}
+        />
+      </label>
+    </div>
   )
   return (
     <>

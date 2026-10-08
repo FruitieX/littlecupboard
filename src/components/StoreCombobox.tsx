@@ -1,3 +1,4 @@
+import { matchesSearch } from '../lib/search'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Check, ChevronDown, MapPin } from 'lucide-react'
 import { useApp } from '../lib/state'
@@ -14,9 +15,7 @@ export function StoreCombobox() {
   const input = useRef<HTMLInputElement>(null)
   const id = useId()
   const matches = state.stores.filter((candidate) =>
-    `${candidate.name} ${candidate.location}`
-      .toLowerCase()
-      .includes(query.toLowerCase()),
+    matchesSearch([candidate.name, candidate.location], query),
   )
   const visible = matches.slice(0, 12)
   useEffect(() => {

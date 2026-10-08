@@ -9,6 +9,7 @@ import {
   RefreshCw,
   SlidersHorizontal,
   Settings2,
+  Sparkles,
   Trash2,
 } from 'lucide-react'
 import { NumberInput, QuantityStepper } from './NumberInput'
@@ -24,6 +25,9 @@ import { Modal, SectionTitle } from './ui'
 import { FoodIcon } from './FoodIcon'
 import { PantryEditor, pantryEdit, type PantryEdit } from './PantryEditor'
 import { ProductEditor } from './LibrarySettings'
+import { PhotoButton } from './PhotoButton'
+import { approveAiAdded } from '../lib/ai-added'
+import { photoError, queuePhotoJob } from './PhotoCapture'
 
 type Tab = 'stock' | 'trends' | 'history'
 const tabs: { id: Tab; label: string }[] = [
@@ -137,7 +141,23 @@ export function Cupboard() {
 }
 
 function StockView() {
-  const { state, update, action } = useApp()
+  const { state, update, action, session, status } = useApp()
+  const [snapping, setSnapping] = useState(false)
+  const [snapMessage, setSnapMessage] = useState('')
+  async function snap(file: File) {
+    setSnapping(true)
+    setSnapMessage('')
+    try {
+      await queuePhotoJob(file, 'pantry')
+      setSnapMessage(
+        'Got it — we’ll add it to the cupboard in the background. It’s marked AI until someone checks it.',
+      )
+    } catch (error) {
+      setSnapMessage(photoError(error))
+    } finally {
+      setSnapping(false)
+    }
+  }
   const { insights } = useLearning()
   const [open, setOpen] = useState<string | null>(null)
   const [editing, setEditing] = useState<PantryEdit | null>(null)
@@ -211,7 +231,20 @@ function StockView() {
         >
           <Plus size={17} /> Add what we have
         </button>
+        {session.aiEnabled && (
+          <PhotoButton
+            label="Snap what we have"
+            busy={snapping}
+            disabled={status === 'offline'}
+            onFile={(file) => void snap(file)}
+          />
+        )}
       </div>
+      {snapMessage && (
+        <p className="snap-message" role="status">
+          {snapMessage}
+        </p>
+      )}
       <AnimatePresence initial={false}>
         {adding && (
           <motion.div
@@ -261,6 +294,13 @@ function StockView() {
                       setEditing(pantryEdit(state, id, product?.name ?? id))
                     }
                     onSettings={() => setEditingItem(id)}
+                    aiAdded={!!state.aiAdded?.[id]}
+                    onApprove={() =>
+                      update(
+                        (s) => approveAiAdded(s, id),
+                        `Approve ${product?.name ?? id}`,
+                      )
+                    }
                     shelfLife={state.shelfLifeDays?.[id]}
                     onRemove={() => {
                       setOpen(null)
@@ -346,6 +386,8 @@ function StockRow({
   onToggle,
   onMore,
   onSettings,
+  aiAdded,
+  onApprove,
   shelfLife,
   onRemove,
   onConfirm,
@@ -362,6 +404,8 @@ function StockRow({
   onToggle: () => void
   onMore: () => void
   onSettings: () => void
+  aiAdded: boolean
+  onApprove: () => void
   shelfLife?: number
   onRemove: () => void
   onConfirm: (amount: Amount) => void
@@ -417,7 +461,17 @@ function StockRow({
           />
         </span>
         <span className="stock-text">
-          <strong>{name}</strong>
+          <strong>
+            {name}
+            {aiAdded && (
+              <span
+                className="ai-badge inline"
+                title="Added by AI from a photo"
+              >
+                <Sparkles size={10} /> AI
+              </span>
+            )}
+          </strong>
           <small>{meta.join(' · ')}</small>
           {level !== null && level !== undefined && (
             <span
@@ -445,12 +499,22 @@ function StockRow({
             transition={{ duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
           >
             <div className="stock-row-panel-inner">
+              {aiAdded && (
+                <div className="ai-review">
+                  <Sparkles size={16} />
+                  <span>Added by AI from a photo. Check the amount.</span>
+                  <button className="chip-button" onClick={onApprove}>
+                    <Check size={14} /> Looks right
+                  </button>
+                </div>
+              )}
               {editable ? (
                 <form
                   className="stock-confirm"
                   onSubmit={(event) => {
                     event.preventDefault()
                     onConfirm(draft)
+                    if (aiAdded) onApprove()
                   }}
                 >
                   <label>
@@ -591,7 +655,12 @@ function AddToCupboard({
         />
         <datalist id="pantry-products">
           {products.map((p) => (
-            <option key={p.id} value={p.name} />
+            // Labels let the browser also match other names.
+            <option
+              key={p.id}
+              value={p.name}
+              label={p.aliases?.length ? p.aliases.join(', ') : undefined}
+            />
           ))}
         </datalist>
       </label>

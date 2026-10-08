@@ -3317,7 +3317,7 @@ async fn partial_store_routes_are_guarded_validated_and_survive_backup_restore()
                 0
             ))
             .unwrap(),
-        14
+        15
     );
     // Old catalog customizations lacking images inherit new bundled art.
     let mut household: model::HouseholdState =
@@ -4852,6 +4852,10 @@ async fn photo_jobs_add_or_buy_items_in_the_background_and_icons_apply_themselve
     assert_eq!(item["quantity"], 2.0);
     assert_eq!(state["itemPhotos"][id][0], photo.as_str());
     assert_eq!(state["shelfLifeDays"][id], 5.0);
+    assert_eq!(
+        state["aiAdded"][id], "bought",
+        "marked until someone approves it"
+    );
     let history = request(
         &server,
         Method::GET,
@@ -4926,6 +4930,31 @@ async fn photo_jobs_add_or_buy_items_in_the_background_and_icons_apply_themselve
         !crate::image_jobs::run_one(&server).await.unwrap(),
         "no icon job for an existing item"
     );
+    // "Snap what we have" adds the photographed amount to the cupboard.
+    *answer.lock().unwrap() = json!({"name":"Oats","productId":"oats","group":"Fruits","quantity":500,"unit":"g","note":"","iconDescription":"x","shelfLifeDays":null});
+    for _ in 0..2 {
+        let photo = upload_png(&server, &cookie).await;
+        request(&server, Method::POST, "/api/ai/jobs", json!({"kind":"photo","scope":"photo","prompt":json!({"photo":photo,"mode":"pantry"}).to_string(),"requestId":null,"proposalId":null,"recipeId":null,"productId":null,"items":null}), Some(&cookie)).await;
+        assert!(crate::image_jobs::run_one(&server).await.unwrap());
+    }
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1["state"]
+        .clone();
+    assert_eq!(
+        state["pantry"]["oats"]["amounts"],
+        json!([{"quantity":1000.0,"unit":"g"}])
+    );
+    assert_eq!(state["aiAdded"]["oats"], "pantry");
+    // Approving is an ordinary edit that removes the marker.
+    let (status, body) = operation(&server, &cookie, json!({"type":"patch","label":"Approve Oats","changes":[{"collection":"aiAdded","key":"oats","field":null,"before":"pantry","after":null}]})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
     // Photos from elsewhere are refused before any work is queued.
     let (status, _, _) = request(&server, Method::POST, "/api/ai/jobs", json!({"kind":"photo","scope":"photo","prompt":json!({"photo":"/api/images/00000000-0000-4000-8000-000000000000","mode":"bought"}).to_string(),"requestId":null,"proposalId":null,"recipeId":null,"productId":null,"items":null}), Some(&cookie)).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);

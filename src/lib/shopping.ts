@@ -6,6 +6,7 @@ import type {
   ShoppingItem,
 } from './data'
 import { catalog } from './data'
+import { normalizeSearch } from './search'
 
 export function mergeItem(
   items: ShoppingItem[],
@@ -139,15 +140,15 @@ export function rankProducts<T extends Product>(
   query: string,
   purchases: (id: string) => number,
 ): T[] {
-  const needle = query.trim().toLowerCase()
+  const needle = normalizeSearch(query.trim())
   if (!needle) return []
   const score = (product: T) => {
-    const name = product.name.toLowerCase()
+    const name = normalizeSearch(product.name)
     if (name === needle) return 0
     if (name.startsWith(needle)) return 1
     if (name.split(/[\s-]+/).some((word) => word.startsWith(needle))) return 2
     if (name.includes(needle)) return 3
-    const aliases = (product.aliases ?? []).map((alias) => alias.toLowerCase())
+    const aliases = (product.aliases ?? []).map(normalizeSearch)
     if (aliases.some((alias) => alias.startsWith(needle))) return 4
     if (aliases.some((alias) => alias.includes(needle))) return 5
     return -1

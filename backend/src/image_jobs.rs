@@ -130,7 +130,7 @@ pub async fn create(
                 )
                 .unwrap_or(false)
             });
-        if !owned || !matches!(mode, "list" | "bought") {
+        if !owned || !matches!(mode, "list" | "bought" | "pantry") {
             return Err(ApiError::bad("Take the photo again and retry."));
         }
         (
@@ -552,7 +552,9 @@ fn apply_item_icon(tx: &rusqlite::Transaction<'_>, job: &Job, url: &str) -> Resu
 async fn run_photo(server: &Server, job: &Job) -> Result<()> {
     let request: Value = serde_json::from_str(&job.prompt)?;
     let photo = request["photo"].as_str().unwrap_or_default().to_string();
-    let bought = request["mode"] == "bought";
+    let mode = request["mode"].as_str().unwrap_or("list").to_string();
+    let bought = mode == "bought";
+    let pantry = mode == "pantry";
     let actor = request["actor"]
         .as_str()
         .unwrap_or("LittleCupboard")
@@ -610,8 +612,37 @@ async fn run_photo(server: &Server, job: &Job) -> Result<()> {
         let excess = photos.len().saturating_sub(12);
         photos.drain(..excess);
         let today = crate::domain::today(state);
+        // Marked until a family member approves the AI's work.
+        state.ai_added.insert(id.clone(), mode.clone());
         let listed = crate::domain::displayed(state, &id, &today);
-        if listed.as_ref().is_none_or(|item| item.checked) {
+        if pantry {
+            // "We have this": add the photographed amount to what is recorded.
+            let photographed = crate::model::Amount {
+                quantity: details.quantity,
+                unit: details.unit.clone(),
+            };
+            let mut amounts = state
+                .pantry
+                .get(&id)
+                .map(|entry| entry.amounts.clone())
+                .unwrap_or_default();
+            amounts.push(photographed);
+            let amounts = crate::domain::totals(&amounts);
+            let first = amounts[0].clone();
+            crate::domain::apply(
+                state,
+                &crate::model::Operation::ObservePantry {
+                    product_id: id.clone(),
+                    quantity: first.quantity,
+                    unit: first.unit,
+                    expires_at: None,
+                    amounts: Some(amounts),
+                    note: None,
+                    expected: None,
+                },
+                &today,
+            )?;
+        } else if listed.as_ref().is_none_or(|item| item.checked) {
             crate::domain::apply(
                 state,
                 &crate::model::Operation::AddItem {
@@ -641,7 +672,13 @@ async fn run_photo(server: &Server, job: &Job) -> Result<()> {
         crate::db::Database::save(&tx, &job.household, &snapshot)?;
         // A bought item records the same checkItem event as tapping its tile,
         // so purchase learning and Undo work as usual.
-        let kind = if bought { "checkItem" } else { "addItem" };
+        let kind = if bought {
+            "checkItem"
+        } else if pantry {
+            "observePantry"
+        } else {
+            "addItem"
+        };
         let detail = if bought {
             json!({"productId":id,"quantity":details.quantity,"unit":details.unit,"note":details.note,"checked":true,"storeId":snapshot.state.store_id,"photo":photo,"fromPhoto":true})
         } else {
@@ -664,7 +701,7 @@ async fn run_photo(server: &Server, job: &Job) -> Result<()> {
                 ],
             )?;
         }
-        Ok(json!({"productId":id,"name":details.name,"created":created,"mode":if bought {"bought"} else {"list"}}))
+        Ok(json!({"productId":id,"name":details.name,"created":created,"mode":mode}))
     });
     let (status, result, error) = match outcome {
         Ok(result) => ("done", Some(result.to_string()), None),

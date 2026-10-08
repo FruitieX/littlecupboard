@@ -18,4 +18,9 @@ shelfLifeDays: { [key in string]?: number },
 /**
  * Private photos the family took of an item, kept for later use.
  */
-itemPhotos: { [key in string]?: Array<string> }, };
+itemPhotos: { [key in string]?: Array<string> }, 
+/**
+ * Items a photo job added, marked until a family member approves them:
+ * `list`, `bought` or `pantry`.
+ */
+aiAdded: { [key in string]?: string }, };

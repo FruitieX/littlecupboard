@@ -243,6 +243,10 @@ pub struct HouseholdState {
     /// Private photos the family took of an item, kept for later use.
     #[serde(default)]
     pub item_photos: BTreeMap<String, Vec<String>>,
+    /// Items a photo job added, marked until a family member approves them:
+    /// `list`, `bought` or `pantry`.
+    #[serde(default)]
+    pub ai_added: BTreeMap<String, String>,
 }
 
 #[derive(Clone, Deserialize, Serialize, TS)]
@@ -446,6 +450,7 @@ pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
         consumption_rates: BTreeMap::new(),
         shelf_life_days: BTreeMap::new(),
         item_photos: BTreeMap::new(),
+        ai_added: BTreeMap::new(),
     }
 }
 

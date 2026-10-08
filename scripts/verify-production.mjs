@@ -1726,7 +1726,7 @@ try {
   await owner.screenshot({ path: 'test-results/photo-capture-mobile.png' })
   await owner
     .getByRole('dialog', { name: 'Snap an item' })
-    .getByLabel('I’m buying it now')
+    .getByLabel('I’m buying it now', { exact: true })
     .setInputFiles('public/images/pasta.jpg')
   await owner.getByRole('dialog', { name: 'Snap an item' }).waitFor({
     state: 'hidden',
@@ -1735,8 +1735,40 @@ try {
   await owner
     .getByRole('button', { name: 'Restore Oats', exact: true })
     .waitFor({ timeout: 30000 })
+  // AI-added work stays marked until someone approves it.
+  const aiChip = owner.getByRole('button', {
+    name: 'Restore Oats',
+    exact: true,
+  })
+  await aiChip.locator('.ai-chip-mark').waitFor()
+  await aiChip.click({ button: 'right' })
+  await owner.getByText('Added by AI from a photo.', { exact: false }).waitFor()
+  await owner.getByRole('button', { name: 'Looks right', exact: true }).click()
+  await eventually(
+    async () =>
+      !(await request(owner, '/state', undefined, 'GET')).state.aiAdded?.oats,
+  )
+  // "Snap what we have" adds to the cupboard in the background, marked AI.
+  await owner.goto(`${frontendUrl}/cupboard`)
+  await settle(owner)
+  await owner
+    .getByLabel('Snap what we have', { exact: true })
+    .setInputFiles('public/images/pasta.jpg')
+  await owner.getByText(/add it to the cupboard in the background/).waitFor()
+  await eventually(
+    async () =>
+      (await request(owner, '/state', undefined, 'GET')).state.aiAdded?.oats ===
+      'pantry',
+  )
+  await owner
+    .locator('.stock-row')
+    .filter({ hasText: 'Oats' })
+    .locator('.ai-badge')
+    .waitFor()
+  await owner.goto(frontendUrl)
+  await settle(owner)
   console.log(
-    'Fire-and-forget photo purchase recognized Oats and checked it off.',
+    'Fire-and-forget photos check off or stock items, stay marked AI until approved.',
   )
   await owner.goto(`${frontendUrl}/settings/items`)
   await settle(owner)

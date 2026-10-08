@@ -421,3 +421,17 @@ A camera button in the "What do we need?" bar opens **Snap an item** with two ch
 Finished item icons now attach themselves on the server when the item has no picture yet, as an undoable `generateItemIcon` event, even if the phone sleeps. Open item and catalog editors also apply a finished icon immediately, including replacements; closed editors never replace an existing picture.
 
 Validation: 105 Rust tests (new: a bought photo creates, keeps, checks off and attributes a new item and queues an icon that applies itself; an add-to-list photo reuses an existing item unchecked without an icon job; foreign photos are refused), 48 frontend tests, TypeScript, formatting, Clippy and the complete production browser suite (new: Snap an item → I'm buying it now checks off Oats with no further taps) pass. Mobile screenshots of the sheet and the pending pill were reviewed.
+
+### Cupboard photos, AI review markers, camera choice, fixed dialog headers and search — 2026-10-08
+
+The user asked for a fire-and-forget camera on the Cupboard's "Add what we have"; for AI-added items to stay visibly marked until a family member approves them; for an explicit camera with a gallery option (the add dialog only offered the gallery on Android, because it restricted file types), compactly as a camera button with a joined dropdown; for clipping-free dialogs whose header and close button stay visible; and for searches that also match other names and descriptions.
+
+Photo jobs gain a `pantry` mode ("Snap what we have" next to Add what we have): the recognized item's amount is added to what is already recorded at home (a confirmed observation of the new total). Every photo job marks its item in the new `aiAdded` household map (`list`, `bought` or `pantry`; schema 15). Marked items show a small violet AI badge on shopping tiles, a sparkle on recently checked chips and a badge on cupboard rows; their editors show "Added by AI from a photo" with **Looks right**. Saving the item editor or catalog editor, or confirming the cupboard amount, also approves it. Approval is an ordinary undoable edit.
+
+`PhotoButton` is a camera split button: the main part opens the camera (`capture`), the chevron offers Take photo or Choose from gallery; it is used in the add dialog and the Cupboard. The Snap an item cards open the camera, with a gallery button on each card's edge.
+
+The shared `Modal` now has a fixed header (close, title, description) and a scrolling body, with padding in `--modal-pad-x/y` so pinned actions and the edge-to-edge recipe detail still align. The pinned Save button no longer casts a cream shadow over the content below it, which clipped "Archive or delete item".
+
+`src/lib/search.ts` provides accent- and case-insensitive search where every word must match some field. Settings items match name, group, other names and notes on the list or in the cupboard; recipes (settings and Recipes page) match name, description, tags and ingredient names and other names; the ingredient picker adds the group; shops match name and location; the cupboard's add field also offers other names; the add box's ranking ignores accents.
+
+Validation: 105 Rust tests (photo jobs now also cover AI markers, pantry amounts adding up and approval), 50 frontend tests (new search tests), TypeScript, formatting, Clippy and the complete production browser suite (new: bought photo marked AI, right-click editor approval, Snap what we have adding a marked cupboard row) pass.

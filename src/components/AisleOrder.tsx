@@ -1,3 +1,4 @@
+import { matchesSearch } from '../lib/search'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import { Reorder, useDragControls } from 'motion/react'
@@ -22,9 +23,7 @@ export function AisleOrder({
     if (!dragging.current) setItems(order)
   }, [order])
   const available = groups.filter(
-    (group) =>
-      !order.includes(group) &&
-      group.toLowerCase().includes(query.trim().toLowerCase()),
+    (group) => !order.includes(group) && matchesSearch([group], query),
   )
   function commit() {
     dragging.current = false

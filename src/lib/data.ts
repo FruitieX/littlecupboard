@@ -110,6 +110,8 @@ export type AppState = {
   >
   shelfLifeDays?: Record<string, number>
   itemPhotos?: Record<string, string[]>
+  /** Items a photo job added, until someone approves them. */
+  aiAdded?: Record<string, 'list' | 'bought' | 'pantry'>
 }
 
 const productGroups: [Category, string, string[]][] = [

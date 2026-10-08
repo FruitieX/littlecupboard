@@ -928,6 +928,7 @@ fn patch(state: &mut Value, change: &Change) -> Result<()> {
         "consumptionRates",
         "shelfLifeDays",
         "itemPhotos",
+        "aiAdded",
     ];
     let scalars = [
         "groups",
@@ -1114,6 +1115,7 @@ pub fn changes(before: &HouseholdState, after: &HouseholdState) -> Result<Vec<Ch
         "consumptionRates",
         "shelfLifeDays",
         "itemPhotos",
+        "aiAdded",
         "purchases",
     ] {
         let old = a[collection].as_object().expect("model map");
@@ -1443,6 +1445,11 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
             })
     }) {
         return Err(ApiError::bad("Keep up to 12 private photos per item."));
+    }
+    if state.ai_added.iter().any(|(id, mode)| {
+        !products.contains(id) || !matches!(mode.as_str(), "list" | "bought" | "pantry")
+    }) {
+        return Err(ApiError::bad("Invalid AI suggestion marker."));
     }
     for (id, pantry) in &state.pantry {
         if !products.contains(id)
