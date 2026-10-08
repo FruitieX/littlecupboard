@@ -6,7 +6,7 @@ import {
   mergeItem,
   mondayOfWeek,
   rankProducts,
-  splitVariant,
+  splitVariants,
 } from './shopping'
 
 describe('shopping behavior', () => {
@@ -85,7 +85,7 @@ describe('rankProducts', () => {
   })
 })
 
-describe('splitVariant', () => {
+describe('splitVariants', () => {
   const products = [
     { id: 'tea', name: 'Tea', category: 'Beverages', icon: '🍵' },
     {
@@ -101,23 +101,34 @@ describe('splitVariant', () => {
       icon: '🥛',
       aliases: ['jogurtti'],
     },
+    { id: 'mango', name: 'Mango', category: 'Fruit & vegetables', icon: '🥭' },
   ]
   it('keeps the extra words as a note for the longest known name', () => {
-    expect(splitVariant(products, 'Peppermint tea')).toMatchObject({
-      product: { id: 'tea' },
-      note: 'Peppermint',
-    })
-    expect(splitVariant(products, 'organic green tea')).toMatchObject({
-      product: { id: 'green-tea' },
-      note: 'organic',
-    })
-    expect(splitVariant(products, 'mango jogurtti')).toMatchObject({
-      product: { id: 'yogurt' },
-      note: 'mango',
-    })
+    expect(splitVariants(products, 'Peppermint tea')).toMatchObject([
+      {
+        product: { id: 'tea' },
+        note: 'Peppermint',
+      },
+    ])
+    expect(splitVariants(products, 'organic green tea')).toMatchObject([
+      {
+        product: { id: 'green-tea' },
+        note: 'organic',
+      },
+    ])
+  })
+  it('offers every known item, the first word first', () => {
+    expect(splitVariants(products, 'Yogurt Mango')).toMatchObject([
+      { product: { id: 'yogurt' }, note: 'Mango' },
+      { product: { id: 'mango' }, note: 'Yogurt' },
+    ])
+    expect(splitVariants(products, 'mango jogurtti')).toMatchObject([
+      { product: { id: 'mango' }, note: 'jogurtti' },
+      { product: { id: 'yogurt' }, note: 'mango' },
+    ])
   })
   it('needs extra words and a known name', () => {
-    expect(splitVariant(products, 'tea')).toBeNull()
-    expect(splitVariant(products, 'dragon fruit')).toBeNull()
+    expect(splitVariants(products, 'tea')).toEqual([])
+    expect(splitVariants(products, 'dragon fruit')).toEqual([])
   })
 })

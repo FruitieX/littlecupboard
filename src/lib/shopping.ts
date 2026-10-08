@@ -170,30 +170,52 @@ export function rankProducts<T extends Product>(
  * item name (or other name) inside a longer query and keeps the rest as the
  * note, so a variety does not need its own item.
  */
-export function splitVariant<T extends Product>(
+export function splitVariants<T extends Product>(
   products: T[],
   query: string,
-): { product: T; note: string } | null {
+): { product: T; note: string }[] {
   const words = normalizeSearch(query).split(/\s+/).filter(Boolean)
   const original = query.trim().split(/\s+/).filter(Boolean)
-  if (words.length < 2) return null
-  let best: { product: T; start: number; length: number } | null = null
+  if (words.length < 2) return []
+  // The longest known name per item, e.g. "mango yogurt" finds both Mango
+  // and Yogurt; each keeps the other words as its note.
+  const found = new Map<string, { product: T; start: number; length: number }>()
   for (const product of products)
     for (const name of [product.name, ...(product.aliases ?? [])]) {
       const parts = normalizeSearch(name).split(/\s+/).filter(Boolean)
       if (!parts.length || parts.length >= words.length) continue
-      for (let start = 0; start + parts.length <= words.length; start++)
+      for (let start = 0; start + parts.length <= words.length; start++) {
+        const best = found.get(product.id)
         if (
           parts.every((part, index) => words[start + index] === part) &&
           (!best || parts.length > best.length)
         )
-          best = { product, start, length: parts.length }
+          found.set(product.id, { product, start, length: parts.length })
+      }
     }
-  if (!best) return null
-  const note = original
-    .filter(
-      (_, index) => index < best.start || index >= best.start + best.length,
-    )
-    .join(' ')
-  return { product: best.product, note }
+  const matches = [...found.values()]
+  return (
+    matches
+      // "organic green tea" offers Green tea, not also Tea.
+      .filter(
+        (m) =>
+          !matches.some(
+            (other) =>
+              other !== m &&
+              other.length > m.length &&
+              other.start <= m.start &&
+              other.start + other.length >= m.start + m.length,
+          ),
+      )
+      // The first word typed usually names the item: "yogurt mango" puts
+      // Yogurt (note: mango) first.
+      .sort((a, b) => a.start - b.start || b.length - a.length)
+      .slice(0, 3)
+      .map((m) => ({
+        product: m.product,
+        note: original
+          .filter((_, index) => index < m.start || index >= m.start + m.length)
+          .join(' '),
+      }))
+  )
 }

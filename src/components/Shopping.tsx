@@ -32,7 +32,7 @@ import { Confetti, type Burst } from './Confetti'
 import { PhotoCapture } from './PhotoCapture'
 import { PhotoButton } from './PhotoButton'
 import { approveAiAdded } from '../lib/ai-added'
-import { rankProducts, splitVariant } from '../lib/shopping'
+import { rankProducts, splitVariants } from '../lib/shopping'
 import { post, uploadImage } from '../lib/http'
 import type { ItemDetailsProposal } from '../lib/api/ItemDetailsProposal'
 
@@ -163,9 +163,8 @@ export function Shopping() {
     !!trimmed &&
     !products.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())
   // "peppermint tea" also offers the existing Tea with a note.
-  const variant = canCreate ? splitVariant(products, trimmed) : null
-  const variantIndex = variant ? suggestions.length : -1
-  const createIndex = suggestions.length + Number(!!variant)
+  const variants = canCreate ? splitVariants(products, trimmed) : []
+  const createIndex = suggestions.length + variants.length
   const optionCount = createIndex + Number(canCreate)
   const listOpen = isFocused && optionCount > 0
   const restock = insights.restock.filter(
@@ -371,9 +370,11 @@ export function Shopping() {
                     e.preventDefault()
                     if (suggestionIndex < suggestions.length)
                       add(suggestions[suggestionIndex])
-                    else if (variant && suggestionIndex === variantIndex)
+                    else if (suggestionIndex < createIndex) {
+                      const variant =
+                        variants[suggestionIndex - suggestions.length]
                       add(variant.product, variant.note)
-                    else setAddOpen(true)
+                    } else setAddOpen(true)
                   }
                 }}
               />
@@ -432,28 +433,32 @@ export function Shopping() {
                     </button>
                   )
                 })}
-                {variant && (
-                  <button
-                    id={`suggestion-${variantIndex}`}
-                    role="option"
-                    aria-selected={suggestionIndex === variantIndex}
-                    onClick={() => add(variant.product, variant.note)}
-                  >
-                    <span className="suggestion-icon">
-                      <FoodIcon
-                        image={productImage(state, variant.product)}
-                        value={variant.product.icon}
-                        productId={variant.product.id}
-                        name={variant.product.name}
-                      />
-                    </span>
-                    <span>
-                      <strong>{variant.product.name}</strong>
-                      <small>Note: {variant.note}</small>
-                    </span>
-                    <Plus size={18} />
-                  </button>
-                )}
+                {variants.map((variant, offset) => {
+                  const index = suggestions.length + offset
+                  return (
+                    <button
+                      key={`variant-${variant.product.id}`}
+                      id={`suggestion-${index}`}
+                      role="option"
+                      aria-selected={suggestionIndex === index}
+                      onClick={() => add(variant.product, variant.note)}
+                    >
+                      <span className="suggestion-icon">
+                        <FoodIcon
+                          image={productImage(state, variant.product)}
+                          value={variant.product.icon}
+                          productId={variant.product.id}
+                          name={variant.product.name}
+                        />
+                      </span>
+                      <span>
+                        <strong>{variant.product.name}</strong>
+                        <small>Note: {variant.note}</small>
+                      </span>
+                      <Plus size={18} />
+                    </button>
+                  )
+                })}
                 {canCreate && (
                   <button
                     id={`suggestion-${createIndex}`}
