@@ -72,7 +72,6 @@ export function PantryEditor({
             Quantity
             <NumberInput
               aria-label={`Pantry quantity ${index + 1}`}
-              autoFocus={index === 0}
               min="0"
               max="1000000"
               step="any"

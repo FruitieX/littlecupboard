@@ -50,7 +50,6 @@ export function GroupEditor({
           <label>
             Group name
             <input
-              autoFocus
               required
               maxLength={60}
               value={name}

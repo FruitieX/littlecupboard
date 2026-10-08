@@ -443,3 +443,11 @@ Follow-up: after accidentally pinch-zooming the installed app, the user asked to
 ### Follow-up: every known item in a typed variety (2026-10-08)
 
 - Typing several known names ("Yogurt Mango") now offers each of them with the other words as the note, the item named first listed first (Yogurt · note Mango, then Mango · note Yogurt). Names inside a longer match are skipped ("organic green tea" offers Green tea only); at most three are shown.
+
+### Cupboard search, row actions and calmer dialogs (2026-10-08)
+
+- The shopping "What do we need?" box is now a shared `ItemSearch` component. The cupboard uses it ("What do we have?") with the same suggestions, known-item-with-note variants and "Create …" option. Picking an item records it with the usual amount and opens its row to adjust; creating opens the new-item dialog with `destination="pantry"` ("Add to cupboard"). The photo split button sits inside the box. The old "Add what we have" form is gone.
+- Open cupboard rows show "Add to list", "Used up" and a "⋯" `ActionMenu` (portaled, follows scrolling): Edit amounts & use-by, Change to another item, Item settings, Remove from cupboard. "Used up" now records zero (so the row warns and restock can suggest it); "Remove from cupboard" deletes the entry.
+- Use soon / Running low warnings show as a banner in the open row with Dismiss. Dismissals are `suggestionFeedback` entries (`use-soon:<id>`, and `restock:<id>` shared with the shopping suggestion) that last until the next purchase or confirmed amount; dismissed rows are listed under "Warnings dismissed".
+- "Change to another item" moves the pantry entry to another (or a newly created) item, adding amounts and keeping the earliest use-by; it can also delete the wrong custom item (pre-checked when an AI photo created it).
+- Dialogs no longer autofocus fields when editing (pantry amounts, group, existing recipe or store); only names of new things autofocus.

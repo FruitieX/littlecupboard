@@ -81,7 +81,7 @@ export function StoreEditor({
         <label>
           Store name
           <input
-            autoFocus
+            autoFocus={!store}
             required
             maxLength={80}
             value={name}

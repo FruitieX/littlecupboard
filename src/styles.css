@@ -4620,19 +4620,19 @@ svg {
   background: white;
   box-shadow: 0 1px 4px #293b3014;
 }
-.cupboard-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin: -64px 0 26px;
+/* The cupboard reuses the shopping search box. */
+.cupboard-search {
+  margin-bottom: 22px;
 }
-.cupboard-add-wrap {
-  overflow: hidden;
+.add-item .photo-split {
+  margin-right: 2px;
 }
-.cupboard-add {
-  margin-bottom: 24px;
-  padding: 18px;
-  border-radius: 18px;
-  background: #f3f5ec;
+.add-item .photo-split-main {
+  width: 40px;
+  min-height: 40px;
+}
+.cupboard-search + .snap-message {
+  margin-top: -10px;
 }
 .cupboard-empty {
   padding: 36px 20px;
@@ -5112,10 +5112,6 @@ svg {
   }
   .editor-actions {
     padding-top: 12px;
-  }
-  .cupboard-toolbar {
-    justify-content: flex-start;
-    margin: 0 0 18px;
   }
   .segmented {
     display: flex;
@@ -5676,10 +5672,6 @@ svg {
 .photo-split-menu label:hover {
   background: #f2f5eb;
 }
-.cupboard-toolbar {
-  gap: 10px;
-  align-items: center;
-}
 .snap-message {
   margin: -14px 0 18px;
   color: #55684a;
@@ -5753,4 +5745,104 @@ svg {
    setting is ignored (Safari). Drag handles opt out with touch-action: none. */
 html {
   touch-action: pan-x pan-y;
+}
+
+/* A warning inside an open cupboard row, dismissable until the next purchase. */
+.stock-warning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 8px 8px 8px 12px;
+  border-radius: 12px;
+  background: #fbf1e3;
+  color: #8a5a1c;
+  font-size: 13.5px;
+}
+.stock-warning.use-soon {
+  background: #fcefea;
+  color: #9a4a33;
+}
+.stock-warning > span {
+  flex: 1;
+  min-width: 120px;
+  font-weight: 600;
+}
+.stock-warning .chip-button {
+  min-height: 32px;
+  background: #ffffffb3;
+  box-shadow: inset 0 0 0 1px #00000014;
+  color: inherit;
+}
+.chip-button.icon-chip {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+}
+
+/* Secondary actions, portaled so collapsing panels never clip them. */
+.action-menu {
+  position: fixed;
+  z-index: 60;
+  display: grid;
+  min-width: 230px;
+  padding: 6px;
+  border-radius: 14px;
+  background: white;
+  box-shadow:
+    0 14px 32px #293b3026,
+    0 0 0 1px #e6e9de;
+  animation: action-menu-in 0.14s ease-out;
+}
+.action-menu button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 15px;
+  text-align: left;
+}
+.action-menu button:hover,
+.action-menu button:focus-visible {
+  background: #f2f5eb;
+  outline: none;
+}
+.action-menu button.danger {
+  color: #b23b2e;
+}
+.action-menu button svg {
+  flex-shrink: 0;
+  color: #6f7d66;
+}
+.action-menu button.danger svg {
+  color: inherit;
+}
+@keyframes action-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .action-menu {
+    animation: none;
+  }
+}
+.move-dialog .add-item-wrap {
+  margin-bottom: 14px;
+}
+.move-dialog .check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+.move-dialog .suggestions {
+  position: static;
+  margin-top: 8px;
+  max-height: none;
+  box-shadow: none;
 }

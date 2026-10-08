@@ -718,7 +718,7 @@ export function RecipeEditor({
         <label>
           Recipe name
           <input
-            autoFocus
+            autoFocus={!recipe}
             required
             maxLength={120}
             value={name}

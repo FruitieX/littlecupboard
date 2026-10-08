@@ -6,14 +6,11 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
 import {
   Check,
   Plus,
-  Search,
   CalendarDays,
   Sparkles,
   Clock3,
   MapPin,
-  History,
   LoaderCircle,
-  Camera,
 } from 'lucide-react'
 import { categories } from '../lib/data'
 import type { AppState, Category, Product, ShoppingItem } from '../lib/data'
@@ -32,7 +29,7 @@ import { Confetti, type Burst } from './Confetti'
 import { PhotoCapture } from './PhotoCapture'
 import { PhotoButton } from './PhotoButton'
 import { approveAiAdded } from '../lib/ai-added'
-import { rankProducts, splitVariants } from '../lib/shopping'
+import { ItemSearch } from './ItemSearch'
 import { post, uploadImage } from '../lib/http'
 import type { ItemDetailsProposal } from '../lib/api/ItemDetailsProposal'
 
@@ -64,9 +61,6 @@ type TripSummary = {
   items: ShoppingItem[]
 }
 
-function productImage(state: AppState, product: Product) {
-  return state.productImages?.[product.id] || product.image
-}
 function usualLabel(habit: Habit | undefined) {
   if (!habit?.quantity || !habit.unit) return ''
   return `Usually ${Number(habit.quantity.toFixed(2))} ${habit.unit}${
@@ -96,10 +90,7 @@ export function Shopping() {
   const { groupByCategory } = useShoppingLayout(session.user.id)
   const { insights } = useLearning()
   const reduced = useReducedMotion() ?? false
-  const [query, setQuery] = useState('')
-  const [isFocused, setFocused] = useState(false)
-  const [suggestionIndex, setSuggestionIndex] = useState(-1)
-  const [addOpen, setAddOpen] = useState(false)
+  const [addName, setAddName] = useState<string | null>(null)
   const [edit, setEdit] = useState<ShoppingItem | null>(null)
   const [restockDetail, setRestockDetail] = useState<Restock | null>(null)
   const [message, setMessage] = useState('')
@@ -109,7 +100,6 @@ export function Shopping() {
   const [summary, setSummary] = useState<TripSummary | null>(null)
   const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastCheck = useRef<{ x: number; y: number; at: number } | null>(null)
-  const input = useRef<HTMLInputElement>(null)
   const store =
     state.stores.find((s) => s.id === state.storeId) ?? state.stores[0]
   const active = useMemo(
@@ -147,26 +137,15 @@ export function Shopping() {
     [insights.habits],
   )
   const onList = useMemo(() => new Set(active.map((i) => i.id)), [active])
-  const trimmed = query.trim()
-  const suggestions = trimmed
-    ? rankProducts(
-        products,
-        trimmed,
-        (id) => habits.get(id)?.purchases ?? 0,
-      ).slice(0, 6)
-    : insights.habits
+  const usual = useMemo(
+    () =>
+      insights.habits
         .filter((habit) => !onList.has(habit.productId))
         .sort((a, b) => b.purchases - a.purchases)
         .flatMap((habit) => products.filter((p) => p.id === habit.productId))
-        .slice(0, 6)
-  const canCreate =
-    !!trimmed &&
-    !products.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())
-  // "peppermint tea" also offers the existing Tea with a note.
-  const variants = canCreate ? splitVariants(products, trimmed) : []
-  const createIndex = suggestions.length + variants.length
-  const optionCount = createIndex + Number(canCreate)
-  const listOpen = isFocused && optionCount > 0
+        .slice(0, 6),
+    [insights.habits, onList, products],
+  )
   const restock = insights.restock.filter(
     (suggestion) => !onList.has(suggestion.product.id),
   )
@@ -187,9 +166,6 @@ export function Shopping() {
       note: note ?? habit?.preferredNote ?? '',
       accumulate: false,
     })
-    setQuery('')
-    setSuggestionIndex(-1)
-    input.current?.focus()
     announce(
       note
         ? `${product.name} (${note}) added to your list`
@@ -311,174 +287,27 @@ export function Shopping() {
       </p>
       <div className="shopping-layout">
         <div className="shopping-main">
-          <div
-            className="add-item-wrap"
-            onBlur={(e) => {
-              if (!e.currentTarget.contains(e.relatedTarget as Node))
-                setFocused(false)
-            }}
+          <ItemSearch
+            id="product"
+            state={state}
+            products={products}
+            label="Add a shopping item"
+            submitLabel="Add item"
+            placeholder="What do we need?"
+            score={(id) => habits.get(id)?.purchases ?? 0}
+            idle={usual}
+            idleCaption="Usually on our list"
+            describe={(p) =>
+              onList.has(p.id)
+                ? 'Already on the list'
+                : usualLabel(habits.get(p.id)) || p.category
+            }
+            onPick={add}
+            onCreate={(name) => setAddName(name)}
+            after={<div id="photo-status-slot" />}
           >
-            <form
-              className="add-item"
-              onSubmit={(e) => {
-                e.preventDefault()
-                const exact = products.find(
-                  (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
-                )
-                if (exact) add(exact)
-                // An empty box opens the dialog to type or snap a photo.
-                else setAddOpen(true)
-              }}
-            >
-              <Search size={21} />
-              <input
-                ref={input}
-                aria-label="Add a shopping item"
-                role="combobox"
-                aria-expanded={listOpen}
-                aria-controls="product-suggestions"
-                aria-activedescendant={
-                  listOpen && suggestionIndex >= 0
-                    ? `suggestion-${suggestionIndex}`
-                    : undefined
-                }
-                autoComplete="off"
-                placeholder="What do we need?"
-                value={query}
-                onFocus={() => setFocused(true)}
-                onChange={(e) => {
-                  setQuery(e.target.value)
-                  setFocused(true)
-                  setSuggestionIndex(-1)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') setFocused(false)
-                  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                    e.preventDefault()
-                    setFocused(true)
-                    setSuggestionIndex((i) =>
-                      Math.max(
-                        0,
-                        Math.min(
-                          optionCount - 1,
-                          i + (e.key === 'ArrowDown' ? 1 : -1),
-                        ),
-                      ),
-                    )
-                  }
-                  if (e.key === 'Enter' && listOpen && suggestionIndex >= 0) {
-                    e.preventDefault()
-                    if (suggestionIndex < suggestions.length)
-                      add(suggestions[suggestionIndex])
-                    else if (suggestionIndex < createIndex) {
-                      const variant =
-                        variants[suggestionIndex - suggestions.length]
-                      add(variant.product, variant.note)
-                    } else setAddOpen(true)
-                  }
-                }}
-              />
-              <PhotoCapture onQueued={(text) => announce(text)} />
-              <button
-                type="submit"
-                className="add-submit"
-                aria-label="Add item"
-              >
-                <Plus size={22} />
-              </button>
-            </form>
-            <div id="photo-status-slot" />
-            {listOpen && (
-              <div
-                className="suggestions"
-                id="product-suggestions"
-                role="listbox"
-                aria-label={
-                  trimmed ? 'Product suggestions' : 'Usually on our list'
-                }
-                onMouseDown={(e) => e.preventDefault()}
-              >
-                {!trimmed && (
-                  <p className="suggestions-caption" aria-hidden="true">
-                    <History size={13} /> Usually on our list
-                  </p>
-                )}
-                {suggestions.map((p, index) => {
-                  const habit = habits.get(p.id)
-                  return (
-                    <button
-                      key={p.id}
-                      id={`suggestion-${index}`}
-                      role="option"
-                      aria-selected={suggestionIndex === index}
-                      onClick={() => add(p)}
-                    >
-                      <span className="suggestion-icon">
-                        <FoodIcon
-                          image={productImage(state, p)}
-                          value={p.icon}
-                          productId={p.id}
-                          name={p.name}
-                        />
-                      </span>
-                      <span>
-                        <strong>{p.name}</strong>
-                        <small>
-                          {onList.has(p.id)
-                            ? 'Already on the list'
-                            : usualLabel(habit) || p.category}
-                        </small>
-                      </span>
-                      <Plus size={18} />
-                    </button>
-                  )
-                })}
-                {variants.map((variant, offset) => {
-                  const index = suggestions.length + offset
-                  return (
-                    <button
-                      key={`variant-${variant.product.id}`}
-                      id={`suggestion-${index}`}
-                      role="option"
-                      aria-selected={suggestionIndex === index}
-                      onClick={() => add(variant.product, variant.note)}
-                    >
-                      <span className="suggestion-icon">
-                        <FoodIcon
-                          image={productImage(state, variant.product)}
-                          value={variant.product.icon}
-                          productId={variant.product.id}
-                          name={variant.product.name}
-                        />
-                      </span>
-                      <span>
-                        <strong>{variant.product.name}</strong>
-                        <small>Note: {variant.note}</small>
-                      </span>
-                      <Plus size={18} />
-                    </button>
-                  )
-                })}
-                {canCreate && (
-                  <button
-                    id={`suggestion-${createIndex}`}
-                    role="option"
-                    aria-selected={suggestionIndex === createIndex}
-                    onClick={() => setAddOpen(true)}
-                  >
-                    <span className="suggestion-icon">
-                      <FoodIcon value="✨" />
-                    </span>
-                    <span>
-                      <strong>Create “{trimmed}”</strong>
-                      <small>Choose a group and add details</small>
-                    </span>
-                    <Plus size={18} />
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
+            <PhotoCapture onQueued={(text) => announce(text)} />
+          </ItemSearch>
           <AnimatePresence initial={false}>
             {restock.length > 0 && (
               <motion.section
@@ -723,14 +552,11 @@ export function Shopping() {
           </div>
         </Modal>
       )}
-      {addOpen && (
+      {addName !== null && (
         <ItemEditor
           open
-          onClose={() => {
-            setAddOpen(false)
-            setQuery('')
-          }}
-          initialName={trimmed}
+          onClose={() => setAddName(null)}
+          initialName={addName}
         />
       )}
       {edit && <ItemEditor open onClose={() => setEdit(null)} item={edit} />}
@@ -917,16 +743,21 @@ function TripSummaryDialog({
   )
 }
 
-function ItemEditor({
+export function ItemEditor({
   open,
   onClose,
   initialName = '',
   item,
+  destination = 'list',
+  onAdded,
 }: {
   open: boolean
   onClose: () => void
   initialName?: string
   item?: ShoppingItem
+  /** New items go on the shopping list, or straight into the cupboard. */
+  destination?: 'list' | 'pantry'
+  onAdded?: (product: Product) => void
 }) {
   const { state, update, action, groups, session, status } = useApp()
   const [name, setName] = useState(item?.name ?? initialName)
@@ -1040,7 +871,13 @@ function ItemEditor({
       onOpenChange={(v) => {
         if (!v) onClose()
       }}
-      title={item ? item.name : 'Something for the basket'}
+      title={
+        item
+          ? item.name
+          : destination === 'pantry'
+            ? 'Something we have'
+            : 'Something for the basket'
+      }
       description={
         item
           ? 'Adjust the amount or leave a note for whoever’s shopping.'
@@ -1085,14 +922,25 @@ function ItemEditor({
                     }
                   : {}),
               }))
-            action({
-              type: 'addItem',
-              productId: product.id,
-              quantity,
-              unit,
-              note,
-              accumulate: true,
-            })
+            if (destination === 'pantry')
+              action({
+                type: 'observePantry',
+                productId: product.id,
+                quantity,
+                unit,
+                note,
+                expiresAt: null,
+              })
+            else
+              action({
+                type: 'addItem',
+                productId: product.id,
+                quantity,
+                unit,
+                note,
+                accumulate: true,
+              })
+            onAdded?.(product)
           }
           if (
             image !== (state.productImages?.[product.id] ?? '') ||
@@ -1151,7 +999,11 @@ function ItemEditor({
                   setMatchedId(null)
                   touch('name', setName)(e.target.value)
                 }}
-                placeholder="What do we need?"
+                placeholder={
+                  destination === 'pantry'
+                    ? 'What do we have?'
+                    : 'What do we need?'
+                }
                 maxLength={80}
               />
             </label>
@@ -1333,7 +1185,11 @@ function ItemEditor({
             disabled={pictureBusy || busy}
           >
             <Check size={18} />
-            {item ? 'Save details' : 'Add to shopping list'}
+            {item
+              ? 'Save details'
+              : destination === 'pantry'
+                ? 'Add to cupboard'
+                : 'Add to shopping list'}
           </button>
         </div>
       </form>

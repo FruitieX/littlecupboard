@@ -119,7 +119,7 @@ export function deleteProduct(state: AppState, id: string): AppState {
     purchasedCoverage: coverage(state.purchasedCoverage),
     suggestionFeedback: Object.fromEntries(
       Object.entries(state.suggestionFeedback ?? {}).filter(
-        ([key]) => key !== `restock:${id}`,
+        ([key]) => key !== `restock:${id}` && key !== `use-soon:${id}`,
       ),
     ),
   }

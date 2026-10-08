@@ -63,11 +63,32 @@ async function replaceNumber(field, value) {
     'Typing must not prefix a forced zero',
   )
 }
-async function openCupboardAdd(page) {
+function cupboardSearch(page) {
+  return page.getByRole('combobox', { name: 'Add something we have' })
+}
+async function stockMenu(page, name, action) {
+  await page
+    .getByRole('button', { name: `More for ${name}`, exact: true })
+    .click()
+  await page.getByRole('menuitem', { name: action, exact: true }).click()
+}
+/** Adds an item from the cupboard search, then confirms its amount. */
+async function addToCupboard(page, name, quantity, unit) {
   await page.goto(`${frontendUrl}/cupboard`)
   await settle(page)
+  await cupboardSearch(page).fill(name)
+  await cupboardSearch(page).press('Enter')
   await page
-    .getByRole('button', { name: 'Add what we have', exact: true })
+    .getByRole('button', { name: `More for ${name}`, exact: true })
+    .waitFor()
+  await stockMenu(page, name, 'Edit amounts & use-by')
+  await replaceNumber(
+    page.getByLabel('Pantry quantity 1', { exact: true }),
+    quantity,
+  )
+  await page.getByLabel('Pantry unit 1', { exact: true }).fill(unit)
+  await page
+    .getByRole('button', { name: 'Save pantry entry', exact: true })
     .click()
 }
 async function openStockRow(page, name) {
@@ -364,13 +385,7 @@ try {
     .waitFor()
   console.log('Offline shopping queued and synchronized after reconnection.')
 
-  await openCupboardAdd(owner)
-  await owner.getByLabel('Pantry item', { exact: true }).fill('Rice')
-  await replaceNumber(owner.getByLabel('Quantity', { exact: true }), '500')
-  await owner.getByLabel('Unit', { exact: true }).fill('g')
-  await owner
-    .getByRole('button', { name: 'Confirm amount', exact: true })
-    .click()
+  await addToCupboard(owner, 'Rice', '500', 'g')
   await owner
     .locator('.stock-row')
     .getByText(/500 g · confirmed/)
@@ -380,10 +395,12 @@ try {
       (await (await fetch('/api/state')).json()).state.pantry.rice?.amounts[0]
         ?.quantity === 500,
   )
-  await openStockRow(owner, 'Rice')
-  await owner
-    .getByRole('button', { name: 'Edit Rice in pantry', exact: true })
-    .click()
+  await stockMenu(owner, 'Rice', 'Edit amounts & use-by')
+  assert.notEqual(
+    await owner.evaluate(() => document.activeElement?.tagName),
+    'INPUT',
+    'The pantry editor does not focus a field (no phone keyboard)',
+  )
   await replaceNumber(
     owner.getByLabel('Pantry quantity 1', { exact: true }),
     '750',
@@ -453,9 +470,7 @@ try {
   await owner
     .getByRole('button', { name: 'Save pantry entry', exact: true })
     .click()
-  await owner
-    .getByRole('button', { name: 'Edit Rice in pantry', exact: true })
-    .click()
+  await stockMenu(owner, 'Rice', 'Edit amounts & use-by')
   await owner.getByLabel('Pantry quantity 2', { exact: true }).fill('800')
   await owner
     .getByRole('button', { name: 'Save pantry entry', exact: true })
@@ -499,9 +514,7 @@ try {
   }
   await owner.route('**/api/operations', rejectPantryOnce)
   await openStockRow(owner, 'Rice')
-  await owner
-    .getByRole('button', { name: 'Remove Rice from pantry', exact: true })
-    .click()
+  await stockMenu(owner, 'Rice', 'Remove from cupboard')
   await owner
     .locator('.connection-pill')
     .filter({ hasText: 'Review changes' })
@@ -525,7 +538,7 @@ try {
     .getByRole('button', { name: 'Close dialog', exact: true })
     .click()
   await owner
-    .getByRole('button', { name: 'Remove Rice from pantry', exact: true })
+    .getByRole('button', { name: 'More for Rice', exact: true })
     .waitFor({ state: 'hidden' })
   await owner.waitForFunction(
     async () => !(await (await fetch('/api/state')).json()).state.pantry.rice,
@@ -541,19 +554,77 @@ try {
     (await request(wife, '/state', undefined, 'GET')).state.pantry.rice,
     undefined,
   )
-  await owner
-    .getByRole('button', { name: 'Add what we have', exact: true })
-    .click()
-  await owner.getByLabel('Pantry item', { exact: true }).fill('Rice')
-  await owner.getByLabel('Quantity', { exact: true }).fill('500')
-  await owner.getByLabel('Unit', { exact: true }).fill('g')
-  await owner
-    .getByRole('button', { name: 'Confirm amount', exact: true })
-    .click()
+  await addToCupboard(owner, 'Rice', '500', 'g')
   await owner
     .locator('.stock-row')
     .getByText(/500 g · confirmed/)
     .waitFor()
+  // New items can be created straight into the cupboard.
+  await cupboardSearch(owner).fill('Homemade jam')
+  await owner.getByRole('option', { name: /Create “Homemade jam”/ }).click()
+  const jamDialog = owner.getByRole('dialog', { name: 'Something we have' })
+  await jamDialog
+    .getByRole('button', { name: 'Add to cupboard', exact: true })
+    .click()
+  await jamDialog.waitFor({ state: 'hidden' })
+  await owner
+    .getByRole('button', { name: 'More for Homemade jam', exact: true })
+    .waitFor()
+  // A misattributed entry moves to the right (here a new) item.
+  await stockMenu(owner, 'Homemade jam', 'Change to another item')
+  const moveDialog = owner.getByRole('dialog', {
+    name: 'Change Homemade jam to…',
+  })
+  await moveDialog
+    .getByLabel('Also delete “Homemade jam” from our items')
+    .check()
+  await moveDialog
+    .getByRole('combobox', { name: 'Find the right item' })
+    .fill('Strawberry jam')
+  await moveDialog
+    .getByRole('option', { name: /Create “Strawberry jam”/ })
+    .click()
+  await moveDialog.waitFor({ state: 'hidden' })
+  await eventually(async () => {
+    const moved = (await request(wife, '/state', undefined, 'GET')).state
+    const jam = moved.customProducts.find((p) => p.name === 'Strawberry jam')
+    return (
+      jam &&
+      moved.pantry[jam.id]?.amounts[0]?.quantity === 1 &&
+      !moved.customProducts.some((p) => p.name === 'Homemade jam')
+    )
+  })
+  // Used up keeps the entry as a warning that can be dismissed.
+  await openStockRow(owner, 'Strawberry jam')
+  await owner
+    .getByRole('button', { name: 'Strawberry jam is used up', exact: true })
+    .click()
+  await owner
+    .locator('.stock-group', { hasText: 'Running low' })
+    .getByText('Strawberry jam', { exact: true })
+    .waitFor()
+  await openStockRow(owner, 'Strawberry jam')
+  await owner
+    .getByRole('button', {
+      name: 'Dismiss warning for Strawberry jam',
+      exact: true,
+    })
+    .click()
+  await owner
+    .locator('.stock-group', { hasText: 'Warnings dismissed' })
+    .getByText('Strawberry jam', { exact: true })
+    .waitFor()
+  await openStockRow(owner, 'Strawberry jam')
+  await owner
+    .getByRole('button', { name: 'More for Strawberry jam', exact: true })
+    .screenshot({ path: 'test-results/cupboard-row-actions.png' })
+  await stockMenu(owner, 'Strawberry jam', 'Remove from cupboard')
+  await owner
+    .getByRole('button', { name: 'More for Strawberry jam', exact: true })
+    .waitFor({ state: 'hidden' })
+  console.log(
+    'Cupboard search creates items into the cupboard; change item, used up, dismiss and remove passed.',
+  )
   await owner.goto(frontendUrl + '/recipes')
   await settle(owner)
   await owner.getByRole('button', { name: 'Add recipe', exact: true }).click()

@@ -2,18 +2,23 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
+  BellOff,
   Check,
   ChevronDown,
+  Clock3,
   History,
+  PackageOpen,
   Plus,
   RefreshCw,
+  Replace,
   SlidersHorizontal,
   Settings2,
   Sparkles,
   Trash2,
+  TriangleAlert,
 } from 'lucide-react'
-import { NumberInput, QuantityStepper } from './NumberInput'
-import { getProducts } from '../lib/catalog'
+import { QuantityStepper } from './NumberInput'
+import { deleteProduct, getProducts } from '../lib/catalog'
 import { useApp } from '../lib/state'
 import { useHistory, useLearning, useStats } from '../lib/learning'
 import type { Habit } from '../lib/learning'
@@ -28,6 +33,15 @@ import { ProductEditor } from './LibrarySettings'
 import { PhotoButton } from './PhotoButton'
 import { approveAiAdded } from '../lib/ai-added'
 import { photoError, queuePhotoJob } from './PhotoCapture'
+import { ItemSearch } from './ItemSearch'
+import { ItemEditor } from './Shopping'
+import { ActionMenu } from './ActionMenu'
+import {
+  dismissWarning,
+  movePantryEntry,
+  stockWarning,
+  warningDismissed,
+} from '../lib/pantry'
 
 type Tab = 'stock' | 'trends' | 'history'
 const tabs: { id: Tab; label: string }[] = [
@@ -143,27 +157,35 @@ export function Cupboard() {
 function StockView() {
   const { state, update, action, session, status } = useApp()
   const [snapping, setSnapping] = useState(false)
-  const [snapMessage, setSnapMessage] = useState('')
+  const [message, setMessage] = useState('')
   async function snap(file: File) {
     setSnapping(true)
-    setSnapMessage('')
+    setMessage('')
     try {
       await queuePhotoJob(file, 'pantry')
-      setSnapMessage(
+      setMessage(
         'Got it — we’ll add it to the cupboard in the background. It’s marked AI until someone checks it.',
       )
     } catch (error) {
-      setSnapMessage(photoError(error))
+      setMessage(photoError(error))
     } finally {
       setSnapping(false)
     }
   }
+  useEffect(() => {
+    if (!message) return
+    const timer = setTimeout(() => setMessage(''), 6000)
+    return () => clearTimeout(timer)
+  }, [message])
   const { insights } = useLearning()
   const [open, setOpen] = useState<string | null>(null)
+  const [reveal, setReveal] = useState<string | null>(null)
   const [editing, setEditing] = useState<PantryEdit | null>(null)
   const [editingItem, setEditingItem] = useState<string | null>(null)
-  const [adding, setAdding] = useState(false)
+  const [creating, setCreating] = useState<string | null>(null)
+  const [moving, setMoving] = useState<string | null>(null)
   const products = useMemo(() => getProducts(state), [state])
+  const searchable = useMemo(() => getProducts(state, false), [state])
   const byId = useMemo(
     () => new Map(products.map((product) => [product.id, product])),
     [products],
@@ -179,14 +201,56 @@ function StockView() {
   const onList = new Set(
     state.items.filter((item) => !item.checked).map((item) => item.id),
   )
+  // Open and scroll to an item someone just added or picked.
+  function show(id: string) {
+    setOpen(id)
+    setReveal(id)
+  }
+  useEffect(() => {
+    if (!reveal) return
+    const frame = requestAnimationFrame(() => {
+      document
+        .getElementById(`stock-row-${reveal}`)
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      setReveal(null)
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [reveal, state.pantry])
+  function pick(product: Product, note?: string) {
+    if (state.pantry?.[product.id]) {
+      setMessage(`${product.name} is already here — check the amount.`)
+      show(product.id)
+      return
+    }
+    const habit = habits.get(product.id)
+    action({
+      type: 'observePantry',
+      productId: product.id,
+      quantity: habit?.quantity || 1,
+      unit: habit?.unit || 'pc',
+      note: note ?? '',
+      expiresAt: null,
+    })
+    setMessage(
+      `${product.name} added to the cupboard. Adjust the amount below.`,
+    )
+    show(product.id)
+  }
   // Keep every pantry entry visible, even before the server's projection
   // for a freshly added item arrives.
   const rows = Object.keys(state.pantry ?? {})
-    .map((id) => ({
-      id,
-      product: byId.get(id),
-      estimate: estimates.get(id),
-    }))
+    .map((id) => {
+      const estimate = estimates.get(id)
+      const warning = stockWarning(estimate)
+      const dismissed = !!warning && warningDismissed(state, id, warning)
+      return {
+        id,
+        product: byId.get(id),
+        estimate,
+        warning: dismissed ? null : warning,
+        dismissed,
+      }
+    })
     .sort(
       (a, b) =>
         (a.estimate?.daysLeft ?? Number.MAX_VALUE) -
@@ -196,15 +260,11 @@ function StockView() {
   const groups = [
     {
       title: 'Use soon',
-      rows: rows.filter((row) =>
-        ['expiring', 'expired'].includes(row.estimate?.status ?? ''),
-      ),
+      rows: rows.filter((row) => row.warning === 'use-soon'),
     },
     {
       title: 'Running low',
-      rows: rows.filter((row) =>
-        ['low', 'out'].includes(row.estimate?.status ?? ''),
-      ),
+      rows: rows.filter((row) => row.warning === 'restock'),
     },
     {
       title: 'Well stocked',
@@ -215,22 +275,40 @@ function StockView() {
       hint: 'Set a consumption rate or buy these a few times and we’ll estimate how long they last.',
       rows: rows.filter(
         (row) =>
-          !row.estimate || ['unknown'].includes(row.estimate.status ?? ''),
+          !row.warning &&
+          !row.dismissed &&
+          (row.estimate?.status ?? 'unknown') === 'unknown',
       ),
+    },
+    {
+      title: 'Warnings dismissed',
+      hint: 'Shown again after the next purchase or confirmed amount.',
+      rows: rows.filter((row) => row.dismissed),
     },
   ]
   const pantryEditing = editing && state.pantry?.[editing.id] ? editing : null
   const editedProduct = editingItem ? byId.get(editingItem) : undefined
+  const movedProduct = moving ? byId.get(moving) : undefined
   return (
     <>
-      <div className="cupboard-toolbar">
-        <button
-          className="secondary-button"
-          aria-expanded={adding}
-          onClick={() => setAdding((value) => !value)}
-        >
-          <Plus size={17} /> Add what we have
-        </button>
+      <ItemSearch
+        id="pantry"
+        className="cupboard-search"
+        state={state}
+        products={searchable}
+        label="Add something we have"
+        submitLabel="Add to cupboard"
+        placeholder="What do we have?"
+        score={(id) => habits.get(id)?.purchases ?? 0}
+        describe={(p) =>
+          state.pantry?.[p.id]
+            ? `Already here · ${amountsLabel(pantryTotal(state, p.id))}`
+            : p.category
+        }
+        createHint="Add it to our items and the cupboard"
+        onPick={pick}
+        onCreate={(name) => setCreating(name)}
+      >
         {session.aiEnabled && (
           <PhotoButton
             label="Snap what we have"
@@ -239,28 +317,12 @@ function StockView() {
             onFile={(file) => void snap(file)}
           />
         )}
-      </div>
-      {snapMessage && (
+      </ItemSearch>
+      {message && (
         <p className="snap-message" role="status">
-          {snapMessage}
+          {message}
         </p>
       )}
-      <AnimatePresence initial={false}>
-        {adding && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="cupboard-add-wrap"
-          >
-            <AddToCupboard
-              products={products}
-              habits={habits}
-              onDone={() => setAdding(false)}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
       {!rows.length && (
         <div className="cupboard-empty">
           <FoodIcon value="🫙" />
@@ -278,12 +340,13 @@ function StockView() {
               <SectionTitle title={group.title} count={group.rows.length} />
               {group.hint && <p className="quiet-label">{group.hint}</p>}
               <div className="stock-list">
-                {group.rows.map(({ id, product, estimate }) => (
+                {group.rows.map(({ id, product, estimate, warning }) => (
                   <StockRow
                     key={id}
                     id={id}
                     product={product}
                     estimate={estimate}
+                    warning={warning}
                     habit={habits.get(id)}
                     total={pantryTotal(state, id)}
                     entry={state.pantry![id]}
@@ -294,6 +357,7 @@ function StockView() {
                       setEditing(pantryEdit(state, id, product?.name ?? id))
                     }
                     onSettings={() => setEditingItem(id)}
+                    onMove={() => setMoving(id)}
                     aiAdded={!!state.aiAdded?.[id]}
                     onApprove={() =>
                       update(
@@ -301,7 +365,31 @@ function StockView() {
                         `Approve ${product?.name ?? id}`,
                       )
                     }
+                    onDismiss={() => {
+                      if (!warning) return
+                      update(
+                        (s) => dismissWarning(s, id, warning),
+                        `Dismiss warning for ${product?.name ?? id}`,
+                      )
+                      setMessage(
+                        `Hidden until ${product?.name ?? id} is bought or confirmed again.`,
+                      )
+                    }}
                     shelfLife={state.shelfLifeDays?.[id]}
+                    onUsedUp={() => {
+                      const unit = pantryTotal(state, id)[0]?.unit ?? 'pc'
+                      action({
+                        type: 'observePantry',
+                        productId: id,
+                        quantity: 0,
+                        unit,
+                        amounts: [{ quantity: 0, unit }],
+                        note: state.pantry![id].note,
+                        expiresAt: null,
+                        expected: structuredClone(state.pantry![id]),
+                      })
+                      setMessage(`${product?.name ?? id} marked as used up.`)
+                    }}
                     onRemove={() => {
                       setOpen(null)
                       update(
@@ -311,6 +399,9 @@ function StockView() {
                           return { ...s, pantry }
                         },
                         `Remove ${product?.name ?? id} from pantry`,
+                      )
+                      setMessage(
+                        `${product?.name ?? id} removed from the cupboard.`,
                       )
                     }}
                     onConfirm={(amount) => {
@@ -370,7 +461,120 @@ function StockView() {
           onClose={() => setEditingItem(null)}
         />
       )}
+      {creating !== null && (
+        <ItemEditor
+          open
+          destination="pantry"
+          initialName={creating}
+          onClose={() => setCreating(null)}
+          onAdded={(product) => show(product.id)}
+        />
+      )}
+      {moving && (
+        <MoveDialog
+          id={moving}
+          name={movedProduct?.name ?? moving}
+          products={searchable.filter((p) => p.id !== moving)}
+          onClose={() => setMoving(null)}
+          onMoved={(product) => {
+            setMoving(null)
+            setMessage(
+              `Moved to ${product.name}. Check the amount if both were recorded.`,
+            )
+            show(product.id)
+          }}
+        />
+      )}
     </>
+  )
+}
+
+/** Fixes a misrecognized item: what we have moves to another item. */
+function MoveDialog({
+  id,
+  name,
+  products,
+  onClose,
+  onMoved,
+}: {
+  id: string
+  name: string
+  products: Product[]
+  onClose: () => void
+  onMoved: (product: Product) => void
+}) {
+  const { state, update } = useApp()
+  const custom = state.customProducts.some((product) => product.id === id)
+  const used =
+    state.items.some((item) => item.id === id) ||
+    [...(state.recipeBook ?? []), ...state.customRecipes].some((recipe) =>
+      recipe.ingredients.some((ingredient) => ingredient.productId === id),
+    )
+  // A wrongly recognized item an AI photo created is usually not wanted.
+  const [deleteOld, setDeleteOld] = useState(
+    custom && !used && !!state.aiAdded?.[id],
+  )
+  const source = state.customProducts.find((product) => product.id === id)
+  function move(product: Product, isNew = false) {
+    update((s) => {
+      let next = isNew
+        ? { ...s, customProducts: [...s.customProducts, product] }
+        : s
+      next = movePantryEntry(next, id, product.id)
+      return deleteOld ? deleteProduct(next, id) : next
+    }, `Move ${name} to ${product.name}`)
+    onMoved(product)
+  }
+  return (
+    <Modal
+      open
+      onOpenChange={(value) => {
+        if (!value) onClose()
+      }}
+      title={`Change ${name} to…`}
+      description="Pick the right item. What we have moves over and adds to anything already recorded there."
+      className="move-dialog"
+    >
+      <ItemSearch
+        id="move"
+        state={state}
+        products={products}
+        label="Find the right item"
+        submitLabel="Move here"
+        placeholder="Search our items"
+        idle={products.filter((p) => state.pantry?.[p.id]).slice(0, 6)}
+        idleCaption="In the cupboard"
+        describe={(p) =>
+          state.pantry?.[p.id]
+            ? `In the cupboard · ${amountsLabel(pantryTotal(state, p.id))}`
+            : p.category
+        }
+        createHint="Create it as a new item"
+        onPick={(product) => move(product)}
+        onCreate={(typed) => {
+          if (!typed) return
+          move(
+            {
+              id: crypto.randomUUID(),
+              name: typed,
+              category: source?.category ?? 'Pantry',
+              icon: source?.icon ?? '🛒',
+            },
+            true,
+          )
+        }}
+      />
+      {custom && !used && (
+        <label className="check-row">
+          <input
+            type="checkbox"
+            checked={deleteOld}
+            onChange={(event) => setDeleteOld(event.target.checked)}
+          />
+          Also delete “{name}” from our items
+        </label>
+      )}
+    </Modal>
   )
 }
 
@@ -378,6 +582,7 @@ function StockRow({
   id,
   product,
   estimate,
+  warning,
   habit,
   total,
   entry,
@@ -386,9 +591,12 @@ function StockRow({
   onToggle,
   onMore,
   onSettings,
+  onMove,
   aiAdded,
   onApprove,
+  onDismiss,
   shelfLife,
+  onUsedUp,
   onRemove,
   onConfirm,
   onAddToList,
@@ -396,6 +604,7 @@ function StockRow({
   id: string
   product?: Product
   estimate?: StockEstimate
+  warning: 'use-soon' | 'restock' | null
   habit?: Habit
   total: Amount[]
   entry: { confirmed: boolean; expiresAt: string | null; note: string }
@@ -404,9 +613,12 @@ function StockRow({
   onToggle: () => void
   onMore: () => void
   onSettings: () => void
+  onMove: () => void
   aiAdded: boolean
   onApprove: () => void
+  onDismiss: () => void
   shelfLife?: number
+  onUsedUp: () => void
   onRemove: () => void
   onConfirm: (amount: Amount) => void
   onAddToList: () => void
@@ -428,18 +640,24 @@ function StockRow({
   useEffect(() => {
     if (!touched.current) setDraft(initial)
   }, [initial.quantity, initial.unit])
-  const status = estimate?.status ?? 'unknown'
+  // A dismissed warning shows the row calmly.
+  const status = warning ? (estimate?.status ?? 'unknown') : 'calm'
   const level = estimate?.level
+  const useWithin = useWithinLabel(estimate, entry.expiresAt)
   const meta = [
     amountsLabel(shown, !!tracked),
     estimate?.daysLeft !== null && estimate?.daysLeft !== undefined
       ? daysLabel(estimate.daysLeft)
       : null,
-    useWithinLabel(estimate, entry.expiresAt),
+    useWithin,
     entry.confirmed ? 'confirmed' : null,
   ].filter(Boolean)
+  const usedUp = total.every((amount) => amount.quantity <= 0)
   return (
-    <div className={`stock-row status-${status} ${open ? 'open' : ''}`}>
+    <div
+      id={`stock-row-${id}`}
+      className={`stock-row status-${status} ${open ? 'open' : ''}`}
+    >
       <button
         className="stock-row-main"
         aria-expanded={open}
@@ -508,6 +726,31 @@ function StockRow({
                   </button>
                 </div>
               )}
+              {warning && (
+                <div className={`stock-warning ${warning}`}>
+                  {warning === 'use-soon' ? (
+                    <Clock3 size={16} />
+                  ) : (
+                    <TriangleAlert size={16} />
+                  )}
+                  <span>
+                    {warning === 'use-soon'
+                      ? useWithin
+                        ? useWithin[0].toUpperCase() + useWithin.slice(1)
+                        : 'Use soon'
+                      : usedUp || estimate?.status === 'out'
+                        ? 'Probably used up'
+                        : 'Running low'}
+                  </span>
+                  <button
+                    className="chip-button"
+                    onClick={onDismiss}
+                    aria-label={`Dismiss warning for ${name}`}
+                  >
+                    <BellOff size={14} /> Dismiss
+                  </button>
+                </div>
+              )}
               {editable ? (
                 <form
                   className="stock-confirm"
@@ -539,7 +782,7 @@ function StockRow({
                 </form>
               ) : (
                 <p className="quiet-label">
-                  Several units are recorded. Use More options to adjust each.
+                  Several units are recorded. Use Edit amounts to adjust each.
                 </p>
               )}
               <div className="stock-actions">
@@ -551,23 +794,41 @@ function StockRow({
                   {onList ? <Check size={15} /> : <Plus size={15} />}
                   {onList ? 'On the list' : 'Add to list'}
                 </button>
-                <button
-                  className="chip-button"
-                  onClick={onRemove}
-                  aria-label={`Remove ${name} from pantry`}
-                >
-                  <Trash2 size={15} /> Used up
-                </button>
-                <button
-                  className="chip-button"
-                  onClick={onMore}
-                  aria-label={`Edit ${name} in pantry`}
-                >
-                  <SlidersHorizontal size={15} /> More options
-                </button>
-                <button className="chip-button" onClick={onSettings}>
-                  <Settings2 size={15} /> Item settings
-                </button>
+                {!usedUp && (
+                  <button
+                    className="chip-button"
+                    onClick={onUsedUp}
+                    aria-label={`${name} is used up`}
+                  >
+                    <PackageOpen size={15} /> Used up
+                  </button>
+                )}
+                <ActionMenu
+                  label={`More for ${name}`}
+                  actions={[
+                    {
+                      label: 'Edit amounts & use-by',
+                      icon: <SlidersHorizontal size={16} />,
+                      onSelect: onMore,
+                    },
+                    {
+                      label: 'Change to another item',
+                      icon: <Replace size={16} />,
+                      onSelect: onMove,
+                    },
+                    {
+                      label: 'Item settings',
+                      icon: <Settings2 size={16} />,
+                      onSelect: onSettings,
+                    },
+                    {
+                      label: 'Remove from cupboard',
+                      icon: <Trash2 size={16} />,
+                      onSelect: onRemove,
+                      danger: true,
+                    },
+                  ]}
+                />
               </div>
               {estimate?.dailyUse && (
                 <p className="stock-explain">
@@ -596,108 +857,6 @@ function StockRow({
         )}
       </AnimatePresence>
     </div>
-  )
-}
-
-function AddToCupboard({
-  products,
-  habits,
-  onDone,
-}: {
-  products: Product[]
-  habits: Map<string, Habit>
-  onDone: () => void
-}) {
-  const { action } = useApp()
-  const [name, setName] = useState('')
-  const [quantity, setQuantity] = useState(1)
-  const [unit, setUnit] = useState('pc')
-  const [expiry, setExpiry] = useState('')
-  const product = products.find(
-    (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
-  )
-  return (
-    <form
-      className="editor-form cupboard-add"
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (!product) return
-        action({
-          type: 'observePantry',
-          productId: product.id,
-          quantity,
-          unit,
-          expiresAt: expiry || null,
-        })
-        setName('')
-        onDone()
-      }}
-    >
-      <label>
-        Pantry item
-        <input
-          list="pantry-products"
-          value={name}
-          required
-          autoFocus
-          onChange={(e) => {
-            setName(e.target.value)
-            const match = products.find(
-              (p) => p.name.toLowerCase() === e.target.value.toLowerCase(),
-            )
-            const habit = match && habits.get(match.id)
-            if (habit?.quantity && habit.unit) {
-              setQuantity(habit.quantity)
-              setUnit(habit.unit)
-            }
-          }}
-          placeholder="Search your ingredients"
-        />
-        <datalist id="pantry-products">
-          {products.map((p) => (
-            // Labels let the browser also match other names.
-            <option
-              key={p.id}
-              value={p.name}
-              label={p.aliases?.length ? p.aliases.join(', ') : undefined}
-            />
-          ))}
-        </datalist>
-      </label>
-      <div className="form-row">
-        <label>
-          Quantity
-          <NumberInput
-            required
-            min="0"
-            step="any"
-            value={quantity}
-            onValueChange={setQuantity}
-          />
-        </label>
-        <label>
-          Unit
-          <input
-            required
-            maxLength={30}
-            value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-          />
-        </label>
-      </div>
-      <label>
-        Use by <span className="optional">optional</span>
-        <input
-          aria-label="Use by"
-          type="date"
-          value={expiry}
-          onChange={(e) => setExpiry(e.target.value)}
-        />
-      </label>
-      <button className="primary-button" disabled={!product}>
-        <Check size={16} /> Confirm amount
-      </button>
-    </form>
   )
 }
 
