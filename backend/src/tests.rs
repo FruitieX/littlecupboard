@@ -4562,3 +4562,51 @@ async fn built_in_shelf_lives_can_be_turned_off_and_custom_items_estimated() {
     );
     provider.abort();
 }
+
+#[tokio::test]
+async fn admin_shelf_lives_are_one_validated_undoable_change() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let household: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT id FROM households", [], |row| row.get(0))
+        .unwrap();
+    let values = std::collections::BTreeMap::from([
+        ("milk".to_string(), Some(5.0)),
+        ("flour".to_string(), Some(0.0)),
+    ]);
+    let (_, count) =
+        api::admin_set_shelf_lives(&mut server.db.lock().unwrap(), &household, &values).unwrap();
+    assert_eq!(count, 2);
+    let (_, again) =
+        api::admin_set_shelf_lives(&mut server.db.lock().unwrap(), &household, &values).unwrap();
+    assert_eq!(again, 0, "unchanged values are skipped");
+    let invalid = std::collections::BTreeMap::from([("missing-item".to_string(), Some(3.0))]);
+    assert!(
+        api::admin_set_shelf_lives(&mut server.db.lock().unwrap(), &household, &invalid).is_err()
+    );
+    let history = request(
+        &server,
+        Method::GET,
+        "/api/history",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    let event = history[0]["id"].as_str().unwrap().to_string();
+    let (status, body) = operation(&server, &cookie, json!({"type":"undo","eventId":event})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert!(state["state"]["shelfLifeDays"]["milk"].is_null());
+}

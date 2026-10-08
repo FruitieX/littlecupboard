@@ -413,6 +413,21 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         limits: Arc::new(Mutex::new(HashMap::new())),
     };
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().is_some_and(|arg| arg == "--set-shelf-lives") {
+        let (Some(household), Some(file)) = (args.get(1), args.get(2)) else {
+            return Err("Usage: --set-shelf-lives HOUSEHOLD_ID FILE.json".into());
+        };
+        let values: std::collections::BTreeMap<String, Option<f64>> =
+            serde_json::from_str(&std::fs::read_to_string(file)?)?;
+        let (revision, count) = api::admin_set_shelf_lives(
+            &mut *server.db.lock().map_err(|e| e.1)?,
+            household,
+            &values,
+        )
+        .map_err(|e| e.1)?;
+        println!("Updated {count} shelf lives; household revision {revision}.");
+        return Ok(());
+    }
     if args
         .first()
         .is_some_and(|arg| matches!(arg.as_str(), "--pair-companion" | "--check-companion"))

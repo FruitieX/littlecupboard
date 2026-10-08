@@ -290,6 +290,53 @@ pub async fn mutate(
     Ok(Json(result))
 }
 
+/// Administrative maintenance: set shelf lives for a household's items as one
+/// ordinary, validated and undoable household change. Only the shelf-life map
+/// can be changed this way. Values of 0 turn a built-in default off; null
+/// removes a household setting.
+pub fn admin_set_shelf_lives(
+    conn: &mut rusqlite::Connection,
+    household: &str,
+    values: &std::collections::BTreeMap<String, Option<f64>>,
+) -> Result<(u32, usize)> {
+    let tx = conn.transaction()?;
+    let mut snapshot = Database::snapshot(&tx, household)?;
+    let changes = values
+        .iter()
+        .filter(|(id, value)| snapshot.state.shelf_life_days.get(*id).copied() != **value)
+        .map(|(id, value)| crate::model::Change {
+            collection: "shelfLifeDays".into(),
+            key: id.clone(),
+            field: None,
+            before: snapshot
+                .state
+                .shelf_life_days
+                .get(id)
+                .map_or(Value::Null, |days| json!(days)),
+            after: value.map_or(Value::Null, |days| json!(days)),
+        })
+        .collect::<Vec<_>>();
+    if changes.is_empty() {
+        return Ok((snapshot.revision, 0));
+    }
+    let label = "Set estimated shelf lives".to_string();
+    let operation = Operation::Patch {
+        changes: changes.clone(),
+        label: label.clone(),
+    };
+    let before = snapshot.state.clone();
+    let today = domain::today(&snapshot.state);
+    let detail = domain::apply(&mut snapshot.state, &operation, &today)?;
+    domain::validate(&snapshot.state)?;
+    let applied = domain::changes(&before, &snapshot.state)?;
+    snapshot.revision += 1;
+    Database::save(&tx, household, &snapshot)?;
+    let id = Uuid::new_v4().to_string();
+    tx.execute("INSERT INTO events(id,household_id,actor,kind,at,detail,changes) VALUES(?1,?2,'LittleCupboard','patch',?3,?4,?5)",params![id,household,Utc::now().to_rfc3339(),serde_json::to_string(&json!({"changes":changes,"detail":detail}))?,serde_json::to_string(&applied)?])?;
+    tx.commit()?;
+    Ok((snapshot.revision, changes.len()))
+}
+
 #[derive(Deserialize)]
 pub struct Page {
     pub before: Option<String>,
