@@ -14,4 +14,8 @@ export type HouseholdState = { items: Array<ShoppingItem>, stores: Array<Store>,
 /**
  * Optional days an item keeps after buying, e.g. about 7 for milk.
  */
-shelfLifeDays: { [key in string]?: number }, };
+shelfLifeDays: { [key in string]?: number }, 
+/**
+ * Private photos the family took of an item, kept for later use.
+ */
+itemPhotos: { [key in string]?: Array<string> }, };

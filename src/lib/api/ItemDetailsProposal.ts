@@ -4,7 +4,15 @@
  * Suggested details for a new shopping item. Fields the family already
  * chose are echoed back unchanged.
  */
-export type ItemDetailsProposal = { group: string, quantity: number, unit: string, note: string, 
+export type ItemDetailsProposal = { 
+/**
+ * The family's name, or a short grocery name recognized from photos.
+ */
+name: string, 
+/**
+ * An existing household item this matches, so it is reused, not duplicated.
+ */
+productId: string | null, group: string, quantity: number, unit: string, note: string, 
 /**
  * A short visual description used to generate the item's icon.
  */

@@ -110,6 +110,7 @@ export function deleteProduct(state: AppState, id: string): AppState {
     pantry: without(state.pantry),
     consumptionRates: without(state.consumptionRates),
     shelfLifeDays: without(state.shelfLifeDays),
+    itemPhotos: without(state.itemPhotos),
     archivedProductIds: (state.archivedProductIds ?? []).filter(
       (entry) => entry !== id,
     ),

@@ -3317,7 +3317,7 @@ async fn partial_store_routes_are_guarded_validated_and_survive_backup_restore()
                 0
             ))
             .unwrap(),
-        13
+        14
     );
     // Old catalog customizations lacking images inherit new bundled art.
     let mut household: model::HouseholdState =
@@ -4609,4 +4609,166 @@ async fn admin_shelf_lives_are_one_validated_undoable_change() {
     .await
     .1;
     assert!(state["state"]["shelfLifeDays"]["milk"].is_null());
+}
+
+async fn upload_png(server: &Server, cookie: &str) -> String {
+    let mut png = std::io::Cursor::new(Vec::new());
+    image::DynamicImage::new_rgb8(24, 24)
+        .write_to(&mut png, image::ImageFormat::Png)
+        .unwrap();
+    let mut body = b"--item-photo\r\nContent-Disposition: form-data; name=\"image\"; filename=\"photo.png\"\r\nContent-Type: image/png\r\n\r\n".to_vec();
+    body.extend(png.get_ref());
+    body.extend(b"\r\n--item-photo--\r\n");
+    let response = app(server.clone())
+        .oneshot(
+            Request::builder()
+                .method(Method::POST)
+                .uri("/api/images?source=true")
+                .header(header::COOKIE, cookie)
+                .header(header::ORIGIN, &server.config.origin)
+                .header("x-littlecupboard-request", "1")
+                .header(
+                    header::CONTENT_TYPE,
+                    "multipart/form-data; boundary=item-photo",
+                )
+                .body(Body::from(body))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let upload: Value =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+    upload["url"].as_str().unwrap().to_string()
+}
+
+#[tokio::test]
+async fn item_photos_identify_existing_items_and_stay_private() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let answer = std::sync::Arc::new(std::sync::Mutex::new(Value::Null));
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::<Value>::new()));
+    let (reply, captured) = (answer.clone(), seen.clone());
+    let fixture = Router::new().route(
+        "/v1/chat/completions",
+        post(move |Json(body): Json<Value>| {
+            let (reply, captured) = (reply.clone(), captured.clone());
+            async move {
+                captured.lock().unwrap().push(body);
+                let content = reply.lock().unwrap().to_string();
+                Json(json!({"choices":[{"message":{"content":content}}]}))
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let provider = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit"});
+    request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config,"apiKey":null}),
+        Some(&cookie),
+    )
+    .await;
+    let photo = upload_png(&server, &cookie).await;
+    let base = json!({"group":"Fruits","quantity":1,"unit":"pc","note":"","iconDescription":"x","shelfLifeDays":null});
+    let ask = |answer_patch: Value| {
+        let mut value = base.clone();
+        value
+            .as_object_mut()
+            .unwrap()
+            .extend(answer_patch.as_object().unwrap().clone());
+        *answer.lock().unwrap() = value;
+    };
+    // The model's catalog pick wins and takes the catalog name and group.
+    ask(json!({"name":"Rolled oats","productId":"oats"}));
+    let (status, details, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/item-details",
+        json!({"images":[photo]}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{details}");
+    assert_eq!(details["productId"], "oats");
+    assert_eq!(details["name"], "Oats");
+    assert_eq!(details["group"], "Grain products");
+    let sent = seen.lock().unwrap().last().cloned().unwrap();
+    let parts = sent["messages"][1]["content"].as_array().unwrap();
+    assert!(parts.iter().any(|part| part["type"] == "image_url"));
+    assert!(
+        parts[0]["text"].as_str().unwrap().contains("oats: Oats"),
+        "the catalog is offered for matching"
+    );
+    // Without a pick, an exact name match still prevents a duplicate.
+    ask(json!({"name":"milk","productId":null}));
+    let details = request(
+        &server,
+        Method::POST,
+        "/api/ai/item-details",
+        json!({"images":[photo]}),
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert_eq!(details["productId"], "milk");
+    // Invented ids are ignored; a new product keeps the recognized name.
+    ask(json!({"name":"Dragon fruit","productId":"not-a-product"}));
+    let details = request(
+        &server,
+        Method::POST,
+        "/api/ai/item-details",
+        json!({"images":[photo]}),
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert!(details["productId"].is_null());
+    assert_eq!(details["name"], "Dragon fruit");
+    // Photos must belong to this household.
+    let (status, _, _) = request(
+        &server,
+        Method::POST,
+        "/api/ai/item-details",
+        json!({"images":["/api/images/00000000-0000-4000-8000-000000000000"]}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let keep = |url: &str| json!({"type":"patch","label":"Keep photo","changes":[{"collection":"itemPhotos","key":"oats","field":null,"before":null,"after":[url]}]});
+    let (status, body) = operation(
+        &server,
+        &cookie,
+        keep("/api/images/00000000-0000-4000-8000-000000000000"),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "{body}");
+    let (status, body) = operation(&server, &cookie, keep(&photo)).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    // Referenced photos survive photo-storage cleanup.
+    server
+        .db
+        .lock()
+        .unwrap()
+        .execute("UPDATE uploads SET created_at='2020-01-01T00:00:00Z'", [])
+        .unwrap();
+    let (status, cleaned, _) = request(
+        &server,
+        Method::POST,
+        "/api/images/cleanup",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{cleaned}");
+    assert_eq!(
+        request(&server, Method::GET, &photo, Value::Null, Some(&cookie))
+            .await
+            .0,
+        StatusCode::OK
+    );
+    provider.abort();
 }

@@ -229,6 +229,28 @@ pub async fn mutate(
         }
         domain::validate(&snapshot.state)?;
         domain::validate_plan_additions(&before, &snapshot.state)?;
+        // Item photos must be this household's own uploads.
+        for url in snapshot
+            .state
+            .item_photos
+            .values()
+            .flatten()
+            .filter(|url| !before.item_photos.values().flatten().any(|old| old == *url))
+        {
+            let id = url
+                .strip_prefix("/api/images/")
+                .expect("validated photo URL");
+            let exists: bool = tx.query_row(
+                "SELECT EXISTS(SELECT 1 FROM uploads WHERE id=?1 AND household_id=?2)",
+                params![id, actor.household_id],
+                |row| row.get(0),
+            )?;
+            if !exists {
+                return Err(ApiError::bad(
+                    "A photo is unavailable in your household. Take it again before saving.",
+                ));
+            }
+        }
         let old_sources = before
             .recipe_book
             .iter()

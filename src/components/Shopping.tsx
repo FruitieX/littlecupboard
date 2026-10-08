@@ -13,6 +13,7 @@ import {
   MapPin,
   History,
   LoaderCircle,
+  Camera,
 } from 'lucide-react'
 import { categories } from '../lib/data'
 import type { AppState, Category, Product, ShoppingItem } from '../lib/data'
@@ -29,7 +30,7 @@ import { cleanItem } from '../lib/sync'
 import { useShoppingLayout } from '../lib/shopping-layout'
 import { Confetti, type Burst } from './Confetti'
 import { rankProducts } from '../lib/shopping'
-import { post } from '../lib/http'
+import { post, uploadImage } from '../lib/http'
 import type { ItemDetailsProposal } from '../lib/api/ItemDetailsProposal'
 
 const categoryColors: Partial<Record<Category, string>> = {
@@ -315,7 +316,8 @@ export function Shopping() {
                   (p) => p.name.toLowerCase() === trimmed.toLowerCase(),
                 )
                 if (exact) add(exact)
-                else if (trimmed) setAddOpen(true)
+                // An empty box opens the dialog to type or snap a photo.
+                else setAddOpen(true)
               }}
             >
               <Search size={21} />
@@ -880,11 +882,14 @@ function ItemEditor({
   const [image, setImage] = useState(
     state.productImages?.[item?.id ?? ''] ?? item?.image ?? '',
   )
-  const existing = getProducts(state).find(
-    (p) => p.name.toLowerCase() === name.trim().toLowerCase(),
-  )
+  // An existing item recognized from a photo; otherwise match by name.
+  const [matchedId, setMatchedId] = useState<string | null>(null)
+  const products = getProducts(state)
+  const existing =
+    (matchedId && products.find((p) => p.id === matchedId)) ||
+    products.find((p) => p.name.toLowerCase() === name.trim().toLowerCase())
   const multipleAmounts = (item?.amounts?.length ?? 0) > 1
-  const [moreOpen, setMoreOpen] = useState(!item)
+  const [moreOpen, setMoreOpen] = useState(false)
   // Fields the family set themselves; AI suggestions never replace them.
   const touched = useRef(new Set<string>())
   const touch =
@@ -894,6 +899,8 @@ function ItemEditor({
       set(value)
     }
   const [filling, setFilling] = useState(false)
+  const [photos, setPhotos] = useState<string[]>([])
+  const [uploading, setUploading] = useState(false)
   const [suggestedShelfLife, setSuggestedShelfLife] = useState<number | null>(
     null,
   )
@@ -902,13 +909,14 @@ function ItemEditor({
     key: number
     subject: string
   } | null>(null)
-  async function fillWithAi() {
+  async function fillWithAi(images = photos) {
     setFilling(true)
     setFillError('')
     const known = touched.current
     try {
       const details = await post<ItemDetailsProposal>('/ai/item-details', {
-        name: name.trim(),
+        name: known.has('name') || !images.length ? name.trim() : '',
+        images,
         quantity: known.has('quantity') ? quantity : null,
         unit: known.has('unit') ? unit : null,
         note: known.has('note') && note.trim() ? note : null,
@@ -918,15 +926,22 @@ function ItemEditor({
             ? category
             : null,
       })
+      const match = details.productId
+        ? products.find((p) => p.id === details.productId)
+        : undefined
+      setMatchedId(match?.id ?? null)
+      setName(match?.name ?? details.name)
       if (!known.has('quantity')) setQuantity(details.quantity)
       if (!known.has('unit')) setUnit(details.unit)
       if (!known.has('note') || !note.trim()) setNote(details.note)
-      if (!existing && !known.has('group')) setCategory(details.group)
-      setSuggestedShelfLife(details.shelfLifeDays ?? null)
-      if (session.imageEnabled && !image)
+      if (!match && !known.has('group')) setCategory(details.group)
+      setSuggestedShelfLife(match ? null : (details.shelfLifeDays ?? null))
+      // New items get an icon automatically; existing ones keep theirs.
+      if (match) setImage(state.productImages?.[match.id] ?? '')
+      else if (session.imageEnabled && !image)
         setIconRequest({
           key: Date.now(),
-          subject: `${name.trim()}: ${details.iconDescription}`,
+          subject: `${details.name}: ${details.iconDescription}`,
         })
     } catch (error) {
       setFillError(
@@ -940,10 +955,27 @@ function ItemEditor({
       setFilling(false)
     }
   }
+  async function addPhoto(file: File) {
+    setUploading(true)
+    setFillError('')
+    try {
+      // Kept at full resolution with the item for later use.
+      const url = await uploadImage(file, true)
+      const next = [...photos, url].slice(-4)
+      setPhotos(next)
+      setUploading(false)
+      if (session.aiEnabled) await fillWithAi(next)
+    } catch (error) {
+      setFillError(error instanceof Error ? error.message : 'Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
   // Show a picture that is still generating (for example after reopening).
   useEffect(() => {
     if (pictureBusy) setMoreOpen(true)
   }, [pictureBusy])
+  const busy = filling || uploading
   return (
     <Modal
       open={open}
@@ -954,8 +986,9 @@ function ItemEditor({
       description={
         item
           ? 'Adjust the amount or leave a note for whoever’s shopping.'
-          : 'Brand, quantity, the exact kind—make it easy for whoever’s shopping.'
+          : 'Type a name or snap a photo.'
       }
+      className="item-editor"
     >
       <form
         className="editor-form"
@@ -1001,84 +1034,139 @@ function ItemEditor({
               accumulate: true,
             })
           }
-          update((s) => ({
-            ...s,
-            productImages: { ...s.productImages, [product.id]: image },
-          }))
+          if (
+            image !== (state.productImages?.[product.id] ?? '') ||
+            photos.length
+          )
+            update((s) => ({
+              ...s,
+              productImages:
+                image !== (s.productImages?.[product.id] ?? '')
+                  ? { ...s.productImages, [product.id]: image }
+                  : s.productImages,
+              itemPhotos: photos.length
+                ? {
+                    ...s.itemPhotos,
+                    [product.id]: [
+                      ...(s.itemPhotos?.[product.id] ?? []),
+                      ...photos,
+                    ].slice(-12),
+                  }
+                : s.itemPhotos,
+            }))
           onClose()
         }}
       >
         {!item && (
-          <label>
-            Item name
-            <input
-              autoFocus
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Whole wheat wraps"
-              maxLength={80}
-            />
-          </label>
-        )}
-        {!item && session.aiEnabled && (
-          <div className="ai-fill">
-            <button
-              type="button"
-              className="ai-fill-button"
-              disabled={!name.trim() || filling || status === 'offline'}
-              onClick={() => void fillWithAi()}
+          <div className="item-name-row">
+            <label>
+              <span className="sr-only">Item name</span>
+              <input
+                aria-label="Item name"
+                autoFocus={!!initialName}
+                required
+                value={name}
+                onChange={(e) => {
+                  setMatchedId(null)
+                  touch('name', setName)(e.target.value)
+                }}
+                placeholder="What do we need?"
+                maxLength={80}
+              />
+            </label>
+            <label
+              className={`photo-button ${busy ? 'busy' : ''}`}
+              title="Take or choose a photo"
             >
-              {filling ? (
-                <LoaderCircle size={16} className="spin" />
+              {uploading ? (
+                <LoaderCircle size={20} className="spin" />
               ) : (
-                <Sparkles size={16} />
+                <Camera size={20} />
               )}
-              {filling ? 'Filling in…' : 'Fill in with AI'}
-            </button>
-            <small>
-              Suggests the amount, unit, note and group
-              {session.imageEnabled ? ', then draws an icon' : ''}. Anything you
-              already chose is kept and used as a hint.
-            </small>
-            {fillError && (
-              <p className="form-error" role="alert">
-                {fillError}
-              </p>
+              <span className="sr-only">Add from a photo</span>
+              <input
+                aria-label="Add from a photo"
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                disabled={busy || status === 'offline'}
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  if (file) void addPhoto(file)
+                  event.target.value = ''
+                }}
+              />
+            </label>
+          </div>
+        )}
+        {!item && (photos.length > 0 || session.aiEnabled) && (
+          <div className="item-assist">
+            {photos.map((url) => (
+              <img key={url} className="item-photo" src={url} alt="" />
+            ))}
+            {session.aiEnabled && (
+              <button
+                type="button"
+                className="ai-fill-button"
+                disabled={
+                  (!name.trim() && !photos.length) ||
+                  busy ||
+                  status === 'offline'
+                }
+                title="Suggests the amount, unit, note and group, and draws an icon. Anything you chose is kept."
+                onClick={() => void fillWithAi()}
+              >
+                {filling ? (
+                  <LoaderCircle size={16} className="spin" />
+                ) : (
+                  <Sparkles size={16} />
+                )}
+                {filling
+                  ? photos.length
+                    ? 'Looking at the photo…'
+                    : 'Filling in…'
+                  : 'Fill in with AI'}
+              </button>
+            )}
+            {existing && matchedId && (
+              <span className="item-match">
+                <Check size={14} /> Already in your items
+              </span>
             )}
           </div>
         )}
-        <div className="quantity-fields">
-          <label className="quantity-field">
-            Quantity
-            {multipleAmounts ? (
-              <NumberInput
-                min="0.01"
-                step="any"
-                required
-                value={quantity}
-                onValueChange={touch('quantity', setQuantity)}
-              />
-            ) : (
-              <QuantityStepper
-                label="Quantity"
-                unit={unit}
-                required
-                value={quantity}
-                onValueChange={touch('quantity', setQuantity)}
-              />
-            )}
-          </label>
-          <label className="unit-field">
-            Unit
-            <input
-              value={unit}
+        {fillError && (
+          <p className="form-error" role="alert">
+            {fillError}
+          </p>
+        )}
+        <div className="amount-row">
+          {multipleAmounts ? (
+            <NumberInput
+              aria-label="Quantity"
+              min="0.01"
+              step="any"
               required
-              onChange={(e) => touch('unit', setUnit)(e.target.value)}
-              placeholder="g, L, pack…"
-              maxLength={20}
+              value={quantity}
+              onValueChange={touch('quantity', setQuantity)}
             />
-          </label>
+          ) : (
+            <QuantityStepper
+              label="Quantity"
+              unit={unit}
+              required
+              value={quantity}
+              onValueChange={touch('quantity', setQuantity)}
+            />
+          )}
+          <input
+            className="unit-input"
+            aria-label="Unit"
+            value={unit}
+            required
+            onChange={(e) => touch('unit', setUnit)(e.target.value)}
+            placeholder="unit"
+            maxLength={20}
+          />
         </div>
         <div className="unit-chips" role="group" aria-label="Common units">
           {quickUnits.map((option) => (
@@ -1093,16 +1181,14 @@ function ItemEditor({
             </button>
           ))}
         </div>
-        <label>
-          A little more detail
-          <textarea
-            value={note}
-            onChange={(e) => touch('note', setNote)(e.target.value)}
-            placeholder="Brand, color, size, or a note for the family…"
-            rows={2}
-            maxLength={300}
-          />
-        </label>
+        <textarea
+          aria-label="A little more detail"
+          value={note}
+          onChange={(e) => touch('note', setNote)(e.target.value)}
+          placeholder="Brand, size or a note (optional)"
+          rows={2}
+          maxLength={300}
+        />
         {item?.mealNames?.length ? (
           <p className="planned-item-info">
             <CalendarDays size={15} />
@@ -1118,7 +1204,12 @@ function ItemEditor({
           open={moreOpen}
           onToggle={(event) => setMoreOpen(event.currentTarget.open)}
         >
-          <summary>Group & picture</summary>
+          <summary>
+            Group & picture
+            <span className="editor-more-summary">
+              {existing && !item ? existing.category : category}
+            </span>
+          </summary>
           <div className="editor-more-body">
             <label>
               Group
@@ -1166,7 +1257,7 @@ function ItemEditor({
           <button
             className="primary-button"
             type="submit"
-            disabled={pictureBusy}
+            disabled={pictureBusy || busy}
           >
             <Check size={18} />
             {item ? 'Save details' : 'Add to shopping list'}

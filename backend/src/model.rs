@@ -240,6 +240,9 @@ pub struct HouseholdState {
     /// Optional days an item keeps after buying, e.g. about 7 for milk.
     #[serde(default)]
     pub shelf_life_days: BTreeMap<String, f64>,
+    /// Private photos the family took of an item, kept for later use.
+    #[serde(default)]
+    pub item_photos: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Clone, Deserialize, Serialize, TS)]
@@ -442,6 +445,7 @@ pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
         archived_product_ids: vec![],
         consumption_rates: BTreeMap::new(),
         shelf_life_days: BTreeMap::new(),
+        item_photos: BTreeMap::new(),
     }
 }
 

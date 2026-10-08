@@ -96,6 +96,9 @@ async function request(page, path, body, method = 'POST') {
   assert.ok(response.ok(), `${path}: ${await response.text()}`)
   return response.json()
 }
+// Chat content is a string, or parts with the text first when photos are attached.
+const itemText = (content) =>
+  typeof content === 'string' ? content : content[0].text
 async function eventually(check) {
   const deadline = Date.now() + 30000
   while (Date.now() < deadline) {
@@ -878,13 +881,17 @@ try {
       'Required item-details protocol:',
     )
       ? JSON.parse(
-          input.messages[1].content
+          itemText(input.messages[1].content)
             .replace('Shopping item: ', '')
             .split('\nSuggest')[0],
         )
       : null
+    const itemPhoto = Array.isArray(input.messages?.[1]?.content)
     const content = itemDetails
       ? JSON.stringify({
+          // Photos of oats match the built-in item instead of a duplicate.
+          name: itemPhoto ? 'Oats' : (itemDetails.name ?? ''),
+          productId: itemPhoto ? 'oats' : null,
           group: itemDetails.groups.at(-1),
           quantity: 500,
           unit: 'g',
@@ -1651,7 +1658,7 @@ try {
     entry.messages?.[0]?.content?.includes('Required item-details protocol:'),
   )
   const sentDetails = JSON.parse(
-    detailsRequest.messages[1].content
+    itemText(detailsRequest.messages[1].content)
       .replace('Shopping item: ', '')
       .split('\nSuggest')[0],
   )
@@ -1691,6 +1698,29 @@ try {
     10,
     'The suggested shelf life is saved with the new item',
   )
+  // A photo from the empty + button reuses a matching existing item.
+  await owner.getByRole('button', { name: 'Add item', exact: true }).click()
+  const photoItem = owner.getByRole('dialog', {
+    name: 'Something for the basket',
+  })
+  await photoItem
+    .getByLabel('Add from a photo')
+    .setInputFiles('public/images/pasta.jpg')
+  await photoItem.getByText('Already in your items').waitFor()
+  assert.equal(await photoItem.getByLabel('Item name').inputValue(), 'Oats')
+  const customCount = (await request(owner, '/state', undefined, 'GET')).state
+    .customProducts.length
+  await photoItem
+    .getByRole('button', { name: 'Add to shopping list', exact: true })
+    .click()
+  await owner.getByRole('button', { name: 'Check Oats', exact: true }).waitFor()
+  await eventually(async () => {
+    const state = (await request(owner, '/state', undefined, 'GET')).state
+    return (
+      state.customProducts.length === customCount &&
+      state.itemPhotos?.oats?.[0]?.startsWith('/api/images/')
+    )
+  })
   await owner.goto(`${frontendUrl}/settings/items`)
   await settle(owner)
   await owner
@@ -1712,7 +1742,7 @@ try {
     owner,
     owner.getByRole('button', { name: 'Check Recovery tomatoes', exact: true }),
   )
-  await owner.getByText('Group & picture', { exact: true }).click()
+  await owner.locator('.editor-more summary').click()
   await owner
     .getByRole('button', { name: 'Generate icon', exact: true })
     .first()
@@ -1752,7 +1782,7 @@ try {
     owner,
     owner.getByRole('button', { name: 'Check Recovery olives', exact: true }),
   )
-  await owner.getByText('Group & picture', { exact: true }).click()
+  await owner.locator('.editor-more summary').click()
   await owner
     .getByRole('button', { name: 'Generate icon', exact: true })
     .first()
@@ -1892,7 +1922,12 @@ try {
   const visionRequest = providerRequests.find(
     (request) =>
       request.messages?.some((message) => Array.isArray(message.content)) &&
-      !request.messages?.[0]?.content?.includes('Required store-map protocol:'),
+      !request.messages?.[0]?.content?.includes(
+        'Required store-map protocol:',
+      ) &&
+      !request.messages?.[0]?.content?.includes(
+        'Required item-details protocol:',
+      ),
   )
   assert.equal(
     visionRequest.messages[1].content.filter(

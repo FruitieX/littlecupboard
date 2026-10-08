@@ -927,6 +927,7 @@ fn patch(state: &mut Value, change: &Change) -> Result<()> {
         "productDetails",
         "consumptionRates",
         "shelfLifeDays",
+        "itemPhotos",
     ];
     let scalars = [
         "groups",
@@ -1112,6 +1113,7 @@ pub fn changes(before: &HouseholdState, after: &HouseholdState) -> Result<Vec<Ch
         "productDetails",
         "consumptionRates",
         "shelfLifeDays",
+        "itemPhotos",
         "purchases",
     ] {
         let old = a[collection].as_object().expect("model map");
@@ -1429,6 +1431,18 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
         return Err(ApiError::bad(
             "Choose a shelf life between 0.5 and 3650 days.",
         ));
+    }
+    if state.item_photos.iter().any(|(id, photos)| {
+        !products.contains(id)
+            || photos.is_empty()
+            || photos.len() > 12
+            || photos.iter().collect::<BTreeSet<_>>().len() != photos.len()
+            || photos.iter().any(|url| {
+                url.strip_prefix("/api/images/")
+                    .is_none_or(|id| uuid::Uuid::parse_str(id).is_err())
+            })
+    }) {
+        return Err(ApiError::bad("Keep up to 12 private photos per item."));
     }
     for (id, pantry) in &state.pantry {
         if !products.contains(id)
