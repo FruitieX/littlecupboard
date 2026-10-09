@@ -868,6 +868,9 @@ try {
   await shop.fill('Harbor')
   await owner.getByRole('option', { name: /Neighborhood Market 079/ }).click()
   assert.equal(await shop.inputValue(), 'Neighborhood Market 079')
+  await owner
+    .locator('.shopping-heading')
+    .screenshot({ path: 'test-results/store-picker-wrap-mobile.png' })
   await owner.reload()
   await settle(owner)
   assert.equal(await shop.inputValue(), 'Neighborhood Market 079')

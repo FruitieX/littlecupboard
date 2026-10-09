@@ -2723,6 +2723,34 @@ svg {
 .store-picker input::placeholder {
   color: var(--forest);
 }
+.store-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+}
+.store-picker input:not([data-open]),
+.store-picker input:not([data-open])::placeholder {
+  color: transparent;
+}
+.store-name {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  color: var(--forest);
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+.store-name > span {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
 .store-combobox:focus-within .store-picker {
   border-color: #9daf82;
 }
@@ -2827,7 +2855,7 @@ svg {
     min-height: 38px;
   }
   .store-picker input {
-    width: 76px;
+    width: 92px;
     font-size: 16px;
   }
   .store-toggle {
@@ -2846,7 +2874,7 @@ svg {
     font-size: 26px;
   }
   .store-picker input {
-    width: 62px;
+    width: 74px;
   }
   .store-combobox .store-picker > svg {
     width: 14px;

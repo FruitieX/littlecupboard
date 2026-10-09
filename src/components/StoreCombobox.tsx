@@ -48,60 +48,68 @@ export function StoreCombobox() {
         ) : (
           <MapPin size={16} aria-hidden="true" />
         )}
-        <input
-          ref={input}
-          role="combobox"
-          aria-label="Shopping at"
-          aria-autocomplete="list"
-          aria-expanded={open}
-          aria-controls={`${id}-list`}
-          aria-activedescendant={
-            open && index >= 0 ? `${id}-${index}` : undefined
-          }
-          value={open ? query : store.name}
-          placeholder={open ? 'Search…' : store.name}
-          autoComplete="off"
-          onFocus={() => {
-            setOpen(true)
-            setQuery('')
-            setIndex(-1)
-          }}
-          onChange={(event) => {
-            setQuery(event.target.value)
-            setOpen(true)
-            setIndex(-1)
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Escape') {
-              event.preventDefault()
-              setOpen(false)
-              setQuery('')
-              input.current?.blur()
+        <span className="store-field">
+          <input
+            ref={input}
+            data-open={open || undefined}
+            role="combobox"
+            aria-label="Shopping at"
+            aria-autocomplete="list"
+            aria-expanded={open}
+            aria-controls={`${id}-list`}
+            aria-activedescendant={
+              open && index >= 0 ? `${id}-${index}` : undefined
             }
-            if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
-              event.preventDefault()
+            value={open ? query : store.name}
+            placeholder={open ? 'Search…' : store.name}
+            autoComplete="off"
+            onFocus={() => {
               setOpen(true)
-              setIndex((current) =>
-                visible.length
-                  ? Math.max(
-                      0,
-                      Math.min(
-                        visible.length - 1,
-                        current + (event.key === 'ArrowDown' ? 1 : -1),
-                      ),
-                    )
-                  : -1,
-              )
-            }
-            if (event.key === 'Enter') {
-              event.preventDefault()
-              const selected =
-                visible[index] ??
-                (visible.length === 1 ? visible[0] : undefined)
-              if (selected) choose(selected)
-            }
-          }}
-        />
+              setQuery('')
+              setIndex(-1)
+            }}
+            onChange={(event) => {
+              setQuery(event.target.value)
+              setOpen(true)
+              setIndex(-1)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault()
+                setOpen(false)
+                setQuery('')
+                input.current?.blur()
+              }
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault()
+                setOpen(true)
+                setIndex((current) =>
+                  visible.length
+                    ? Math.max(
+                        0,
+                        Math.min(
+                          visible.length - 1,
+                          current + (event.key === 'ArrowDown' ? 1 : -1),
+                        ),
+                      )
+                    : -1,
+                )
+              }
+              if (event.key === 'Enter') {
+                event.preventDefault()
+                const selected =
+                  visible[index] ??
+                  (visible.length === 1 ? visible[0] : undefined)
+                if (selected) choose(selected)
+              }
+            }}
+          />
+          {!open && (
+            <span className="store-name" aria-hidden="true">
+              <span>{store.name}</span>
+            </span>
+          )}
+        </span>
         <button
           className="store-toggle"
           aria-label="Choose a shop"
