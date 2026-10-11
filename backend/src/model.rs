@@ -141,6 +141,17 @@ pub struct Store {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub image: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub position: Option<GeoPoint>,
+}
+
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct GeoPoint {
+    pub lat: f64,
+    pub lng: f64,
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, TS, PartialEq)]
@@ -418,6 +429,7 @@ pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
             id: "our-store".into(),
             name: "Our shop".into(),
             image: None,
+            position: None,
             location: "".into(),
             order: seed.categories.clone(),
         }],

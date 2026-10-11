@@ -18,6 +18,7 @@ import { replaceEqualDeep } from './structural'
 import { api, HttpError, post } from './http'
 import { AuthScreen } from '../components/AuthScreen'
 import { Modal } from '../components/ui'
+import { NearestShop } from '../components/NearestShop'
 
 type Snapshot = { revision: number; state: AppState; eventId?: string }
 type Pending = Mutation & { failed?: string; storeId?: string }
@@ -527,7 +528,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         groups: state.groups ?? [],
       }}
     >
-      {ready && <div data-app-ready="true">{children}</div>}
+      {ready && (
+        <div data-app-ready="true">
+          <NearestShop />
+          {children}
+        </div>
+      )}
       {!ready && (
         <div className="auth-loading" role="status">
           Loading your household…

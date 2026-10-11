@@ -1433,6 +1433,27 @@ try {
   await owner
     .getByLabel('Store name', { exact: true })
     .fill('Renamed Neighborhood Market')
+  await ownerContext.grantPermissions(['geolocation'])
+  await ownerContext.setGeolocation({ latitude: 60.21, longitude: 24.73 })
+  await owner
+    .getByRole('button', { name: 'Use my location', exact: true })
+    .click()
+  await owner.waitForFunction(
+    () =>
+      document.querySelector('.store-position input')?.value ===
+      '60.210000, 24.730000',
+  )
+  await owner.getByLabel(/^Map position/).fill('somewhere')
+  assert.ok(
+    await owner
+      .getByRole('button', { name: 'Save shop', exact: true })
+      .isDisabled(),
+  )
+  await owner.getByLabel(/^Map position/).fill('60.2101, 24.7302')
+  await owner
+    .locator('.store-position')
+    .screenshot({ path: 'test-results/store-position-mobile.png' })
+  await ownerContext.clearPermissions()
   await owner
     .getByRole('button', { name: 'Generate icon', exact: true })
     .first()
@@ -1457,6 +1478,39 @@ try {
   assert.equal(editedShop.name, 'Renamed Neighborhood Market')
   assert.deepEqual(editedShop.order, selectedShop.order)
   assert.ok(editedShop.image.startsWith('/api/images/'))
+  assert.deepEqual(editedShop.position, { lat: 60.2101, lng: 24.7302 })
+  const wifeShop = wife.getByRole('combobox', {
+    name: 'Shopping at',
+    exact: true,
+  })
+  await wife.goto(frontendUrl)
+  await settle(wife)
+  const wifeShopBefore = await wifeShop.inputValue()
+  await wifeContext.grantPermissions(['geolocation'])
+  await wifeContext.setGeolocation({ latitude: 61.5, longitude: 23.76 })
+  await wife.reload()
+  await settle(wife)
+  await wife.waitForTimeout(500)
+  assert.equal(await wifeShop.inputValue(), wifeShopBefore)
+  await wifeContext.setGeolocation({ latitude: 60.2105, longitude: 24.731 })
+  await wife.reload()
+  await settle(wife)
+  await wife.waitForFunction(
+    () =>
+      document.querySelector('[aria-label="Shopping at"]')?.value ===
+      'Renamed Neighborhood Market',
+  )
+  await wifeContext.clearPermissions()
+  await wifeShop.fill(wifeShopBefore)
+  await wife
+    .getByRole('option')
+    .filter({ hasText: wifeShopBefore })
+    .first()
+    .click()
+  assert.equal(await wifeShop.inputValue(), wifeShopBefore)
+  console.log(
+    'Shop map positions save, validate and auto-select the nearby shop on launch.',
+  )
   for (const [id, name, category, image] of [
     ['existing-water-art', 'Water', 'Beverages', 'water'],
     ['existing-basil-art', 'Basil', 'Vegetables', 'basil'],

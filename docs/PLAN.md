@@ -451,3 +451,9 @@ Follow-up: after accidentally pinch-zooming the installed app, the user asked to
 - Use soon / Running low warnings show as a banner in the open row with Dismiss. Dismissals are `suggestionFeedback` entries (`use-soon:<id>`, and `restock:<id>` shared with the shopping suggestion) that last until the next purchase or confirmed amount; dismissed rows are listed under "Warnings dismissed".
 - "Change to another item" moves the pantry entry to another (or a newly created) item, adding amounts and keeping the earliest use-by; it can also delete the wrong custom item (pre-checked when an AI photo created it).
 - Dialogs no longer autofocus fields when editing (pantry amounts, group, existing recipe or store); only names of new things autofocus.
+
+### Shop map positions and nearby-shop selection (2026-10-11)
+
+- Shops have an optional `position` (`GeoPoint { lat, lng }`, validated server-side). The shop editor's "Map position" field accepts pasted `lat, lng` or "Use my location".
+- `NearestShop` runs when the app opens (and when it resumes after 10+ minutes hidden) if any shop has a position: it asks for the device location, and selects the closest positioned shop within 1 km (plus up to 1 km of GPS uncertainty). Otherwise, if location is denied or fails, or the shop was picked by hand while locating, the last chosen shop stays. The selection is per device, like manual choice.
+- The shop selector shows the name at 13px over two lines instead of truncating.

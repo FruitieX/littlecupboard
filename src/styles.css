@@ -809,6 +809,23 @@ svg {
 .editor-form input[readonly] {
   background: #f0f2e7;
 }
+.store-position {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  gap: 8px 10px;
+}
+.store-position .form-error {
+  grid-column: 1 / -1;
+}
+.store-position input[aria-invalid='true'] {
+  border-color: #c98b72;
+}
+@media (max-width: 420px) {
+  .store-position {
+    grid-template-columns: 1fr;
+  }
+}
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Check, Plus } from 'lucide-react'
+import { Check, LocateFixed, Plus } from 'lucide-react'
 import { useApp } from '../lib/state'
 import type { Store } from '../lib/data'
 import { Modal } from './ui'
 import { ImageField } from './ImageField'
 import { AisleOrder } from './AisleOrder'
 import { StoreMapAssistant } from './StoreMapAssistant'
+import { currentPosition, formatPoint, parsePoint } from '../lib/geo'
 
 export function StoreEditor({
   store,
@@ -19,6 +20,10 @@ export function StoreEditor({
   const [location, setLocation] = useState(store?.location ?? '')
   const [image, setImage] = useState(store?.image ?? '')
   const [order, setOrder] = useState(store?.order ?? [...groups])
+  const [position, setPosition] = useState(formatPoint(store?.position))
+  const [locating, setLocating] = useState(false)
+  const [positionError, setPositionError] = useState('')
+  const point = parsePoint(position)
   const [pictureBusy, setPictureBusy] = useState(false)
   const [mapBusy, setMapBusy] = useState(false)
   const busy = pictureBusy || mapBusy
@@ -35,7 +40,7 @@ export function StoreEditor({
         className="editor-form"
         onSubmit={(event) => {
           event.preventDefault()
-          if (busy || !name.trim()) return
+          if (busy || !name.trim() || point === null) return
           const id = store?.id ?? crypto.randomUUID()
           update((state) => ({
             ...state,
@@ -47,6 +52,10 @@ export function StoreEditor({
                         ...(name !== store.name ? { name: name.trim() } : {}),
                         ...(location !== store.location
                           ? { location: location.trim() }
+                          : {}),
+                        ...(JSON.stringify(point) !==
+                        JSON.stringify(store.position)
+                          ? { position: point }
                           : {}),
                         ...(image !== (store.image ?? '')
                           ? { image: image || undefined }
@@ -69,6 +78,7 @@ export function StoreEditor({
                     name: name.trim(),
                     location: location.trim(),
                     image: image || undefined,
+                    ...(point ? { position: point } : {}),
                     order: order.filter((group) =>
                       (state.groups ?? []).includes(group),
                     ),
@@ -98,6 +108,57 @@ export function StoreEditor({
             placeholder="e.g. On the way home"
           />
         </label>
+        <div className="store-position">
+          <label>
+            Map position
+            <span className="optional">
+              Opens the app on this shop when you are nearby
+            </span>
+            <input
+              inputMode="decimal"
+              value={position}
+              aria-invalid={point === null}
+              onChange={(event) => {
+                setPosition(event.target.value)
+                setPositionError('')
+              }}
+              placeholder="Latitude, longitude"
+            />
+          </label>
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={locating}
+            onClick={async () => {
+              setLocating(true)
+              setPositionError('')
+              try {
+                const { coords } = await currentPosition(20000)
+                setPosition(
+                  formatPoint({ lat: coords.latitude, lng: coords.longitude }),
+                )
+              } catch (error) {
+                setPositionError(
+                  error instanceof GeolocationPositionError &&
+                    error.code === error.PERMISSION_DENIED
+                    ? 'Location access is blocked for this site.'
+                    : 'Could not find your location. Try again or paste coordinates.',
+                )
+              } finally {
+                setLocating(false)
+              }
+            }}
+          >
+            <LocateFixed size={16} />
+            {locating ? 'Locating…' : 'Use my location'}
+          </button>
+          {(positionError || point === null) && (
+            <p className="form-error" role="alert">
+              {positionError ||
+                'Enter latitude and longitude, e.g. 60.1699, 24.9384.'}
+            </p>
+          )}
+        </div>
         <ImageField
           kind="store"
           scope={store?.id ? `store:${store.id}` : ''}
@@ -129,7 +190,7 @@ export function StoreEditor({
         <button
           type="submit"
           className="primary-button"
-          disabled={busy || !name.trim()}
+          disabled={busy || !name.trim() || point === null}
         >
           {store ? <Check size={18} /> : <Plus size={18} />}
           {store ? 'Save shop' : 'Add store'}

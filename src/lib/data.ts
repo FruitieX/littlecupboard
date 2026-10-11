@@ -77,6 +77,7 @@ export type Store = {
   location: string
   order: Category[]
   image?: string
+  position?: import('./api/GeoPoint').GeoPoint
 }
 export type Plan = Record<string, string>
 export type AppState = {

@@ -1286,6 +1286,13 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
             ));
         }
     }
+    if state.stores.iter().any(|store| {
+        store.position.is_some_and(|point| {
+            !(-90.0..=90.0).contains(&point.lat) || !(-180.0..=180.0).contains(&point.lng)
+        })
+    }) {
+        return Err(ApiError::bad("Shop positions must be valid coordinates."));
+    }
     if !state.stores.iter().any(|store| store.id == state.store_id) {
         state
             .stores

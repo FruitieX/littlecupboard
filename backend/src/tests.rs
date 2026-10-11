@@ -3258,6 +3258,26 @@ async fn partial_store_routes_are_guarded_validated_and_survive_backup_restore()
             StatusCode::BAD_REQUEST
         );
     }
+    let position = |before: Value, after: Value| json!({"type":"patch","label":"Shop position","changes":[{"collection":"stores","key":id,"field":"position","before":before,"after":after}]});
+    let point = json!({"lat":60.1699,"lng":24.9384});
+    let (status, saved) = operation(&server, &cookie, position(Value::Null, point.clone())).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert_eq!(saved["state"]["stores"][0]["position"], point);
+    for invalid in [
+        json!({"lat":91.0,"lng":0.0}),
+        json!({"lat":0.0,"lng":-181.0}),
+        json!({"lat":"60","lng":24.9}),
+    ] {
+        assert_eq!(
+            operation(&server, &cookie, position(point.clone(), invalid))
+                .await
+                .0,
+            StatusCode::BAD_REQUEST
+        );
+    }
+    let (status, saved) = operation(&server, &cookie, position(point, Value::Null)).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    assert!(saved["state"]["stores"][0].get("position").is_none());
     assert_eq!(
         operation(&server, &cookie, patch(store["order"].clone(), json!([])))
             .await
