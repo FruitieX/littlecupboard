@@ -282,11 +282,30 @@ pub fn project_stock(
                     clock = Some(*at);
                 }
                 let mut seen = anchor.is_some();
+                // A purchase in another counted unit (a pack instead of the
+                // usual piece) is taken as that many usual purchases, so it
+                // still restocks the projection instead of being ignored.
+                let usual = packages
+                    .get(id)
+                    .filter(|package| package.unit == daily.unit)
+                    .map(|package| package.quantity);
+                let bought_of = |amounts: &[Amount]| {
+                    let direct = unit_of(amounts);
+                    if direct > 0.0 {
+                        return direct;
+                    }
+                    let counted = amounts
+                        .iter()
+                        .filter(|amount| !matches!(amount.unit.as_str(), "g" | "ml" | "dl" | "cl"))
+                        .map(|amount| amount.quantity)
+                        .sum::<f64>();
+                    usual.map_or(0.0, |usual| counted * usual)
+                };
                 for (at, detail) in purchases.get(id).map(Vec::as_slice).unwrap_or(&[]) {
                     if anchor.is_some_and(|(since, _)| at <= since) {
                         continue;
                     }
-                    let bought = unit_of(&event_amounts(detail));
+                    let bought = bought_of(&event_amounts(detail));
                     if bought <= 0.0 {
                         continue;
                     }
@@ -595,6 +614,16 @@ pub fn summarize(
                 candidates.remove(id);
             }
             "low" | "out" => {
+                // Whatever was bought on the latest trip is what the household
+                // chose for now: until it is projected used up, suggesting more
+                // a day after buying it reads as a mistake.
+                if estimate.status == "low"
+                    && last_bought.get(id).is_some_and(|bought| {
+                        (today - bought.with_timezone(&zone).date_naive()).num_days() <= 1
+                    })
+                {
+                    continue;
+                }
                 let last = last_bought.get(id).copied().unwrap_or_else(|| {
                     DateTime::parse_from_rfc3339(&estimate.observed_at)
                         .map_or_else(|_| Utc::now(), |at| at.with_timezone(&Utc))
@@ -814,6 +843,58 @@ mod tests {
         );
         assert_eq!(later[0].status, "out");
         assert!(later[0].amounts.is_empty());
+    }
+
+    #[test]
+    fn a_purchase_in_another_counted_unit_counts_as_usual_purchases() {
+        // Bread usually bought as 1 pc, then once as 2 packs: the packs still
+        // restock it instead of leaving the old pieces running out.
+        let state = stock_state(2.0, "pack", false, "2026-09-09T12:00:00Z");
+        let purchases = BTreeMap::from([(
+            "milk".to_string(),
+            vec![
+                purchase(0, 1.0, "pc"),
+                purchase(2, 1.0, "pc"),
+                purchase(4, 1.0, "pc"),
+                purchase(6, 2.0, "pack"),
+                purchase(6, 500.0, "g"),
+            ],
+        )]);
+        let rates = BTreeMap::from([(
+            "milk".to_string(),
+            (
+                ConsumptionRate {
+                    quantity: 1.0,
+                    unit: "pc".into(),
+                    days: 2.0,
+                },
+                "estimated",
+            ),
+        )]);
+        let packages = BTreeMap::from([(
+            "milk".to_string(),
+            Amount {
+                quantity: 1.0,
+                unit: "pc".into(),
+            },
+        )]);
+        let project = |packages| {
+            project_stock(
+                &state,
+                &rates,
+                packages,
+                &purchases,
+                &BTreeMap::new(),
+                at(6),
+                chrono_tz::UTC,
+                2.0,
+            )
+        };
+        // 2 packs + 500 g count as 2 usual pieces; weights are never guessed.
+        assert_eq!(project(&packages)[0].days_left, Some(4.0));
+        assert_eq!(project(&packages)[0].status, "plenty");
+        // Without a usual purchase in the rate's unit there is no conversion.
+        assert_eq!(project(&BTreeMap::new())[0].days_left, Some(0.0));
     }
 
     #[test]
