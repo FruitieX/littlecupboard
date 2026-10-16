@@ -113,30 +113,10 @@ pub async fn create(
     }
     // Resolve the subject now so validation failures never create dead work.
     let (prompt, items_json) = if photo {
-        // Fire-and-forget: recognize a photo and add the item (`list`) or
-        // record it as bought (`bought`), even if the phone sleeps.
-        let request: Value = serde_json::from_str(&input.prompt)
-            .map_err(|_| ApiError::bad("Describe the photo job."))?;
-        let url = request["photo"].as_str().unwrap_or_default();
-        let mode = request["mode"].as_str().unwrap_or_default();
-        let owned = url
-            .strip_prefix("/api/images/")
-            .filter(|id| Uuid::parse_str(id).is_ok())
-            .is_some_and(|id| {
-                conn.query_row(
-                    "SELECT EXISTS(SELECT 1 FROM uploads WHERE id=?1 AND household_id=?2)",
-                    params![id, actor.household_id],
-                    |row| row.get::<_, bool>(0),
-                )
-                .unwrap_or(false)
-            });
-        if !owned || !matches!(mode, "list" | "bought" | "pantry") {
-            return Err(ApiError::bad("Take the photo again and retry."));
-        }
-        (
-            json!({"photo":url,"mode":mode,"actor":actor.user.name}).to_string(),
-            None,
-        )
+        // Fire-and-forget: recognize photos and/or a typed name and add the
+        // item (`list`), record it as bought (`bought`) or put it in the
+        // cupboard (`pantry`), even if the phone sleeps.
+        (photo_prompt(&conn, &actor, &input.prompt)?, None)
     } else if sheet {
         let items = input.items.as_deref().unwrap_or_default();
         icon_batch::validate_items(items)?;
@@ -169,8 +149,11 @@ pub async fn create(
     };
     // An identical generation already in flight is adopted rather than run
     // twice when a family member asks again before it finishes.
-    let adopted = conn
-        .query_row(
+    // Photo jobs each describe a different item, so they never adopt.
+    let adopted = if photo {
+        None
+    } else {
+        conn.query_row(
             "SELECT id,status FROM ai_image_jobs WHERE household_id=?1 AND kind=?2 AND scope=?3 AND proposal_id IS ?4 AND recipe_id IS ?5 AND product_id IS ?6 AND COALESCE(items,'')=?7 AND status IN ('queued','running') ORDER BY created_at LIMIT 1",
             params![
                 actor.household_id,
@@ -183,7 +166,8 @@ pub async fn create(
             ],
             |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
         )
-        .optional()?;
+        .optional()?
+    };
     if let Some((id, status)) = adopted {
         return Ok(Json(AiJobCreated { job_id: id, status }));
     }
@@ -214,6 +198,75 @@ pub async fn create(
         job_id: id,
         status: "queued".into(),
     }))
+}
+
+/// Validates a background item request: up to four household photos and/or
+/// a typed name, plus any fields the family already chose, which the AI keeps.
+fn photo_prompt(
+    conn: &rusqlite::Connection,
+    actor: &crate::auth::Actor,
+    prompt: &str,
+) -> Result<String> {
+    let request: Value =
+        serde_json::from_str(prompt).map_err(|_| ApiError::bad("Describe the photo job."))?;
+    let mut photos: Vec<String> = request["photos"]
+        .as_array()
+        .map(|photos| {
+            photos
+                .iter()
+                .filter_map(|p| p.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+    if let Some(photo) = request["photo"].as_str() {
+        photos.push(photo.to_string());
+    }
+    let owned = |url: &str| {
+        url.strip_prefix("/api/images/")
+            .filter(|id| Uuid::parse_str(id).is_ok())
+            .is_some_and(|id| {
+                conn.query_row(
+                    "SELECT EXISTS(SELECT 1 FROM uploads WHERE id=?1 AND household_id=?2)",
+                    params![id, actor.household_id],
+                    |row| row.get::<_, bool>(0),
+                )
+                .unwrap_or(false)
+            })
+    };
+    let mode = request["mode"].as_str().unwrap_or_default();
+    if photos.len() > 4
+        || !photos.iter().all(|url| owned(url))
+        || !matches!(mode, "list" | "bought" | "pantry")
+    {
+        return Err(ApiError::bad("Take the photo again and retry."));
+    }
+    let name = request["name"].as_str().unwrap_or_default().trim();
+    if name.chars().count() > 80 || name.is_empty() && photos.is_empty() {
+        return Err(ApiError::bad("Enter an item name or add a photo."));
+    }
+    let quantity = request["quantity"].as_f64();
+    let unit = request["unit"]
+        .as_str()
+        .map(str::trim)
+        .filter(|unit| !unit.is_empty());
+    let note = request["note"]
+        .as_str()
+        .map(str::trim)
+        .filter(|note| !note.is_empty());
+    let group = request["group"].as_str();
+    let product_id = request["productId"].as_str();
+    let image = request["image"].as_str().filter(|image| !image.is_empty());
+    let state = crate::db::Database::snapshot(conn, &actor.household_id)?.state;
+    if quantity.is_some_and(|q| !q.is_finite() || q <= 0.0 || q > 100000.0)
+        || unit.is_some_and(|unit| unit.chars().count() > 20)
+        || note.is_some_and(|note| note.chars().count() > 300)
+        || group.is_some_and(|group| !state.groups.iter().any(|g| g == group))
+        || product_id.is_some_and(|id| crate::domain::product(&state, id).is_err())
+        || image.is_some_and(|image| !crate::domain::valid_image(image))
+    {
+        return Err(ApiError::bad("Check the item details and try again."));
+    }
+    Ok(json!({"photos":photos,"name":name,"quantity":quantity,"unit":unit,"note":note,"group":group,"productId":product_id,"image":image,"mode":mode,"actor":actor.user.name}).to_string())
 }
 
 #[derive(Deserialize)]
@@ -546,12 +599,36 @@ fn apply_item_icon(tx: &rusqlite::Transaction<'_>, job: &Job, url: &str) -> Resu
     Ok(true)
 }
 
-/// Recognizes a photographed item and adds it (`list`) or records it as
-/// bought (`bought`) as one undoable household change. New items keep the
-/// photo, get the suggested details and queue an icon.
+/// Recognizes a photographed or typed item and adds it (`list`), records it
+/// as bought (`bought`) or puts it in the cupboard (`pantry`) as one undoable
+/// household change. New items keep the photos, get the suggested details
+/// and queue an icon unless the family already chose a picture.
 async fn run_photo(server: &Server, job: &Job) -> Result<()> {
     let request: Value = serde_json::from_str(&job.prompt)?;
-    let photo = request["photo"].as_str().unwrap_or_default().to_string();
+    // Jobs queued before typed names were supported carry a single photo.
+    let mut photos: Vec<String> = request["photos"]
+        .as_array()
+        .map(|photos| {
+            photos
+                .iter()
+                .filter_map(|p| p.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default();
+    if let Some(photo) = request["photo"].as_str() {
+        photos.push(photo.to_string());
+    }
+    let photo = photos.first().cloned();
+    let name = request["name"].as_str().unwrap_or_default().to_string();
+    // Typed in the add dialog: adds to whatever is already listed, as the
+    // dialog's own Add button does.
+    let typed = !name.is_empty();
+    let fixed_quantity = request["quantity"].as_f64();
+    let fixed_unit = request["unit"].as_str().map(String::from);
+    let fixed_note = request["note"].as_str().map(String::from);
+    let fixed_group = request["group"].as_str().map(String::from);
+    let fixed_product = request["productId"].as_str().map(String::from);
+    let image = request["image"].as_str().map(String::from);
     let mode = request["mode"].as_str().unwrap_or("list").to_string();
     let bought = mode == "bought";
     let pantry = mode == "pantry";
@@ -563,15 +640,34 @@ async fn run_photo(server: &Server, job: &Job) -> Result<()> {
         server,
         &job.household,
         ai::ItemDetailsRequest {
-            name: String::new(),
-            images: vec![photo.clone()],
-            quantity: None,
-            unit: None,
-            note: None,
-            group: None,
+            name: name.clone(),
+            images: photos.clone(),
+            quantity: fixed_quantity,
+            unit: fixed_unit.clone(),
+            note: fixed_note.clone(),
+            group: fixed_group.clone(),
         },
     )
-    .await;
+    .await
+    .map(|mut details| {
+        // What the family chose stays as they chose it.
+        if let Some(quantity) = fixed_quantity {
+            details.quantity = quantity;
+        }
+        if let Some(unit) = &fixed_unit {
+            details.unit = unit.clone();
+        }
+        if let Some(note) = &fixed_note {
+            details.note = note.clone();
+        }
+        if let Some(group) = &fixed_group {
+            details.group = group.clone();
+        }
+        if fixed_product.is_some() {
+            details.product_id = fixed_product.clone();
+        }
+        details
+    });
     let mut conn = server.db.lock()?;
     let tx = conn.transaction()?;
     let active: bool = tx.query_row(
@@ -605,12 +701,19 @@ async fn run_photo(server: &Server, job: &Job) -> Result<()> {
                 state.shelf_life_days.insert(id.clone(), days);
             }
         }
-        let photos = state.item_photos.entry(id.clone()).or_default();
-        if !photos.contains(&photo) {
-            photos.push(photo.clone());
+        if created && let Some(image) = &image {
+            state.product_images.insert(id.clone(), image.clone());
         }
-        let excess = photos.len().saturating_sub(12);
-        photos.drain(..excess);
+        if !photos.is_empty() {
+            let kept = state.item_photos.entry(id.clone()).or_default();
+            for photo in &photos {
+                if !kept.contains(photo) {
+                    kept.push(photo.clone());
+                }
+            }
+            let excess = kept.len().saturating_sub(12);
+            kept.drain(..excess);
+        }
         let today = crate::domain::today(state);
         // Marked until a family member approves the AI's work.
         state.ai_added.insert(id.clone(), mode.clone());
@@ -642,7 +745,7 @@ async fn run_photo(server: &Server, job: &Job) -> Result<()> {
                 },
                 &today,
             )?;
-        } else if listed.as_ref().is_none_or(|item| item.checked) {
+        } else if typed && !bought || listed.as_ref().is_none_or(|item| item.checked) {
             crate::domain::apply(
                 state,
                 &crate::model::Operation::AddItem {
@@ -650,7 +753,7 @@ async fn run_photo(server: &Server, job: &Job) -> Result<()> {
                     quantity: details.quantity,
                     unit: details.unit.clone(),
                     note: details.note.clone(),
-                    accumulate: false,
+                    accumulate: typed,
                 },
                 &today,
             )?;
@@ -680,12 +783,13 @@ async fn run_photo(server: &Server, job: &Job) -> Result<()> {
             "addItem"
         };
         let detail = if bought {
-            json!({"productId":id,"quantity":details.quantity,"unit":details.unit,"note":details.note,"checked":true,"storeId":snapshot.state.store_id,"photo":photo,"fromPhoto":true})
+            json!({"productId":id,"quantity":details.quantity,"unit":details.unit,"note":details.note,"checked":true,"storeId":snapshot.state.store_id,"photo":photo,"fromPhoto":photo.is_some()})
         } else {
-            json!({"productId":id,"quantity":details.quantity,"unit":details.unit,"note":details.note,"photo":photo,"fromPhoto":true})
+            json!({"productId":id,"quantity":details.quantity,"unit":details.unit,"note":details.note,"photo":photo,"fromPhoto":photo.is_some()})
         };
         tx.execute("INSERT INTO events(id,household_id,actor,kind,at,detail,changes) VALUES(?1,?2,?3,?4,?5,?6,?7)",params![Uuid::new_v4().to_string(),job.household,actor,kind,chrono::Utc::now().to_rfc3339(),detail.to_string(),serde_json::to_string(&changes)?])?;
         if created
+            && image.is_none()
             && config_for(&tx, &job.household)?
                 .is_some_and(|config| config.enabled && !config.image_model.is_empty())
         {

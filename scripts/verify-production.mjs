@@ -1826,6 +1826,28 @@ try {
     10,
     'The suggested shelf life is saved with the new item',
   )
+  // "Fill in & add" closes at once; the server finishes it in the background.
+  await owner
+    .getByRole('combobox', { name: 'Add a shopping item' })
+    .fill('Fixture ghee')
+  await owner
+    .getByRole('combobox', { name: 'Add a shopping item' })
+    .press('Enter')
+  const backgroundItem = owner.getByRole('dialog', {
+    name: 'Something for the basket',
+  })
+  await backgroundItem.getByRole('button', { name: 'kg', exact: true }).click()
+  await owner.screenshot({ path: 'test-results/fill-in-and-add-mobile.png' })
+  await backgroundItem
+    .getByRole('button', { name: 'Fill in & add', exact: true })
+    .click()
+  await backgroundItem.waitFor({ state: 'hidden' })
+  const backgroundTile = owner.getByRole('button', {
+    name: 'Check Fixture ghee',
+    exact: true,
+  })
+  await backgroundTile.waitFor({ timeout: 30000 })
+  assert.match(await backgroundTile.innerText(), /500 kg[\s\S]*Fixture note/)
   // A photo from the empty + button reuses a matching existing item.
   await owner.getByRole('button', { name: 'Add item', exact: true }).click()
   const photoItem = owner.getByRole('dialog', {
@@ -1870,7 +1892,7 @@ try {
   })
   await aiChip.locator('.ai-chip-mark').waitFor()
   await aiChip.click({ button: 'right' })
-  await owner.getByText('Added by AI from a photo.', { exact: false }).waitFor()
+  await owner.getByText('Added by AI.', { exact: false }).waitFor()
   await owner.getByRole('button', { name: 'Looks right', exact: true }).click()
   await eventually(
     async () =>

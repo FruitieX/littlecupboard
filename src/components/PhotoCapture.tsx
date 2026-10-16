@@ -17,6 +17,8 @@ import { Modal } from './ui'
 export type PhotoMode = 'list' | 'bought' | 'pantry'
 type Mode = PhotoMode
 
+const queuedEvent = 'littlecupboard:photo-job-queued'
+
 /** Uploads a photo privately and queues the background job for it. */
 export async function queuePhotoJob(file: File, mode: PhotoMode) {
   const url = await uploadImage(file, true)
@@ -25,6 +27,32 @@ export async function queuePhotoJob(file: File, mode: PhotoMode) {
     scope: 'photo',
     prompt: JSON.stringify({ photo: url, mode }),
   })
+  window.dispatchEvent(new Event(queuedEvent))
+}
+
+/**
+ * Queues "fill in and add" for a typed name and/or uploaded photos. Fields
+ * left null are filled in by the AI; the others are kept as chosen.
+ */
+export async function queueItemJob(
+  details: {
+    name: string
+    photos: string[]
+    quantity: number | null
+    unit: string | null
+    note: string | null
+    group: string | null
+    productId: string | null
+    image: string | null
+  },
+  mode: PhotoMode,
+) {
+  await createAiJob({
+    kind: 'photo',
+    scope: 'photo',
+    prompt: JSON.stringify({ ...details, mode }),
+  })
+  window.dispatchEvent(new Event(queuedEvent))
 }
 
 export function photoError(error: unknown) {
@@ -59,7 +87,10 @@ export function PhotoCapture({
       })
   }, [])
   useEffect(() => {
-    if (session.aiEnabled) refresh()
+    if (!session.aiEnabled) return
+    refresh()
+    window.addEventListener(queuedEvent, refresh)
+    return () => window.removeEventListener(queuedEvent, refresh)
   }, [session.aiEnabled, refresh])
   const active = jobs.filter(isJobActive)
   useEffect(() => {
@@ -154,8 +185,8 @@ export function PhotoCapture({
               <button type="button" onClick={() => setOpen(true)}>
                 <LoaderCircle size={14} className="spin" />
                 {active.length === 1
-                  ? 'Adding 1 photo…'
-                  : `Adding ${active.length} photos…`}
+                  ? 'Adding 1 item…'
+                  : `Adding ${active.length} items…`}
               </button>
             )}
             {failed.length > 0 && (
@@ -166,8 +197,8 @@ export function PhotoCapture({
               >
                 <X size={14} />
                 {failed.length === 1
-                  ? 'A photo couldn’t be added'
-                  : `${failed.length} photos couldn’t be added`}
+                  ? 'An item couldn’t be added'
+                  : `${failed.length} items couldn’t be added`}
               </button>
             )}
           </div>,
@@ -197,13 +228,13 @@ export function PhotoCapture({
           <ul className="photo-jobs">
             {active.map((job) => (
               <li key={job.id}>
-                <LoaderCircle size={15} className="spin" /> Recognizing a photo…
+                <LoaderCircle size={15} className="spin" /> Filling in an item…
               </li>
             ))}
             {failed.map((job) => (
               <li key={job.id} className="failed">
                 <X size={15} />
-                <span>{job.error || 'The photo could not be recognized.'}</span>
+                <span>{job.error || 'The item could not be filled in.'}</span>
                 <button
                   type="button"
                   className="text-button"

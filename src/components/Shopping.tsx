@@ -26,7 +26,7 @@ import { shoppingQuantity } from '../lib/meal-shopping'
 import { cleanItem } from '../lib/sync'
 import { useShoppingLayout } from '../lib/shopping-layout'
 import { Confetti, type Burst } from './Confetti'
-import { PhotoCapture } from './PhotoCapture'
+import { PhotoCapture, photoError, queueItemJob } from './PhotoCapture'
 import { PhotoButton } from './PhotoButton'
 import { approveAiAdded } from '../lib/ai-added'
 import { ItemSearch } from './ItemSearch'
@@ -557,6 +557,7 @@ export function Shopping() {
           open
           onClose={() => setAddName(null)}
           initialName={addName}
+          onQueued={announce}
         />
       )}
       {edit && <ItemEditor open onClose={() => setEdit(null)} item={edit} />}
@@ -647,7 +648,7 @@ const ItemTile = memo(function ItemTile({
           </span>
         )}
         {aiAdded && (
-          <span className="ai-badge" title="Added by AI from a photo">
+          <span className="ai-badge" title="Added by AI">
             <Sparkles size={10} />
             AI
           </span>
@@ -750,6 +751,7 @@ export function ItemEditor({
   item,
   destination = 'list',
   onAdded,
+  onQueued,
 }: {
   open: boolean
   onClose: () => void
@@ -758,6 +760,8 @@ export function ItemEditor({
   /** New items go on the shopping list, or straight into the cupboard. */
   destination?: 'list' | 'pantry'
   onAdded?: (product: Product) => void
+  /** Confirms an item handed to the AI to fill in and add in the background. */
+  onQueued?: (message: string) => void
 }) {
   const { state, update, action, groups, session, status } = useApp()
   const [name, setName] = useState(item?.name ?? initialName)
@@ -844,6 +848,41 @@ export function ItemEditor({
       setFilling(false)
     }
   }
+  const [queueing, setQueueing] = useState(false)
+  // Hands the item to the server, which fills in the rest and adds it even
+  // if this page closes, so the family can carry on straight away.
+  async function addInBackground() {
+    setQueueing(true)
+    setFillError('')
+    const known = touched.current
+    const typed = name.trim()
+    try {
+      await queueItemJob(
+        {
+          name: known.has('name') || !photos.length ? typed : '',
+          photos,
+          quantity: known.has('quantity') ? quantity : null,
+          unit: known.has('unit') ? unit : null,
+          note: known.has('note') && note.trim() ? note : null,
+          group: !existing && known.has('group') ? category : null,
+          productId: existing?.id ?? null,
+          image: !existing && image ? image : null,
+        },
+        destination,
+      )
+      const subject = existing?.name ?? (typed || 'it')
+      onQueued?.(
+        destination === 'pantry'
+          ? `Got it — we’ll fill in ${subject} and add it to the cupboard in the background.`
+          : `Got it — we’ll fill in ${subject} and add it to the list in the background.`,
+      )
+      onClose()
+    } catch (error) {
+      setFillError(photoError(error))
+    } finally {
+      setQueueing(false)
+    }
+  }
   async function addPhoto(file: File) {
     setUploading(true)
     setFillError('')
@@ -864,7 +903,7 @@ export function ItemEditor({
   useEffect(() => {
     if (pictureBusy) setMoreOpen(true)
   }, [pictureBusy])
-  const busy = filling || uploading
+  const busy = filling || uploading || queueing
   return (
     <Modal
       open={open}
@@ -968,9 +1007,7 @@ export function ItemEditor({
         {item && state.aiAdded?.[item.id] && (
           <div className="ai-review">
             <Sparkles size={16} />
-            <span>
-              Added by AI from a photo. Check the name, amount and group.
-            </span>
+            <span>Added by AI. Check the name, amount and group.</span>
             <button
               type="button"
               className="chip-button"
@@ -1042,6 +1079,27 @@ export function ItemEditor({
                     ? 'Looking at the photo…'
                     : 'Filling in…'
                   : 'Fill in with AI'}
+              </button>
+            )}
+            {session.aiEnabled && (
+              <button
+                type="button"
+                className="ai-fill-button"
+                disabled={
+                  (!name.trim() && !photos.length) ||
+                  busy ||
+                  pictureBusy ||
+                  status === 'offline'
+                }
+                title="Closes this dialog; the AI fills in the rest and adds it in the background. Anything you chose is kept."
+                onClick={() => void addInBackground()}
+              >
+                {queueing ? (
+                  <LoaderCircle size={16} className="spin" />
+                ) : (
+                  <Sparkles size={16} />
+                )}
+                Fill in & add
               </button>
             )}
             {existing && matchedId && (

@@ -468,6 +468,7 @@ function StockView() {
           initialName={creating}
           onClose={() => setCreating(null)}
           onAdded={(product) => show(product.id)}
+          onQueued={setMessage}
         />
       )}
       {moving && (
@@ -682,10 +683,7 @@ function StockRow({
           <strong>
             {name}
             {aiAdded && (
-              <span
-                className="ai-badge inline"
-                title="Added by AI from a photo"
-              >
+              <span className="ai-badge inline" title="Added by AI">
                 <Sparkles size={10} /> AI
               </span>
             )}
@@ -720,7 +718,7 @@ function StockRow({
               {aiAdded && (
                 <div className="ai-review">
                   <Sparkles size={16} />
-                  <span>Added by AI from a photo. Check the amount.</span>
+                  <span>Added by AI. Check the amount.</span>
                   <button className="chip-button" onClick={onApprove}>
                     <Check size={14} /> Looks right
                   </button>

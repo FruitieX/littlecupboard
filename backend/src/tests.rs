@@ -4978,5 +4978,46 @@ async fn photo_jobs_add_or_buy_items_in_the_background_and_icons_apply_themselve
     // Photos from elsewhere are refused before any work is queued.
     let (status, _, _) = request(&server, Method::POST, "/api/ai/jobs", json!({"kind":"photo","scope":"photo","prompt":json!({"photo":"/api/images/00000000-0000-4000-8000-000000000000","mode":"bought"}).to_string(),"requestId":null,"proposalId":null,"recipeId":null,"productId":null,"items":null}), Some(&cookie)).await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+    // "Fill in & add" from the add dialog: a typed name, the family's own
+    // amount kept over the AI's, queued twice without either being adopted.
+    *answer.lock().unwrap() = json!({"name":"Star fruit","productId":null,"group":"Fruits","quantity":6,"unit":"pc","note":"Yellow","iconDescription":"A star","shelfLifeDays":4});
+    for _ in 0..2 {
+        let (status, body, _) = request(&server, Method::POST, "/api/ai/jobs", json!({"kind":"photo","scope":"photo","prompt":json!({"name":"Star fruit","quantity":2,"mode":"list"}).to_string(),"requestId":null,"proposalId":null,"recipeId":null,"productId":null,"items":null}), Some(&cookie)).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+    }
+    assert!(crate::image_jobs::run_one(&server).await.unwrap());
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1["state"]
+        .clone();
+    let star = state["customProducts"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["name"] == "Star fruit")
+        .unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    let item = state["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["id"] == star.as_str())
+        .unwrap();
+    assert_eq!(item["quantity"], 2.0);
+    assert_eq!(item["unit"], "pc");
+    assert_eq!(item["note"], "Yellow");
+    assert_eq!(state["aiAdded"][star.as_str()], "list");
+    assert!(state["itemPhotos"].get(star.as_str()).is_none());
+    // A typed item with no name or photo is refused.
+    let (status, _, _) = request(&server, Method::POST, "/api/ai/jobs", json!({"kind":"photo","scope":"photo","prompt":json!({"name":" ","mode":"list"}).to_string(),"requestId":null,"proposalId":null,"recipeId":null,"productId":null,"items":null}), Some(&cookie)).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
     provider.abort();
 }
