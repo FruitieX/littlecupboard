@@ -10,7 +10,7 @@ import {
 } from 'react'
 import type { ReactNode } from 'react'
 import { api } from './http'
-import { useApp } from './state'
+import { insightsCacheKey, useApp } from './state'
 import { replaceEqualDeep } from './structural'
 import type { AppState, Product, Recipe } from './data'
 import type { ConsumptionRate } from './api/ConsumptionRate'
@@ -75,9 +75,20 @@ function useQuietFetch<T>(
   path: string | null,
   initial: T,
   delay = 1200,
+  cacheKey?: string,
 ): { data: T; error: string; loaded: boolean } {
   const { state, status } = useApp()
-  const [data, setData] = useState<T>(initial)
+  // A cached response renders on the first frame after launch, so derived
+  // sections such as Running low do not pop in once the request returns.
+  const [data, setData] = useState<T>(() => {
+    if (!cacheKey) return initial
+    try {
+      const cached = localStorage.getItem(cacheKey)
+      return cached ? (JSON.parse(cached) as T) : initial
+    } catch {
+      return initial
+    }
+  })
   const [error, setError] = useState('')
   const [loaded, setLoaded] = useState(false)
   const first = useRef(true)
@@ -95,6 +106,12 @@ function useQuietFetch<T>(
           .then((next) => {
             if (!active) return
             setData((previous) => replaceEqualDeep(previous, next))
+            if (cacheKey)
+              try {
+                localStorage.setItem(cacheKey, JSON.stringify(next))
+              } catch {
+                // Without storage the section simply waits for the request.
+              }
             setError('')
             setLoaded(true)
           })
@@ -108,12 +125,18 @@ function useQuietFetch<T>(
       active = false
       clearTimeout(timer)
     }
-  }, [path, state, status, delay])
+  }, [path, state, status, delay, cacheKey])
   return { data, error, loaded }
 }
 
 export function LearningProvider({ children }: { children: ReactNode }) {
-  const { data, error, loaded } = useQuietFetch('/insights', emptyInsights)
+  const { session } = useApp()
+  const { data, error, loaded } = useQuietFetch(
+    '/insights',
+    emptyInsights,
+    1200,
+    insightsCacheKey(session),
+  )
   const value = useMemo(
     () => ({ insights: { ...emptyInsights, ...data }, error, loaded }),
     [data, error, loaded],

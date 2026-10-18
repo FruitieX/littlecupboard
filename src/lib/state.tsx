@@ -58,6 +58,9 @@ function write(key: string, value: unknown) {
 function queueKey(session: SessionInfo, tab: string) {
   return `forkbasket:queue:${session.householdId}:${session.user.id}:${tab}`
 }
+export function insightsCacheKey(session: SessionInfo) {
+  return `forkbasket:insights:${session.householdId}:${session.user.id}`
+}
 function cacheKey(session: SessionInfo) {
   return `forkbasket:state:${session.householdId}:${session.user.id}`
 }
@@ -442,6 +445,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (session) {
       localStorage.removeItem(cacheKey(session))
       localStorage.removeItem(queueKey(session, tab.current))
+      localStorage.removeItem(insightsCacheKey(session))
     }
     localStorage.removeItem(cachedSession)
     if (cacheTimer.current) clearTimeout(cacheTimer.current)
