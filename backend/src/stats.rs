@@ -57,7 +57,13 @@ pub fn household_stats(
         let at = at.with_timezone(&zone);
         let detail: Value = serde_json::from_str(detail).unwrap_or(Value::Null);
         match kind.as_str() {
-            "finishTrip" => finishes.push(at),
+            // An automatic finish ends the trip at its last check.
+            "finishTrip" => finishes.push(
+                detail["lastCheckAt"]
+                    .as_str()
+                    .and_then(|last| DateTime::parse_from_rfc3339(last).ok())
+                    .map_or(at, |last| last.with_timezone(&zone)),
+            ),
             "checkItem" => {
                 let Some(product) = detail["productId"].as_str() else {
                     continue;

@@ -5021,3 +5021,67 @@ async fn photo_jobs_add_or_buy_items_in_the_background_and_icons_apply_themselve
     assert_eq!(status, StatusCode::BAD_REQUEST);
     provider.abort();
 }
+
+#[tokio::test]
+async fn idle_shopping_trips_finish_automatically_after_an_hour() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    operation(&server,&cookie,json!({"type":"addItem","productId":"oat-milk","quantity":1,"unit":"L","note":"","accumulate":false})).await;
+    let state = |server: &Server| {
+        let conn = server.db.lock().unwrap();
+        crate::db::Database::snapshot(
+            &conn,
+            conn.query_row("SELECT id FROM households", [], |row| {
+                row.get::<_, String>(0)
+            })
+            .unwrap()
+            .as_str(),
+        )
+        .unwrap()
+        .state
+    };
+    let now = chrono::Utc::now();
+    // Nothing checked: nothing to finish, however long the list waits.
+    crate::trip_finish::run(&server, now + chrono::Duration::hours(5)).unwrap();
+    assert!(
+        state(&server)
+            .items
+            .iter()
+            .any(|item| item.id == "oat-milk")
+    );
+    let (status, body) = operation(
+        &server,
+        &cookie,
+        json!({"type":"checkItem","id":"oat-milk","checked":true}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    crate::trip_finish::run(&server, now + chrono::Duration::minutes(50)).unwrap();
+    assert!(state(&server).items.iter().any(|item| item.checked));
+    crate::trip_finish::run(&server, now + chrono::Duration::minutes(61)).unwrap();
+    let after = state(&server);
+    assert!(!after.items.iter().any(|item| item.checked));
+    assert!(after.items.iter().all(|item| item.id != "oat-milk"));
+    let history = request(
+        &server,
+        Method::GET,
+        "/api/history",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    assert_eq!(history[0]["kind"], "finishTrip");
+    assert_eq!(history[0]["detail"]["automatic"], true);
+    assert!(history[0]["detail"]["count"].as_u64().unwrap() >= 1);
+    // The automatic finish is undoable like a manual one.
+    let event = history[0]["id"].as_str().unwrap().to_string();
+    let (status, body) = operation(&server, &cookie, json!({"type":"undo","eventId":event})).await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert!(
+        state(&server)
+            .items
+            .iter()
+            .any(|item| item.id == "oat-milk" && item.checked)
+    );
+}

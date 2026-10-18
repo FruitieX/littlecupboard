@@ -462,3 +462,8 @@ Follow-up: after accidentally pinch-zooming the installed app, the user asked to
 
 - A purchase in another counted unit than the item's rate (1 pack of bread usually bought as 1 pc) now restocks the projection as that many usual purchases; it used to be ignored, so the old pieces kept "running out". Weights/volumes are never converted this way.
 - Items bought today or yesterday are not suggested as Running low until they are projected used up: the household just chose that amount.
+
+### Automatic trip finish (feedback #8, 2026-10-18)
+
+- `trip_finish` runs every 5 minutes on the server. If a household has checked items and its last `checkItem` event (check, restore or undo) is more than an hour old, it finishes the trip as an undoable `finishTrip` event by `LittleCupboard`, with `automatic: true` and `lastCheckAt` in the detail. Trends trip minutes count such a trip as ending at that last check. History shows "Finished shopping automatically".
+- The reported wrapped and overflowing text in the Recently checked chips appears only in feedback-hub screenshots. Its DOM capture (`modern-screenshot`) lays the text out again inside the chips' exact shrink-to-fit widths. The chip widths in the screenshot match the real layout, so the app's layout was left unchanged.

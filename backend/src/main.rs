@@ -14,6 +14,7 @@ mod model;
 mod stats;
 #[cfg(test)]
 mod tests;
+mod trip_finish;
 
 use axum::{
     Json, Router,
@@ -481,6 +482,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     icon_jobs::start(server.clone()).map_err(|error| error.1)?;
     image_jobs::start(server.clone()).map_err(|error| error.1)?;
     meal_consumption::start(server.clone());
+    trip_finish::start(server.clone());
     axum::serve(listener, app(server))
         .with_graceful_shutdown(async {
             #[cfg(unix)]

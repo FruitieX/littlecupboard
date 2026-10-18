@@ -1212,7 +1212,7 @@ function HistoryView() {
                       : event.kind === 'mealFeedback'
                         ? `${detail.status} lunch`
                         : event.kind === 'finishTrip'
-                          ? `Finished shopping · ${detail.count ?? 0} items`
+                          ? `Finished shopping${detail.automatic ? ' automatically' : ''} · ${detail.count ?? 0} items`
                           : event.kind === 'addItem'
                             ? `Added ${name(detail.productId)}`
                             : event.kind === 'observePantry'
