@@ -13,6 +13,7 @@ This document records the user’s requirements, the chosen direction, and imple
 - Backend preference: Rust, Tokio, Axum, and ts-rs for shared API types.
 - Environment: NixOS; use the project’s locked Nix flake, verify tools inside it, and use committed npm and Cargo lockfiles.
 - Standing user instruction: after relevant checks, commit task changes and push to the remote. Do not include unrelated changes.
+- Sign-in (2026-10-23): optional Pocket ID passkey sign-in (OIDC) leads the sign-in screen when configured; email/password stays as a fallback for anyone without a passkey. See [DEPLOYMENT.md](DEPLOYMENT.md#passkey-sign-in-oidc-optional).
 - Current design direction: warm ivory, forest green, gentle pastel food tiles, expressive food illustrations, recipe photography, friendly serif headings, and restrained animations.
 
 ## Shopping list requirements

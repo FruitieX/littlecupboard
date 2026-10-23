@@ -14,6 +14,7 @@
     "mockups": "node scripts/mockups.mjs",
     "test:production": "LITTLECUPBOARD_TEST_PRODUCTION=1 node scripts/verify-production.mjs",
     "test:container": "node scripts/verify-container.mjs",
+    "test:oidc": "node scripts/verify-oidc.mjs",
     "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {

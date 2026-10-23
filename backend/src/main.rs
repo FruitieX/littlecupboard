@@ -11,6 +11,7 @@ mod image_jobs;
 mod insights;
 mod meal_consumption;
 mod model;
+mod oidc;
 mod stats;
 #[cfg(test)]
 mod tests;
@@ -40,6 +41,7 @@ pub struct Config {
     pub setup_token: String,
     pub data_dir: PathBuf,
     pub encryption_key: [u8; 32],
+    pub oidc: Option<oidc::Oidc>,
 }
 #[derive(Clone)]
 pub struct Server {
@@ -92,6 +94,8 @@ pub fn app(server: Server) -> Router {
         .route("/api/auth/setup", post(auth::setup))
         .route("/api/auth/login", post(auth::login))
         .route("/api/auth/logout", post(auth::logout))
+        .route("/api/auth/oidc/login", get(oidc::login))
+        .route("/api/auth/oidc/callback", get(oidc::callback))
         .route("/api/auth/recover", post(auth::recover))
         .route("/api/auth/join", post(auth::join))
         .route("/api/auth/profile", put(auth::profile))
@@ -389,6 +393,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             .filter(|value| !value.is_empty())
             .map(|value| value.trim_end_matches('/').to_string())
             .collect(),
+        oidc: oidc::Oidc::from_env(&origin),
         origin,
         secure_cookie,
         setup_token,

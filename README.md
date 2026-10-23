@@ -27,7 +27,7 @@ nix build .#container
 docker load < result
 ```
 
-The image serves frontend and API in one Rust process on port 8080. Keep /data on persistent storage and set LITTLECUPBOARD_ORIGIN to the externally visited origin. WAL is the default for local/block storage; NFS requires LITTLECUPBOARD_SQLITE_JOURNAL_MODE=DELETE and reliable NFSv4 locking/sync. The supplied Kubernetes template uses one replica, Recreate, a block PVC, non-root permissions, public/private Envoy HTTPS routes and health probes. The live homelab instead uses the migrated NFS claim; see [the deployment guide](docs/DEPLOYMENT.md). Generate and SOPS-encrypt the deployment secrets before copying them into your homelab.
+The image serves frontend and API in one Rust process on port 8080. Keep /data on persistent storage and set LITTLECUPBOARD_ORIGIN to the externally visited origin. WAL is the default for local/block storage; NFS requires LITTLECUPBOARD_SQLITE_JOURNAL_MODE=DELETE and reliable NFSv4 locking/sync. The supplied Kubernetes template uses one replica, Recreate, a block PVC, non-root permissions, public/private Envoy HTTPS routes and health probes. The live homelab instead uses the migrated NFS claim; see [the deployment guide](docs/DEPLOYMENT.md). Generate and SOPS-encrypt the deployment secrets before copying them into your homelab. Optional passkey sign-in through an OIDC provider is configured with `LITTLECUPBOARD_OIDC_*` variables; see [Passkey sign-in](docs/DEPLOYMENT.md#passkey-sign-in-oidc-optional).
 
 ## Develop
 
@@ -54,6 +54,7 @@ nix develop --command cargo clippy --manifest-path backend/Cargo.toml -- -D warn
 nix develop --command cargo test --manifest-path backend/Cargo.toml
 nix develop --command npm run build
 nix develop --command npm run test:production
+nix develop --command npm run test:oidc
 nix build .#container
 docker load -i result
 nix develop --command npm run test:container

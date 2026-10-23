@@ -59,6 +59,21 @@ Open the HTTPS site. Use `LITTLECUPBOARD_SETUP_TOKEN` from your deployment secre
 
 If you omit the setup token and encryption key environment variables, the app creates private `setup-token` and `secret-key` files in its data directory. Preserve the encryption key: changing or losing it makes saved AI credentials unreadable. In Kubernetes, keep the SOPS secret as part of your backup plan.
 
+## Passkey sign-in (OIDC, optional)
+
+LittleCupboard can sign people in through an OpenID Connect provider such as Pocket ID. Without these variables it behaves exactly as before. With them, the sign-in screen leads with “Sign in with passkey” and keeps email/password sign-in as a quieter fallback; a device that signs in with a password goes straight to the password form next time.
+
+| Variable                             | Meaning                                                                                                                        |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `LITTLECUPBOARD_OIDC_ISSUER`         | Provider issuer URL, e.g. `https://id.fruitiex.org`.                                                                           |
+| `LITTLECUPBOARD_OIDC_CLIENT_ID`      | Client id registered at the provider.                                                                                          |
+| `LITTLECUPBOARD_OIDC_CLIENT_SECRET`  | Client secret (keep it in the SOPS secret).                                                                                    |
+| `LITTLECUPBOARD_OIDC_REDIRECT_URL`   | Optional; defaults to `$LITTLECUPBOARD_ORIGIN/api/auth/oidc/callback`. Register this callback at the provider.                 |
+| `LITTLECUPBOARD_OIDC_ALLOWED_GROUPS` | Optional comma-separated groups; sign-in requires one of them.                                                                 |
+| `LITTLECUPBOARD_OIDC_USER_MAP`       | Optional `provideruser:local@email,...` links existing password accounts to provider usernames on their first passkey sign-in. |
+
+OIDC is enabled only when the issuer, client id and client secret are all set. Identities are keyed by issuer and subject. On a first sign-in the app uses an existing link, then the user map; anyone else in an allowed group becomes a password-less member of the household (only when exactly one household exists). An account already linked to one provider identity is never linked to a second, so a recreated provider user cannot take it over. Passkey sessions last 365 days and slide while the app is in use; password sessions keep their 30-day lifetime. Signing in from the legacy hostname first moves to `LITTLECUPBOARD_ORIGIN`. `npm run test:oidc` runs the flow against a mock provider in the production build.
+
 ## Local production run
 
 ```sh

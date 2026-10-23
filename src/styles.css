@@ -5891,3 +5891,12 @@ html {
   max-height: none;
   box-shadow: none;
 }
+.auth-alternates {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 16px;
+}
+.auth-card a.primary-button {
+  text-decoration: none;
+}

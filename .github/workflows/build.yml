@@ -44,6 +44,7 @@ jobs:
       - run: nix develop --command cargo test --manifest-path backend/Cargo.toml
       - run: nix develop --command npm run build
       - run: nix develop --command npm run test:production
+      - run: nix develop --command npm run test:oidc
       - run: nix develop --command node scripts/verify-updates.mjs
       - run: nix build .#container
       - name: Load and verify image
