@@ -419,6 +419,19 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         limits: Arc::new(Mutex::new(HashMap::new())),
     };
     let args: Vec<String> = std::env::args().skip(1).collect();
+    if args.first().is_some_and(|arg| arg == "--remove-member") {
+        // Maintenance: removes a non-owner account, e.g. one a passkey
+        // sign-in created, together with its sessions and provider link.
+        let Some(email) = args.get(1) else {
+            return Err("Usage: --remove-member EMAIL".into());
+        };
+        let removed = server.db.lock().map_err(|e| e.1)?.execute(
+            "DELETE FROM users WHERE email=?1 AND role='member'",
+            [email.trim().to_lowercase()],
+        )?;
+        println!("Removed {removed} member account(s).");
+        return Ok(());
+    }
     if args.first().is_some_and(|arg| arg == "--set-shelf-lives") {
         let (Some(household), Some(file)) = (args.get(1), args.get(2)) else {
             return Err("Usage: --set-shelf-lives HOUSEHOLD_ID FILE.json".into());
