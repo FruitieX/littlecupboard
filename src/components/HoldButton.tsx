@@ -32,6 +32,29 @@ export function HoldButton({
     ignoreClickUntil.current = Date.now() + 800
     onHold()
   }
+  // Lifting the finger after a hold still fires a click, now aimed at
+  // whatever the editor opened beneath it, such as a checkbox. Swallow the
+  // click that follows the release, however long the finger stayed down.
+  function held() {
+    edit()
+    // Some browsers send no click after a long press; stop shortly after
+    // the release so the next real tap still works.
+    const release = () => setTimeout(stop, 400)
+    const swallow = (event: globalThis.MouseEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      stop()
+    }
+    const stop = () => {
+      for (const type of ['pointerup', 'pointercancel'])
+        document.removeEventListener(type, release, true)
+      document.removeEventListener('click', swallow, true)
+    }
+    for (const type of ['pointerup', 'pointercancel'])
+      document.addEventListener(type, release, { capture: true, once: true })
+    document.addEventListener('click', swallow, true)
+    setTimeout(stop, 10000)
+  }
   return (
     <button
       {...props}
@@ -43,7 +66,7 @@ export function HoldButton({
         cancel()
         start.current = { x: event.clientX, y: event.clientY }
         event.currentTarget.dataset.pressing = 'true'
-        timer.current = setTimeout(edit, 500)
+        timer.current = setTimeout(held, 500)
       }}
       onPointerMove={(event) => {
         if (

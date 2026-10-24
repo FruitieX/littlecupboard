@@ -22,7 +22,8 @@ function buildProducts(state: AppState, includeArchived: boolean): Product[] {
   return [...catalog, ...state.customProducts]
     .filter(
       (product) =>
-        includeArchived || !state.archivedProductIds?.includes(product.id),
+        includeArchived ||
+        (!state.archivedProductIds?.includes(product.id) && !product.oneOff),
     )
     .map((product) => {
       const current = state.productDetails?.[product.id] ?? product
@@ -123,6 +124,25 @@ export function deleteProduct(state: AppState, id: string): AppState {
       ),
     ),
   }
+}
+
+/** Mirrors the server: one-off items leave with their list entry. */
+export function pruneOneOffs(state: AppState): AppState {
+  return state.customProducts
+    .filter(
+      (product) =>
+        product.oneOff &&
+        !state.items.some((item) => item.id === product.id) &&
+        ![...(state.recipeBook ?? []), ...state.customRecipes].some((recipe) =>
+          recipe.ingredients.some(
+            (ingredient) => ingredient.productId === product.id,
+          ),
+        ),
+    )
+    .reduce((next, product) => {
+      const { [product.id]: _, ...purchases } = next.purchases
+      return { ...deleteProduct(next, product.id), purchases }
+    }, state)
 }
 
 export function deleteRecipe(state: AppState, id: string): AppState {

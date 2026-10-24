@@ -87,6 +87,7 @@ export function LibrarySettings({ section }: { section: 'items' | 'recipes' }) {
   const products = getProducts(state)
     .filter(
       (entry) =>
+        !entry.oneOff &&
         !!state.archivedProductIds?.includes(entry.id) === showArchived,
     )
     .filter((entry) => matchesSearch(productSearchFields(state, entry), query))

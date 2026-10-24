@@ -35,6 +35,11 @@ pub struct Product {
     pub interval: Option<f64>,
     #[serde(default)]
     pub aliases: Vec<String>,
+    /// Bought once: hidden from the catalog and deleted with its list entry
+    /// once the trip is finished, without touching the cupboard.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub one_off: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS, PartialEq)]
@@ -82,6 +87,9 @@ pub struct ShoppingItem {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub amounts: Option<Vec<Amount>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub one_off: Option<bool>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS, PartialEq)]

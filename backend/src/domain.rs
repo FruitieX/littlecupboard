@@ -95,9 +95,63 @@ pub fn products(state: &HouseholdState, include_archived: bool) -> Vec<Product> 
         .catalog
         .iter()
         .chain(state.custom_products.iter())
-        .filter(|entry| include_archived || !state.archived_product_ids.contains(&entry.id))
+        .filter(|entry| {
+            include_archived
+                || !state.archived_product_ids.contains(&entry.id) && entry.one_off != Some(true)
+        })
         .map(|entry| customize_product(state, entry.clone()))
         .collect()
+}
+fn one_off(state: &HouseholdState, id: &str) -> bool {
+    state
+        .custom_products
+        .iter()
+        .any(|product| product.id == id && product.one_off == Some(true))
+}
+/// Deletes one-off products that are no longer on the list, along with
+/// everything kept about them, unless a recipe still uses them.
+fn prune_one_offs(state: &mut HouseholdState) {
+    let gone = state
+        .custom_products
+        .iter()
+        .filter(|product| product.one_off == Some(true))
+        .map(|product| product.id.clone())
+        .filter(|id| {
+            !state.items.iter().any(|item| &item.id == id)
+                && !state
+                    .recipe_book
+                    .iter()
+                    .chain(&state.custom_recipes)
+                    .any(|recipe| recipe.ingredients.iter().any(|i| &i.product_id == id))
+        })
+        .collect::<BTreeSet<_>>();
+    if gone.is_empty() {
+        return;
+    }
+    state
+        .custom_products
+        .retain(|product| !gone.contains(&product.id));
+    state.archived_product_ids.retain(|id| !gone.contains(id));
+    for map in [
+        &mut state.product_images,
+        &mut state.product_groups,
+        &mut state.purchases,
+        &mut state.ai_added,
+    ] {
+        map.retain(|id, _| !gone.contains(id));
+    }
+    state.pantry.retain(|id, _| !gone.contains(id));
+    state.consumption_rates.retain(|id, _| !gone.contains(id));
+    state.shelf_life_days.retain(|id, _| !gone.contains(id));
+    state.item_photos.retain(|id, _| !gone.contains(id));
+    for days in [&mut state.plan_coverage, &mut state.purchased_coverage] {
+        for products in days.values_mut() {
+            products.retain(|id, _| !gone.contains(id));
+        }
+    }
+    state
+        .suggestion_feedback
+        .retain(|key, _| !key.split_once(':').is_some_and(|(_, id)| gone.contains(id)));
 }
 fn recipe(state: &HouseholdState, id: &str) -> Option<Recipe> {
     state
@@ -302,6 +356,7 @@ pub fn displayed(state: &HouseholdState, id: &str, today: &str) -> Option<Shoppi
         checked_before: None,
         manual_amount: None,
         amounts: None,
+        one_off: product.one_off,
     });
     let original = normalize(&Amount {
         quantity: 1.0,
@@ -447,7 +502,10 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
                         amount.quantity = (amount.quantity - required.quantity).max(0.0);
                     }
                 }
-                adjust_stock(state, id, &surplus, 1.0);
+                let one_off = one_off(state, id);
+                if !one_off {
+                    adjust_stock(state, id, &surplus, 1.0);
+                }
                 let mut checked_item = item.clone();
                 checked_item.checked = true;
                 checked_item.plan_credits = Some(credits);
@@ -465,7 +523,9 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
                 } else {
                     state.items.push(checked_item);
                 }
-                state.purchases.insert(id.clone(), Utc::now().to_rfc3339());
+                if !one_off {
+                    state.purchases.insert(id.clone(), Utc::now().to_rfc3339());
+                }
             } else {
                 let previous =
                     previous.ok_or_else(|| ApiError::bad("This checked item no longer exists."))?;
@@ -546,6 +606,7 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
                 .collect::<Vec<_>>();
             coverage(state, &credits, 1.0);
             state.items.retain(|item| item.id != *id);
+            prune_one_offs(state);
             json!({"productId":id})
         }
         Operation::EditItem {
@@ -685,6 +746,7 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
         Operation::FinishTrip => {
             let count = state.items.iter().filter(|item| item.checked).count();
             state.items.retain(|item| !item.checked);
+            prune_one_offs(state);
             json!({"count":count,"storeId":state.store_id})
         }
         Operation::ObservePantry {
@@ -870,6 +932,7 @@ fn add_item(
             checked_before: None,
             manual_amount: None,
             amounts: None,
+            one_off: product.one_off,
         });
     }
     Ok(())
@@ -1228,7 +1291,7 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
         || state
             .product_details
             .iter()
-            .any(|(id, p)| id != &p.id || !built_in_ids.contains(id))
+            .any(|(id, p)| id != &p.id || !built_in_ids.contains(id) || p.one_off.is_some())
         || state
             .custom_products
             .iter()

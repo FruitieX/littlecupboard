@@ -3164,11 +3164,99 @@ try {
   await appleTile.waitFor()
   assert.match(await appleTile.innerText(), /6 pc/)
   await appleTile.click()
+  // One-off items: made from the add dialog or marked later, they skip the
+  // cupboard and leave the household catalog once the trip is finished.
+  const oneOffLabel = 'One-off: forget it once it’s bought'
+  const shoppingSearch = owner.getByRole('combobox', {
+    name: 'Add a shopping item',
+  })
+  for (const name of ['Fixture blanket', 'Fixture towel']) {
+    await shoppingSearch.fill(name)
+    await shoppingSearch.press('Enter')
+    const dialog = owner.getByRole('dialog', {
+      name: 'Something for the basket',
+    })
+    if (name === 'Fixture blanket') {
+      await dialog.getByLabel(oneOffLabel).check()
+      await owner.screenshot({ path: 'test-results/one-off-new-mobile.png' })
+    }
+    await dialog
+      .getByRole('button', { name: 'Add to shopping list', exact: true })
+      .click()
+    await dialog.waitFor({ state: 'hidden' })
+  }
+  const towelTile = owner.getByRole('button', {
+    name: 'Check Fixture towel',
+    exact: true,
+  })
+  // Lifting the finger after a hold must not tick what opened beneath it.
+  await hold(owner, towelTile)
+  const towelEditor = owner.getByRole('dialog', { name: 'Fixture towel' })
+  await owner.waitForTimeout(500)
+  assert.equal(await towelEditor.getByLabel(oneOffLabel).isChecked(), false)
+  await towelEditor.getByLabel(oneOffLabel).check()
+  await towelEditor
+    .getByRole('button', { name: 'Save details', exact: true })
+    .click()
+  await eventually(
+    async () =>
+      (await request(wife, '/state', undefined, 'GET')).state.customProducts
+        .filter((product) => product.name.startsWith('Fixture '))
+        .filter((product) => product.oneOff).length === 2,
+  )
+  // Taps right after opening an editor are ignored as the hold's release.
+  await owner.waitForTimeout(900)
+  for (const name of ['Fixture blanket', 'Fixture towel']) {
+    await owner
+      .getByRole('button', { name: `Check ${name}`, exact: true })
+      .click()
+    await owner
+      .getByRole('button', { name: `Restore ${name}`, exact: true })
+      .waitFor()
+  }
+  // The marks and checks survive a reload.
+  await owner.reload()
+  await settle(owner)
+  for (const name of ['Fixture blanket', 'Fixture towel'])
+    await owner
+      .getByRole('button', { name: `Restore ${name}`, exact: true })
+      .waitFor()
+  const oneOffIds = (
+    await request(owner, '/state', undefined, 'GET')
+  ).state.customProducts
+    .filter((product) => product.oneOff)
+    .map((product) => product.id)
   await owner.getByRole('button', { name: 'Finish trip' }).click()
   const trip = owner.getByRole('dialog', { name: 'Trip complete!' })
   await trip.waitFor()
   assert.match(await trip.textContent(), /Items\s*\d+/i)
   await trip.getByRole('button', { name: 'Done', exact: true }).click()
+  const leftovers = async () => {
+    const state = (await request(wife, '/state', undefined, 'GET')).state
+    return oneOffIds.flatMap((id) =>
+      [
+        state.customProducts.some((product) => product.id === id) && 'product',
+        state.items.some((item) => item.id === id) && 'item',
+        state.pantry[id] && 'pantry',
+        state.purchases[id] && 'purchase',
+      ]
+        .filter(Boolean)
+        .map((kind) => `${id}: ${kind}`),
+    )
+  }
+  await eventually(async () => !(await leftovers()).length).catch(() => {})
+  assert.deepEqual(await leftovers(), [], 'One-off items leave no trace')
+  await shoppingSearch.fill('Fixture blanket')
+  assert.equal(
+    await owner
+      .getByRole('option', { name: /Fixture blanket/ })
+      .filter({ hasNotText: 'Create' })
+      .count(),
+    0,
+    'A bought one-off item is no longer suggested',
+  )
+  await shoppingSearch.fill('')
+  console.log('One-off items skip the cupboard and leave after the trip.')
   await owner.goto(frontendUrl + '/cupboard')
   await settle(owner)
   await owner

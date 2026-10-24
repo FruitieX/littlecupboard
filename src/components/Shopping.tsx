@@ -782,6 +782,10 @@ export function ItemEditor({
     (matchedId && products.find((p) => p.id === matchedId)) ||
     products.find((p) => p.name.toLowerCase() === name.trim().toLowerCase())
   const multipleAmounts = (item?.amounts?.length ?? 0) > 1
+  // Only the family's own items can be one-offs; built-in ones stay.
+  const customItem = item && state.customProducts.find((p) => p.id === item.id)
+  const canOneOff = destination === 'list' && (item ? !!customItem : !existing)
+  const [oneOff, setOneOff] = useState(!!customItem?.oneOff)
   const [moreOpen, setMoreOpen] = useState(false)
   // Fields the family set themselves; AI suggestions never replace them.
   const touched = useRef(new Set<string>())
@@ -934,10 +938,11 @@ export function ItemEditor({
               name: name.trim(),
               category,
               icon: '🛒',
+              ...(canOneOff && oneOff ? { oneOff: true } : {}),
             }
           if (item && state.aiAdded?.[item.id])
             update((s) => approveAiAdded(s, item.id), `Approve ${item.name}`)
-          if (item)
+          if (item) {
             action({
               type: 'editItem',
               id: item.id,
@@ -947,7 +952,25 @@ export function ItemEditor({
               note,
               expected: cleanItem(item),
             })
-          else {
+            // After the edit, so its expected item still matches.
+            if (customItem && oneOff !== !!customItem.oneOff) {
+              const mark = <T extends Product>(entry: T): T => {
+                if (entry.id !== item.id) return entry
+                const { oneOff: _, ...rest } = entry
+                return (oneOff ? { ...rest, oneOff: true } : rest) as T
+              }
+              update(
+                (s) => ({
+                  ...s,
+                  customProducts: s.customProducts.map(mark),
+                  items: s.items.map(mark),
+                }),
+                oneOff
+                  ? `Make ${item.name} a one-off`
+                  : `Keep ${item.name} in our items`,
+              )
+            }
+          } else {
             if (!existing)
               update((s) => ({
                 ...s,
@@ -1164,6 +1187,16 @@ export function ItemEditor({
           rows={2}
           maxLength={300}
         />
+        {canOneOff && (
+          <label className="checkbox-label one-off-toggle">
+            <input
+              type="checkbox"
+              checked={oneOff}
+              onChange={(e) => setOneOff(e.target.checked)}
+            />
+            One-off: forget it once it’s bought
+          </label>
+        )}
         {item?.mealNames?.length ? (
           <p className="planned-item-info">
             <CalendarDays size={15} />

@@ -551,7 +551,8 @@ export function RecipeEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope])
   const choices = knownProducts.filter(
-    (product) => !state.archivedProductIds?.includes(product.id),
+    (product) =>
+      !state.archivedProductIds?.includes(product.id) && !product.oneOff,
   )
   const missingIcons = ingredients
     .map((i) => knownProducts.find((p) => p.id === i.productId)!)

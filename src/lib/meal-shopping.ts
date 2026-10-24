@@ -440,7 +440,11 @@ export function toggleShoppingItem(
           candidate.id === id ? snapshot : candidate,
         )
       : [...covered.items, snapshot],
-    purchases: { ...covered.purchases, [id]: now.toISOString() },
+    purchases: state.customProducts.some(
+      (product) => product.id === id && product.oneOff,
+    )
+      ? covered.purchases
+      : { ...covered.purchases, [id]: now.toISOString() },
   }
 }
 

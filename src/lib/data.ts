@@ -33,6 +33,8 @@ export type Product = {
   image?: string
   aliases?: string[]
   interval?: number
+  /** Bought once: hidden from the catalog and deleted after the trip. */
+  oneOff?: boolean
 }
 export type ShoppingItem = Product & {
   quantity: number

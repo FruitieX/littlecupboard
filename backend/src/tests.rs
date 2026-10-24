@@ -806,6 +806,117 @@ async fn background_icons_do_not_overwrite_edits_or_apply_after_canceling() {
 }
 
 #[test]
+fn one_off_items_skip_the_cupboard_and_disappear_after_the_trip() {
+    let today = "2026-10-01";
+    let check = |state: &mut model::HouseholdState, id: &str| {
+        domain::apply(
+            state,
+            &model::Operation::CheckItem {
+                id: id.into(),
+                checked: true,
+                expected: None,
+            },
+            today,
+        )
+        .unwrap();
+    };
+    let mut state = model::fresh_state(true, "UTC".into());
+    for (id, one_off) in [("blanket", Some(true)), ("kept", None)] {
+        state.custom_products.push(model::Product {
+            id: id.into(),
+            name: id.into(),
+            category: state.groups[0].clone(),
+            icon: "🛒".into(),
+            image: None,
+            aliases: vec![],
+            interval: None,
+            one_off,
+        });
+        state
+            .product_images
+            .insert(id.into(), "/api/images/photo".into());
+        domain::apply(
+            &mut state,
+            &model::Operation::AddItem {
+                product_id: id.into(),
+                quantity: 1.0,
+                unit: "pc".into(),
+                note: "115 × 150 cm".into(),
+                accumulate: false,
+            },
+            today,
+        )
+        .unwrap();
+    }
+    assert_eq!(state.items[0].one_off, Some(true));
+    assert!(
+        !domain::products(&state, false)
+            .iter()
+            .any(|product| product.id == "blanket")
+    );
+    check(&mut state, "blanket");
+    check(&mut state, "kept");
+    assert!(!state.pantry.contains_key("blanket"));
+    assert!(!state.purchases.contains_key("blanket"));
+    assert!(state.pantry.contains_key("kept"));
+    let before = state.clone();
+    domain::apply(&mut state, &model::Operation::FinishTrip, today).unwrap();
+    assert!(state.items.is_empty());
+    assert_eq!(
+        state
+            .custom_products
+            .iter()
+            .map(|product| product.id.as_str())
+            .collect::<Vec<_>>(),
+        ["kept"]
+    );
+    assert!(!state.product_images.contains_key("blanket"));
+    // Undoing the trip brings the one-off item back.
+    let changes = domain::changes(&before, &state).unwrap();
+    let mut undone = state.clone();
+    domain::apply_history_changes(
+        &mut undone,
+        &changes
+            .into_iter()
+            .map(|change| model::Change {
+                before: change.after,
+                after: change.before,
+                ..change
+            })
+            .collect::<Vec<_>>(),
+    )
+    .unwrap();
+    assert_eq!(undone.items, before.items);
+    assert!(
+        undone
+            .custom_products
+            .iter()
+            .any(|product| product.id == "blanket")
+    );
+    assert_eq!(undone.product_images, before.product_images);
+    // Removing an unbought one-off item deletes it as well.
+    domain::apply(
+        &mut undone,
+        &model::Operation::RemoveItem {
+            id: "blanket".into(),
+        },
+        today,
+    )
+    .unwrap();
+    assert!(
+        !undone
+            .custom_products
+            .iter()
+            .any(|product| product.id == "blanket")
+    );
+    // Built-in catalog items cannot become one-offs.
+    let mut pasta = domain::product(&state, "pasta").unwrap();
+    pasta.one_off = Some(true);
+    state.product_details.insert("pasta".into(), pasta);
+    assert!(domain::validate(&state).is_err());
+}
+
+#[test]
 fn restoring_a_purchase_removes_pantry_stock_including_released_meal_surplus() {
     let today = "2026-10-01";
     for scenario in ["manual", "planned", "released"] {
@@ -3379,6 +3490,7 @@ async fn partial_store_routes_are_guarded_validated_and_survive_backup_restore()
             image: None,
             aliases: vec![],
             interval: None,
+            one_off: None,
         });
         let item = domain::product(&household, "family-alias").unwrap();
         assert_eq!(

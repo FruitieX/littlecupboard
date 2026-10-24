@@ -265,3 +265,35 @@ describe('getProducts cache', () => {
     expect(getProducts(state, false).some((p) => p.id === 'rice')).toBe(true)
   })
 })
+
+it('hides one-off items from the catalog and forgets them after the trip', () => {
+  let state = initialState()
+  const blanket = {
+    id: 'one-off-blanket',
+    name: 'Blanket 115 × 150 cm',
+    category: state.stores[0].order[0],
+    icon: '🛒',
+    aliases: [],
+    oneOff: true,
+  }
+  state = { ...state, customProducts: [blanket] }
+  expect(getProducts(state, false).some((p) => p.id === blanket.id)).toBe(false)
+  state = optimistic(state, {
+    type: 'addItem',
+    productId: blanket.id,
+    quantity: 1,
+    unit: 'pc',
+    note: '',
+    accumulate: false,
+  })
+  state = optimistic(state, {
+    type: 'checkItem',
+    id: blanket.id,
+    checked: true,
+  })
+  expect(state.items.find((item) => item.id === blanket.id)?.checked).toBe(true)
+  expect(state.purchases[blanket.id]).toBeUndefined()
+  state = optimistic(state, { type: 'finishTrip' })
+  expect(state.items.some((item) => item.id === blanket.id)).toBe(false)
+  expect(state.customProducts).toHaveLength(0)
+})

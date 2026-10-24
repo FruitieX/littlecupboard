@@ -126,6 +126,7 @@ pub(crate) fn resolve_items(
                     aliases: vec![],
                     image: None,
                     interval: None,
+                    one_off: None,
                 })
             } else {
                 Err(ApiError::bad("Choose an existing household item group."))

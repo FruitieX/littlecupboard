@@ -2,4 +2,4 @@
 import type { Amount } from "./Amount";
 import type { PlanCredit } from "./PlanCredit";
 
-export type ShoppingItem = { id: string, name: string, category: string, icon: string, quantity: number, unit: string, note: string, checked: boolean, image?: string, interval?: number, aliases: Array<string>, origin?: string, planCredits?: Array<PlanCredit>, checkedBefore?: boolean, manualAmount?: Amount, amounts?: Array<Amount>, };
+export type ShoppingItem = { id: string, name: string, category: string, icon: string, quantity: number, unit: string, note: string, checked: boolean, image?: string, interval?: number, aliases: Array<string>, origin?: string, planCredits?: Array<PlanCredit>, checkedBefore?: boolean, manualAmount?: Amount, amounts?: Array<Amount>, oneOff?: boolean, };

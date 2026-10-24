@@ -9,7 +9,7 @@ import {
   confirmPantry,
 } from './meal-shopping'
 import { addIngredients, mergeItem } from './shopping'
-import { getProducts } from './catalog'
+import { getProducts, pruneOneOffs } from './catalog'
 
 const lists = [
   'items',
@@ -174,7 +174,7 @@ export function optimistic(state: AppState, operation: Operation): AppState {
         ),
       }
     case 'removeItem':
-      return removeShoppingItem(state, operation.id)
+      return pruneOneOffs(removeShoppingItem(state, operation.id))
     case 'editItem':
       return editShoppingItem(
         state,
@@ -207,7 +207,10 @@ export function optimistic(state: AppState, operation: Operation): AppState {
         },
       }
     case 'finishTrip':
-      return { ...state, items: state.items.filter((item) => !item.checked) }
+      return pruneOneOffs({
+        ...state,
+        items: state.items.filter((item) => !item.checked),
+      })
     case 'patch': {
       const next = structuredClone(state) as unknown as Record<string, unknown>
       for (const change of operation.changes) {

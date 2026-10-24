@@ -432,6 +432,7 @@ fn candidates(server: &Server) -> Result<Vec<Candidate>> {
                 aliases: vec![],
                 image: None,
                 interval: None,
+                one_off: None,
             })
             .collect();
         result.push(Candidate {
@@ -696,6 +697,7 @@ async fn run_photo(server: &Server, job: &Job) -> Result<()> {
                 aliases: vec![],
                 image: None,
                 interval: None,
+                one_off: None,
             });
             if let Some(days) = details.shelf_life_days {
                 state.shelf_life_days.insert(id.clone(), days);
