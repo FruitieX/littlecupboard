@@ -3164,6 +3164,86 @@ try {
   await appleTile.waitFor()
   assert.match(await appleTile.innerText(), /6 pc/)
   await appleTile.click()
+  // Descriptions: a new item keeps its note as the default, and an edited
+  // note becomes the new default only when asked.
+  const soapSearch = owner.getByRole('combobox', {
+    name: 'Add a shopping item',
+  })
+  await soapSearch.fill('Fixture soap')
+  await soapSearch.press('Enter')
+  const soapDialog = owner.getByRole('dialog', {
+    name: 'Something for the basket',
+  })
+  await soapDialog.getByLabel('A little more detail').fill('Lavender')
+  await soapDialog
+    .getByRole('button', { name: 'Add to shopping list', exact: true })
+    .click()
+  await soapDialog.waitFor({ state: 'hidden' })
+  const soap = async () =>
+    (await request(wife, '/state', undefined, 'GET')).state.customProducts.find(
+      (product) => product.name === 'Fixture soap',
+    )
+  await eventually(async () => (await soap())?.description === 'Lavender')
+  await owner.waitForTimeout(900)
+  await hold(
+    owner,
+    owner.getByRole('button', { name: 'Check Fixture soap', exact: true }),
+  )
+  const soapEditor = owner.getByRole('dialog', { name: 'Fixture soap' })
+  assert.equal(
+    await soapEditor.getByLabel('Use this note next time too').count(),
+    0,
+    'An unchanged note offers nothing to keep',
+  )
+  await soapEditor.getByLabel('A little more detail').fill('Unscented')
+  await soapEditor.getByLabel('Use this note next time too').check()
+  await owner.screenshot({ path: 'test-results/keep-note-mobile.png' })
+  await soapEditor
+    .getByRole('button', { name: 'Remove from list', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Check Fixture soap', exact: true })
+    .waitFor({ state: 'detached' })
+  assert.equal(
+    (await soap()).description,
+    'Lavender',
+    'Removing the entry does not save its edited note',
+  )
+  await soapSearch.fill('Fixture soap')
+  await soapSearch.press('Enter')
+  await owner
+    .getByRole('button', { name: 'Check Fixture soap', exact: true })
+    .waitFor()
+  // Close the search suggestions that would cover the tile.
+  await soapSearch.press('Escape')
+  await owner.waitForTimeout(900)
+  await hold(
+    owner,
+    owner.getByRole('button', { name: 'Check Fixture soap', exact: true }),
+  )
+  await soapEditor.getByLabel('A little more detail').fill('Unscented')
+  await soapEditor.getByLabel('Use this note next time too').check()
+  await soapEditor
+    .getByRole('button', { name: 'Save details', exact: true })
+    .click()
+  await eventually(async () => (await soap())?.description === 'Unscented')
+  await owner.waitForTimeout(900)
+  await hold(
+    owner,
+    owner.getByRole('button', { name: 'Check Fixture soap', exact: true }),
+  )
+  await soapEditor
+    .getByRole('button', { name: 'Remove from list', exact: true })
+    .click()
+  await soapSearch.fill('Fixture soap')
+  await soapSearch.press('Enter')
+  assert.match(
+    await owner
+      .getByRole('button', { name: 'Check Fixture soap', exact: true })
+      .innerText(),
+    /Unscented/,
+  )
+  console.log('Item descriptions fill in notes and change only when asked.')
   // One-off items: made from the add dialog or marked later, they skip the
   // cupboard and leave the household catalog once the trip is finished.
   const oneOffLabel = 'One-off: forget it once it’s bought'

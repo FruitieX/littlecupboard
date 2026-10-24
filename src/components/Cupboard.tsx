@@ -424,7 +424,7 @@ function StockView() {
                         productId: id,
                         quantity: habit?.quantity || 1,
                         unit: habit?.unit || 'pc',
-                        note: habit?.preferredNote ?? '',
+                        note: '',
                         accumulate: false,
                       })
                     }}

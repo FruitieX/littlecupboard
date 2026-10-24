@@ -600,6 +600,7 @@ fn resolve(
             image: None,
             interval: None,
             one_off: None,
+            description: None,
             aliases: vec![],
         };
         state.custom_products.push(product.clone());

@@ -1,5 +1,5 @@
 import { NumberInput, QuantityStepper } from './NumberInput'
-import { getProducts } from '../lib/catalog'
+import { getProducts, setDescription } from '../lib/catalog'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, MouseEvent } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react'
@@ -163,7 +163,7 @@ export function Shopping() {
       productId: product.id,
       quantity: habit?.quantity || 1,
       unit: habit?.unit || 'pc',
-      note: note ?? habit?.preferredNote ?? '',
+      note: note ?? '',
       accumulate: false,
     })
     announce(
@@ -178,7 +178,7 @@ export function Shopping() {
       productId: suggestion.product.id,
       quantity: suggestion.quantity || 1,
       unit: suggestion.unit || 'pc',
-      note: suggestion.note,
+      note: '',
       accumulate: false,
     })
     feedback(suggestion, 'accepted')
@@ -786,6 +786,16 @@ export function ItemEditor({
   const customItem = item && state.customProducts.find((p) => p.id === item.id)
   const canOneOff = destination === 'list' && (item ? !!customItem : !existing)
   const [oneOff, setOneOff] = useState(!!customItem?.oneOff)
+  // A note can become the item's description, the default for next time.
+  const catalogProduct = item
+    ? products.find((p) => p.id === item.id)
+    : existing || undefined
+  const canKeepNote =
+    destination === 'list' &&
+    !!catalogProduct &&
+    !(canOneOff && oneOff) &&
+    note.trim() !== (catalogProduct.description ?? '')
+  const [keepNote, setKeepNote] = useState(false)
   const [moreOpen, setMoreOpen] = useState(false)
   // Fields the family set themselves; AI suggestions never replace them.
   const touched = useRef(new Set<string>())
@@ -939,7 +949,15 @@ export function ItemEditor({
               category,
               icon: '🛒',
               ...(canOneOff && oneOff ? { oneOff: true } : {}),
+              ...(destination === 'list' && note.trim()
+                ? { description: note.trim() }
+                : {}),
             }
+          if (canKeepNote && keepNote)
+            update(
+              (s) => setDescription(s, product.id, note),
+              `Use this note for ${product.name} next time`,
+            )
           if (item && state.aiAdded?.[item.id])
             update((s) => approveAiAdded(s, item.id), `Approve ${item.name}`)
           if (item) {
@@ -1195,6 +1213,16 @@ export function ItemEditor({
               onChange={(e) => setOneOff(e.target.checked)}
             />
             One-off: forget it once it’s bought
+          </label>
+        )}
+        {canKeepNote && (
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={keepNote}
+              onChange={(e) => setKeepNote(e.target.checked)}
+            />
+            {note.trim() ? 'Use this note next time too' : 'No note next time'}
           </label>
         )}
         {item?.mealNames?.length ? (

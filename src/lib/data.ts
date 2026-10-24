@@ -35,8 +35,14 @@ export type Product = {
   interval?: number
   /** Bought once: hidden from the catalog and deleted after the trip. */
   oneOff?: boolean
+  /** Default note, filled in when the item goes on the list without one. */
+  description?: string
 }
-export type ShoppingItem = Product & {
+/** Product fields a list entry copies; the description becomes its note. */
+export function listFields({ description: _, ...product }: Product) {
+  return product
+}
+export type ShoppingItem = Omit<Product, 'description'> & {
   quantity: number
   unit: string
   note: string

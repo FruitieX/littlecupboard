@@ -333,6 +333,7 @@ export function ProductEditor({
   const [name, setName] = useState(product?.name ?? '')
   const [group, setGroup] = useState(product?.category ?? groups[0])
   const [aliases, setAliases] = useState<string[]>(product?.aliases ?? [])
+  const [description, setDescription] = useState(product?.description ?? '')
   const [aliasDraft, setAliasDraft] = useState('')
   const [image, setImage] = useState(product?.image ?? '')
   const [busy, setBusy] = useState(false)
@@ -396,6 +397,7 @@ export function ProductEditor({
               icon: product?.icon ?? '🛒',
               aliases: searchAliases,
               image: image || undefined,
+              description: description.trim() || undefined,
             }
             if (
               product &&
@@ -457,6 +459,19 @@ export function ProductEditor({
                 <option key={entry}>{entry}</option>
               ))}
             </select>
+          </label>
+          <label>
+            Description
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Brand, size or a note (optional)"
+              rows={2}
+              maxLength={300}
+            />
+            <small>
+              Filled in as the note when this goes on the shopping list.
+            </small>
           </label>
           <AliasInput
             aliases={aliases}

@@ -40,6 +40,11 @@ pub struct Product {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub one_off: Option<bool>,
+    /// Default note for whoever is shopping, filled in when the item goes
+    /// on the list without one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub description: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, TS, PartialEq)]

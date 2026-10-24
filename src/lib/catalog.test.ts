@@ -7,6 +7,7 @@ import {
   deleteRecipe,
   getProducts,
   saveProduct,
+  setDescription,
 } from './catalog'
 import { diffState, optimistic } from './sync'
 import { changeGroup } from './groups'
@@ -296,4 +297,36 @@ it('hides one-off items from the catalog and forgets them after the trip', () =>
   state = optimistic(state, { type: 'finishTrip' })
   expect(state.items.some((item) => item.id === blanket.id)).toBe(false)
   expect(state.customProducts).toHaveLength(0)
+})
+
+it('fills new list entries from the item description, kept off the entry', () => {
+  let state = setDescription(
+    { ...initialState(), items: [] },
+    'pasta',
+    ' Whole wheat penne ',
+  )
+  expect(getProducts(state).find((p) => p.id === 'pasta')?.description).toBe(
+    'Whole wheat penne',
+  )
+  state = optimistic(state, {
+    type: 'addItem',
+    productId: 'pasta',
+    quantity: 1,
+    unit: 'pc',
+    note: '',
+    accumulate: true,
+  })
+  const entry = state.items.find((item) => item.id === 'pasta')!
+  expect(entry.note).toBe('Whole wheat penne')
+  expect('description' in entry).toBe(false)
+  const custom = {
+    id: 'family-towel',
+    name: 'Towel',
+    category: state.stores[0].order[0],
+    icon: '🛒',
+    aliases: [],
+    description: 'Blue',
+  }
+  state = setDescription({ ...state, customProducts: [custom] }, custom.id, '')
+  expect(state.customProducts[0]).not.toHaveProperty('description')
 })

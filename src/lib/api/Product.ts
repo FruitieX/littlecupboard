@@ -5,4 +5,9 @@ export type Product = { id: string, name: string, category: string, icon: string
  * Bought once: hidden from the catalog and deleted with its list entry
  * once the trip is finished, without touching the cupboard.
  */
-oneOff?: boolean, };
+oneOff?: boolean, 
+/**
+ * Default note for whoever is shopping, filled in when the item goes
+ * on the list without one.
+ */
+description?: string, };

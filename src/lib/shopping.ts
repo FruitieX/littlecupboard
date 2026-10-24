@@ -5,7 +5,7 @@ import type {
   Recipe,
   ShoppingItem,
 } from './data'
-import { catalog } from './data'
+import { catalog, listFields } from './data'
 import { normalizeSearch } from './search'
 
 export function mergeItem(
@@ -18,7 +18,16 @@ export function mergeItem(
 ): ShoppingItem[] {
   const existing = items.find((item) => item.id === product.id)
   if (!existing)
-    return [...items, { ...product, quantity, unit, note, checked: false }]
+    return [
+      ...items,
+      {
+        ...listFields(product),
+        quantity,
+        unit,
+        note: note.trim() || product.description || '',
+        checked: false,
+      },
+    ]
   const normalize = (quantity: number, unit: string) => {
     const lower = unit.trim().toLowerCase()
     const normalized = (

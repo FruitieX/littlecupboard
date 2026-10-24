@@ -1,4 +1,4 @@
-import { catalog, type AppState, type Product } from './data'
+import { catalog, listFields, type AppState, type Product } from './data'
 import { defaultCatalogImage } from './catalog-artwork'
 
 // Household snapshots keep their identity until something changes, so cache
@@ -60,9 +60,39 @@ export function saveProduct(state: AppState, product: Product): AppState {
       }).filter(([, image]) => !!image),
     ) as Record<string, string>,
     items: state.items.map((item) =>
-      item.id === product.id ? { ...item, ...product } : item,
+      item.id === product.id ? { ...item, ...listFields(product) } : item,
     ),
   }
+}
+
+/** Sets an item's default note without touching its other details. */
+export function setDescription(
+  state: AppState,
+  id: string,
+  description: string,
+): AppState {
+  const update = <T extends Product>(product: T): T => {
+    const { description: _, ...rest } = product
+    return (
+      description.trim() ? { ...rest, description: description.trim() } : rest
+    ) as T
+  }
+  const builtIn = catalog.some((product) => product.id === id)
+  const current = getProducts(state).find((product) => product.id === id)
+  return builtIn
+    ? {
+        ...state,
+        productDetails: {
+          ...state.productDetails,
+          [id]: update(state.productDetails?.[id] ?? current!),
+        },
+      }
+    : {
+        ...state,
+        customProducts: state.customProducts.map((product) =>
+          product.id === id ? update(product) : product,
+        ),
+      }
 }
 
 export function archiveProduct(

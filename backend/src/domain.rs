@@ -925,7 +925,11 @@ fn add_item(
             aliases: product.aliases,
             quantity,
             unit: unit.trim().into(),
-            note: note.trim().into(),
+            note: if note.trim().is_empty() {
+                product.description.unwrap_or_default()
+            } else {
+                note.trim().into()
+            },
             checked: false,
             origin: None,
             plan_credits: None,
@@ -1315,6 +1319,10 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
                 .is_some_and(|image| !valid_image(image))
             || product.aliases.len() > 30
             || product.aliases.iter().any(|alias| !text(alias, 80))
+            || product
+                .description
+                .as_ref()
+                .is_some_and(|description| !text(description, 300))
         {
             return Err(ApiError::bad("Invalid product details."));
         }

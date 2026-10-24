@@ -21,7 +21,6 @@ export type Restock = {
   product: Product
   quantity: number
   unit: string
-  note: string
   intervalDays: number | null
   daysSince: number
   daysLeft?: number | null
@@ -37,7 +36,6 @@ export type Habit = {
   consumptionRate: ConsumptionRate | null
   consumptionSource: string
   confidence: string
-  preferredNote: string
   quantity: number | null
   unit: string | null
   storeId: string

@@ -806,6 +806,47 @@ async fn background_icons_do_not_overwrite_edits_or_apply_after_canceling() {
 }
 
 #[test]
+fn item_descriptions_fill_in_the_note_of_new_list_entries() {
+    let today = "2026-10-01";
+    let mut state = model::fresh_state(true, "UTC".into());
+    let mut pasta = domain::product(&state, "pasta").unwrap();
+    pasta.description = Some("Whole wheat penne".into());
+    state.product_details.insert("pasta".into(), pasta.clone());
+    let add = |state: &mut model::HouseholdState, id: &str, note: &str| {
+        domain::apply(
+            state,
+            &model::Operation::AddItem {
+                product_id: id.into(),
+                quantity: 1.0,
+                unit: "pc".into(),
+                note: note.into(),
+                accumulate: true,
+            },
+            today,
+        )
+        .unwrap();
+    };
+    add(&mut state, "pasta", "");
+    add(&mut state, "rice", "");
+    assert_eq!(state.items[0].note, "Whole wheat penne");
+    assert_eq!(state.items[1].note, "");
+    // A note given when adding wins, and the description stays as it was.
+    state.items.clear();
+    add(&mut state, "pasta", "Spaghetti this time");
+    assert_eq!(state.items[0].note, "Spaghetti this time");
+    assert_eq!(
+        domain::product(&state, "pasta")
+            .unwrap()
+            .description
+            .as_deref(),
+        Some("Whole wheat penne")
+    );
+    pasta.description = Some("x".repeat(301));
+    state.product_details.insert("pasta".into(), pasta);
+    assert!(domain::validate(&state).is_err());
+}
+
+#[test]
 fn one_off_items_skip_the_cupboard_and_disappear_after_the_trip() {
     let today = "2026-10-01";
     let check = |state: &mut model::HouseholdState, id: &str| {
@@ -831,6 +872,7 @@ fn one_off_items_skip_the_cupboard_and_disappear_after_the_trip() {
             aliases: vec![],
             interval: None,
             one_off,
+            description: None,
         });
         state
             .product_images
@@ -1934,7 +1976,8 @@ async fn learned_intervals_ignore_restores_and_undone_purchases() {
         json!({"quantity":2.0,"unit":"L","days":8.0})
     );
     assert_eq!(insights["habits"][0]["consumptionSource"], "estimated");
-    assert_eq!(insights["restock"][0]["note"], "Barista");
+    // Notes vary per trip, so suggestions no longer guess one.
+    assert!(insights["restock"][0].get("note").is_none());
     assert_eq!(insights["restock"][0]["quantity"].as_f64(), Some(2.0));
     assert_eq!(insights["restock"][0]["unit"], "L");
     assert_eq!(insights["restock"][0]["daysLeft"], 0.0);
@@ -3491,6 +3534,7 @@ async fn partial_store_routes_are_guarded_validated_and_survive_backup_restore()
             aliases: vec![],
             interval: None,
             one_off: None,
+            description: None,
         });
         let item = domain::product(&household, "family-alias").unwrap();
         assert_eq!(

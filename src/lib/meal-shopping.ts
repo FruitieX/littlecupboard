@@ -1,5 +1,5 @@
 import { getProducts } from './catalog'
-import { recipes } from './data'
+import { listFields, recipes } from './data'
 import type { Amount, AppState, PlanCredit, ShoppingItem } from './data'
 import { dateKey, mondayOfWeek, householdDate } from './shopping'
 
@@ -228,7 +228,7 @@ export function getShoppingItems(
     )
     return [
       {
-        ...product,
+        ...listFields(product),
         category: state.productGroups?.[id] ?? product.category,
         ...primary,
         note:

@@ -474,18 +474,6 @@ pub fn summarize(
             None
         };
         let elapsed = (Utc::now() - *last).num_days();
-        let note = history
-            .iter()
-            .filter_map(|(_, detail)| detail["note"].as_str())
-            .filter(|note| !note.is_empty())
-            .fold(BTreeMap::<String, u32>::new(), |mut counts, note| {
-                *counts.entry(note.into()).or_default() += 1;
-                counts
-            })
-            .into_iter()
-            .max_by_key(|(_, count)| *count)
-            .map(|(note, _)| note)
-            .unwrap_or_default();
         let store = history
             .iter()
             .filter_map(|(_, detail)| detail["storeId"].as_str())
@@ -565,7 +553,7 @@ pub fn summarize(
             );
         }
         last_bought.insert(id.clone(), *last);
-        habits.push(json!({"productId":id,"name":product.name,"purchases":history.len(),"intervalDays":interval,"confidence":if intervals.len()>=5 {"established"}else if intervals.len()>=2 {"emerging"}else{"learning"},"lastBought":last,"estimatedConsumption":estimated,"consumptionRate":effective,"consumptionSource":if manual.is_some(){"manual"}else if estimated.is_some(){"estimated"}else{"learning"},"preferredNote":note,"quantity":package["quantity"],"unit":package["unit"],"storeId":store}));
+        habits.push(json!({"productId":id,"name":product.name,"purchases":history.len(),"intervalDays":interval,"confidence":if intervals.len()>=5 {"established"}else if intervals.len()>=2 {"emerging"}else{"learning"},"lastBought":last,"estimatedConsumption":estimated,"consumptionRate":effective,"consumptionSource":if manual.is_some(){"manual"}else if estimated.is_some(){"estimated"}else{"learning"},"quantity":package["quantity"],"unit":package["unit"],"storeId":store}));
         for (at, _) in history {
             let day = at.with_timezone(&zone);
             *weekdays.entry(day.weekday().to_string()).or_default() += 1;
@@ -579,7 +567,7 @@ pub fn summarize(
             && elapsed >= interval
             && suggestible(state, id, last)
         {
-            candidates.insert(id.clone(), json!({"product":product,"quantity":package["quantity"],"unit":package["unit"],"note":note,"intervalDays":interval,"daysSince":elapsed,"confidence":if intervals.len()>=5 {"established"}else{"emerging"},"consumptionRate":effective,"consumptionSource":if configured_interval.is_some(){"manual"}else{"estimated"},"reason":if let Some(rate)=manual.filter(|_|configured_interval.is_some()) {format!("Your rate: {} {} every {} days; usually bought as {} {}. Last bought {} days ago. Worth checking.",rate.quantity,rate.unit,rate.days,package["quantity"],package["unit"].as_str().unwrap_or(""),elapsed)} else if manual.is_some() {format!("Usually bought about every {} days; last bought {} days ago. Your rate uses a different unit, so this suggestion follows purchase frequency. Worth checking.",interval,elapsed)} else {format!("Bought on {} separate days, usually about every {} days; last bought {} days ago. Worth checking.",days.len(),interval,elapsed)}}));
+            candidates.insert(id.clone(), json!({"product":product,"quantity":package["quantity"],"unit":package["unit"],"intervalDays":interval,"daysSince":elapsed,"confidence":if intervals.len()>=5 {"established"}else{"emerging"},"consumptionRate":effective,"consumptionSource":if configured_interval.is_some(){"manual"}else{"estimated"},"reason":if let Some(rate)=manual.filter(|_|configured_interval.is_some()) {format!("Your rate: {} {} every {} days; usually bought as {} {}. Last bought {} days ago. Worth checking.",rate.quantity,rate.unit,rate.days,package["quantity"],package["unit"].as_str().unwrap_or(""),elapsed)} else if manual.is_some() {format!("Usually bought about every {} days; last bought {} days ago. Your rate uses a different unit, so this suggestion follows purchase frequency. Worth checking.",interval,elapsed)} else {format!("Bought on {} separate days, usually about every {} days; last bought {} days ago. Worth checking.",days.len(),interval,elapsed)}}));
         }
     }
     let today = Utc::now().with_timezone(&zone).date_naive();
@@ -675,7 +663,7 @@ pub fn summarize(
                     existing["daysLeft"] = json!(estimate.days_left);
                     continue;
                 }
-                candidates.insert(id.clone(), json!({"product":product,"quantity":package.as_ref().map(|p| p.quantity),"unit":package.as_ref().map(|p| p.unit.clone()),"note":"","intervalDays":Value::Null,"daysSince":(Utc::now() - last).num_days(),"daysLeft":estimate.days_left,"confidence":if source == "manual" {"established"} else {"emerging"},"consumptionRate":rate,"consumptionSource":source,"reason":reason}));
+                candidates.insert(id.clone(), json!({"product":product,"quantity":package.as_ref().map(|p| p.quantity),"unit":package.as_ref().map(|p| p.unit.clone()),"intervalDays":Value::Null,"daysSince":(Utc::now() - last).num_days(),"daysLeft":estimate.days_left,"confidence":if source == "manual" {"established"} else {"emerging"},"consumptionRate":rate,"consumptionSource":source,"reason":reason}));
             }
             _ => {}
         }
