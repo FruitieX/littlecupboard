@@ -12,7 +12,7 @@ import {
   MapPin,
   LoaderCircle,
 } from 'lucide-react'
-import { categories } from '../lib/data'
+import { categories, selectedStore } from '../lib/data'
 import type { AppState, Category, Product, ShoppingItem } from '../lib/data'
 import { useApp } from '../lib/state'
 import { useLearning } from '../lib/learning'
@@ -100,8 +100,10 @@ export function Shopping() {
   const [summary, setSummary] = useState<TripSummary | null>(null)
   const messageTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastCheck = useRef<{ x: number; y: number; at: number } | null>(null)
-  const store =
-    state.stores.find((s) => s.id === state.storeId) ?? state.stores[0]
+  const store = useMemo(
+    () => selectedStore(state),
+    [state.stores, state.storeId, state.groups],
+  )
   const active = useMemo(
     () => shoppingItems.filter((i) => !i.checked),
     [shoppingItems],

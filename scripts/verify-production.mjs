@@ -1067,10 +1067,11 @@ try {
   await new Promise((resolve) => provider.listen(0, '127.0.0.1', resolve))
   const promptDefaults = (await request(owner, '/ai/config', undefined, 'GET'))
     .promptDefaults
-  let failConfigOnce = true
+  // The settings page may request the config more than once while it mounts,
+  // so the outage lasts until the test recovers it explicitly.
+  let failConfig = true
   const failingSettings = async (route) => {
-    if (route.request().method() === 'GET' && failConfigOnce) {
-      failConfigOnce = false
+    if (route.request().method() === 'GET' && failConfig) {
       await route.fulfill({
         status: 503,
         contentType: 'application/json',
@@ -1099,6 +1100,7 @@ try {
       .count(),
     0,
   )
+  failConfig = false
   await owner
     .getByRole('button', {
       name: 'Retry loading assistant settings',
@@ -1106,7 +1108,7 @@ try {
     })
     .click()
   await owner.getByText('Configure AI assistant', { exact: true }).waitFor()
-  failConfigOnce = true
+  failConfig = true
   await owner.reload()
   await settle(owner)
   await owner
@@ -1115,6 +1117,7 @@ try {
       exact: true,
     })
     .waitFor()
+  failConfig = false
   await owner.evaluate(() => window.dispatchEvent(new Event('online')))
   await owner.getByText('Configure AI assistant', { exact: true }).waitFor()
   await owner.unroute('**/api/ai/config', failingSettings)
@@ -1490,8 +1493,14 @@ try {
   await wifeContext.setGeolocation({ latitude: 61.5, longitude: 23.76 })
   await wife.reload()
   await settle(wife)
-  await wife.waitForTimeout(500)
-  assert.equal(await wifeShop.inputValue(), wifeShopBefore)
+  await wife.waitForFunction(
+    () =>
+      document.querySelector('[aria-label="Shopping at"]')?.value ===
+      'Unknown shop',
+  )
+  await wife
+    .locator('.shopping-heading')
+    .screenshot({ path: 'test-results/store-picker-unknown-mobile.png' })
   await wifeContext.setGeolocation({ latitude: 60.2105, longitude: 24.731 })
   await wife.reload()
   await settle(wife)
@@ -1509,7 +1518,7 @@ try {
     .click()
   assert.equal(await wifeShop.inputValue(), wifeShopBefore)
   console.log(
-    'Shop map positions save, validate and auto-select the nearby shop on launch.',
+    'Shop map positions save, validate and auto-select the nearby (or unknown) shop on launch.',
   )
   for (const [id, name, category, image] of [
     ['existing-water-art', 'Water', 'Beverages', 'water'],

@@ -456,7 +456,7 @@ Follow-up: after accidentally pinch-zooming the installed app, the user asked to
 ### Shop map positions and nearby-shop selection (2026-10-11)
 
 - Shops have an optional `position` (`GeoPoint { lat, lng }`, validated server-side). The shop editor's "Map position" field accepts pasted `lat, lng` or "Use my location".
-- `NearestShop` runs when the app opens (and when it resumes after 10+ minutes hidden) if any shop has a position: it asks for the device location, and selects the closest positioned shop within 1 km (plus up to 1 km of GPS uncertainty). Otherwise, if location is denied or fails, or the shop was picked by hand while locating, the last chosen shop stays. The selection is per device, like manual choice.
+- `NearestShop` runs when the app opens (and when it resumes after 10+ minutes hidden) if any shop has a position: it asks for the device location, and selects the closest positioned shop within 1 km (plus up to 1 km of GPS uncertainty). When no positioned shop is in reach it selects "Unknown shop" (feedback #10), a device-local choice (`unknownShopId`) also offered at the end of the shop picker: it orders items by household groups and its checks carry no `storeId`, so they never count toward a shop. If location is denied or fails, or the shop was picked by hand while locating, the last chosen shop stays. The selection is per device, like manual choice.
 - The shop selector shows the name at 13px over two lines instead of truncating.
 
 ### Running low right after a trip (feedback #5, 2026-10-16)

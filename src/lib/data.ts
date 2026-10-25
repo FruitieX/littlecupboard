@@ -87,6 +87,24 @@ export type Store = {
   image?: string
   position?: import('./api/GeoPoint').GeoPoint
 }
+/** Device-local choice for "not at any saved shop"; never sent to the server. */
+export const unknownShopId = ':unknown'
+export function selectedStore(state: {
+  stores: Store[]
+  storeId: string
+  groups?: Category[]
+}): Store {
+  if (state.storeId === unknownShopId)
+    return {
+      id: unknownShopId,
+      name: 'Unknown shop',
+      location: '',
+      order: [...(state.groups ?? categories)],
+    }
+  return (
+    state.stores.find((store) => store.id === state.storeId) ?? state.stores[0]
+  )
+}
 export type Plan = Record<string, string>
 export type AppState = {
   items: ShoppingItem[]

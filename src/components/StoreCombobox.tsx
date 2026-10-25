@@ -2,13 +2,12 @@ import { matchesSearch } from '../lib/search'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Check, ChevronDown, MapPin } from 'lucide-react'
 import { useApp } from '../lib/state'
+import { selectedStore, unknownShopId } from '../lib/data'
 import type { Store } from '../lib/data'
 
 export function StoreCombobox() {
   const { state, update } = useApp()
-  const store =
-    state.stores.find((candidate) => candidate.id === state.storeId) ??
-    state.stores[0]
+  const store = selectedStore(state)
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(-1)
@@ -17,7 +16,17 @@ export function StoreCombobox() {
   const matches = state.stores.filter((candidate) =>
     matchesSearch([candidate.name, candidate.location], query),
   )
-  const visible = matches.slice(0, 12)
+  const unknown = {
+    ...selectedStore({ ...state, storeId: unknownShopId }),
+    location: 'Not at any saved shop',
+  }
+  // Always reachable at the end of the list, beyond the shop cap.
+  const visible = [
+    ...matches.slice(0, 12),
+    ...(matchesSearch([unknown.name, unknown.location], query)
+      ? [unknown]
+      : []),
+  ]
   useEffect(() => {
     if (open && index >= 0)
       document
@@ -150,12 +159,9 @@ export function StoreCombobox() {
               </button>
             ))}
           </div>
-          {!matches.length && <p>No matching shops.</p>}
-          {matches.length > visible.length && (
-            <p>
-              {visible.length} of {matches.length} shops · keep typing to find
-              yours
-            </p>
+          {!visible.length && <p>No matching shops.</p>}
+          {matches.length > 12 && (
+            <p>12 of {matches.length} shops · keep typing to find yours</p>
           )}
         </div>
       )}

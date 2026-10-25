@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { distanceMeters, nearestStore, parsePoint } from './geo'
+import { selectedStore, unknownShopId } from './data'
 import type { Store } from './data'
 
 const store = (id: string, lat?: number, lng?: number): Store => ({
@@ -38,5 +39,22 @@ describe('geo', () => {
     expect(parsePoint('')).toBeUndefined()
     expect(parsePoint('95, 10')).toBeNull()
     expect(parsePoint('somewhere')).toBeNull()
+  })
+})
+
+describe('selectedStore', () => {
+  const stores = [store('a'), store('b')]
+  it('resolves saved shops and falls back to the first', () => {
+    expect(selectedStore({ stores, storeId: 'b' }).id).toBe('b')
+    expect(selectedStore({ stores, storeId: 'gone' }).id).toBe('a')
+  })
+  it('offers an unknown shop ordered by household groups', () => {
+    const unknown = selectedStore({
+      stores,
+      storeId: unknownShopId,
+      groups: ['Bakery', 'Produce'],
+    })
+    expect(unknown.name).toBe('Unknown shop')
+    expect(unknown.order).toEqual(['Bakery', 'Produce'])
   })
 })

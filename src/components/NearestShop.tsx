@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { useApp } from '../lib/state'
 import { currentPosition, nearestStore } from '../lib/geo'
+import { unknownShopId } from '../lib/data'
 
 const resumeAfterMs = 10 * 60 * 1000
 
-/** Selects the shop you are standing in when the app opens or resumes. */
+/** Selects the shop you are standing in (or none) when the app opens or resumes. */
 export function NearestShop() {
   const { state, update } = useApp()
   const latest = useRef(state)
@@ -30,8 +31,10 @@ export function NearestShop() {
           { lat: coords.latitude, lng: coords.longitude },
           coords.accuracy,
         )
-        if (store && store.id !== now.storeId)
-          update((current) => ({ ...current, storeId: store.id }))
+        // Away from every saved shop, don't pretend to be in the last one.
+        const id = store?.id ?? unknownShopId
+        if (id !== now.storeId)
+          update((current) => ({ ...current, storeId: id }))
       } catch {
         /* Location is a convenience; the last chosen shop stays. */
       }

@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
-import { initialState, recipes } from './data'
+import { initialState, recipes, unknownShopId } from './data'
 import type { AppState, Recipe, ShoppingItem } from './data'
 import type { SessionInfo } from './api/SessionInfo'
 import type { Operation } from './api/Operation'
@@ -163,11 +163,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
           /* Preserve the server snapshot if an offline target has vanished. */
         }
       }
-    const selected = next.stores.some((store) => store.id === shop.current)
-      ? shop.current
-      : next.stores.some((store) => store.id === next.storeId)
-        ? next.storeId
-        : next.stores[0].id
+    const selected =
+      shop.current === unknownShopId ||
+      next.stores.some((store) => store.id === shop.current)
+        ? shop.current
+        : next.stores.some((store) => store.id === next.storeId)
+          ? next.storeId
+          : next.stores[0].id
     next = replaceEqualDeep(current.current, { ...next, storeId: selected })
     if (next !== current.current) {
       current.current = next
@@ -413,7 +415,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     queue.current.push({
       id: crypto.randomUUID(),
       operation,
-      storeId: current.current.storeId,
+      storeId:
+        current.current.storeId === unknownShopId
+          ? undefined
+          : current.current.storeId,
     })
     publish()
     void flushRef.current()
