@@ -214,6 +214,12 @@ pub struct Preferences {
     pub novelty: f64,
     pub max_weekday_minutes: u32,
     pub auto_restock: bool,
+    /// How close a shop must be to count as "here" (before GPS uncertainty).
+    #[serde(default = "default_nearby_meters")]
+    pub nearby_meters: u32,
+}
+fn default_nearby_meters() -> u32 {
+    1000
 }
 impl Default for Preferences {
     fn default() -> Self {
@@ -225,6 +231,7 @@ impl Default for Preferences {
             novelty: 0.25,
             max_weekday_minutes: 35,
             auto_restock: false,
+            nearby_meters: default_nearby_meters(),
         }
     }
 }

@@ -15,6 +15,7 @@ const state = (): AppState => ({
     novelty: 0.3,
     maxWeekdayMinutes: 30,
     autoRestock: false,
+    nearbyMeters: 1000,
   },
 })
 describe('household meal suggestions', () => {

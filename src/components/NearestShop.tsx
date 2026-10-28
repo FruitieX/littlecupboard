@@ -30,6 +30,7 @@ export function NearestShop() {
           now.stores,
           { lat: coords.latitude, lng: coords.longitude },
           coords.accuracy,
+          now.preferences?.nearbyMeters,
         )
         // Away from every saved shop, don't pretend to be in the last one.
         const id = store?.id ?? unknownShopId

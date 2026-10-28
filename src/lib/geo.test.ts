@@ -30,6 +30,12 @@ describe('geo', () => {
     expect(nearestStore(stores, { lat: 60.17, lng: 24.94 })?.id).toBe('nearer')
     expect(nearestStore(stores, { lat: 61, lng: 24.94 })).toBeUndefined()
   })
+  it('uses the household nearby distance', () => {
+    const stores = [store('shop', 60.1745, 24.94)] // ~500 m north
+    const here = { lat: 60.17, lng: 24.94 }
+    expect(nearestStore(stores, here, 0, 1000)?.id).toBe('shop')
+    expect(nearestStore(stores, here, 0, 200)).toBeUndefined()
+  })
   it('parses copied coordinates', () => {
     expect(parsePoint('60.1699, 24.9384')).toEqual({
       lat: 60.1699,

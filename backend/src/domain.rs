@@ -1552,6 +1552,7 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
         || preferences.novelty < 0.0
         || preferences.novelty > 1.0
         || preferences.max_weekday_minutes > 1440
+        || !(50..=10_000).contains(&preferences.nearby_meters)
         || preferences.dietary.len() > 30
         || preferences.avoid.len() > 100
         || preferences

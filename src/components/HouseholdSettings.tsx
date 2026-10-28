@@ -25,6 +25,7 @@ export function HouseholdSettings() {
                 timeZone: String(data.get('timeZone')),
                 maxWeekdayMinutes: Number(data.get('minutes')),
                 novelty: Number(data.get('novelty')),
+                nearbyMeters: Number(data.get('nearbyMeters')),
                 dietary: String(data.get('dietary'))
                   .split(',')
                   .map((v) => v.trim())
@@ -92,6 +93,23 @@ export function HouseholdSettings() {
               defaultValue={preferences.novelty}
             />
             <small>Familiar favorites → more new ideas</small>
+          </label>
+          <label>
+            Nearby shop distance (meters)
+            <input
+              name="nearbyMeters"
+              type="number"
+              required
+              min={50}
+              max={10000}
+              step={50}
+              defaultValue={preferences.nearbyMeters ?? 1000}
+            />
+            <small>
+              A shop with a map position this close is selected when you open
+              the app; farther away it shows “Unknown shop”. GPS uncertainty
+              widens it.
+            </small>
           </label>
           <label>
             Household time zone

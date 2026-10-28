@@ -1,7 +1,7 @@
 import type { GeoPoint } from './api/GeoPoint'
 import type { Store } from './data'
 
-/** Shops this close (plus GPS uncertainty, capped) count as "here". */
+/** Default for how close a shop must be (plus GPS uncertainty, capped) to count as "here". */
 export const nearbyMeters = 1000
 
 export function distanceMeters(a: GeoPoint, b: GeoPoint) {
@@ -20,8 +20,9 @@ export function nearestStore(
   stores: Store[],
   here: GeoPoint,
   accuracy = 0,
+  nearby = nearbyMeters,
 ): Store | undefined {
-  const reach = nearbyMeters + Math.min(Math.max(accuracy, 0), nearbyMeters)
+  const reach = nearby + Math.min(Math.max(accuracy, 0), nearby)
   let best: { store: Store; distance: number } | undefined
   for (const store of stores) {
     if (!store.position) continue
