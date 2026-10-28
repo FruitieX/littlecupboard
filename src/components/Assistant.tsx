@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { useApp } from '../lib/state'
 import { post, uploadImage } from '../lib/http'
+import { pastedImages, readClipboardImages } from '../lib/clipboard-image'
 import { generateIconBatches, needsItemIcon } from '../lib/icon-batches'
 import {
   awaitAiJob,
@@ -198,26 +199,12 @@ export function Assistant() {
   }
   async function pasteImage() {
     try {
-      if (!navigator.clipboard?.read)
-        throw new Error('Use Ctrl+V / Cmd+V here, or choose an image file.')
-      const files: File[] = []
-      for (const item of await navigator.clipboard.read()) {
-        const type = item.types.find((type) =>
-          ['image/png', 'image/jpeg', 'image/webp'].includes(type),
-        )
-        if (type)
-          files.push(
-            new File([await item.getType(type)], 'Pasted recipe', { type }),
-          )
-      }
-      if (!files.length)
-        throw new Error('Copy an image first, or use Choose images.')
-      await attach(files)
+      await attach(await readClipboardImages('Pasted recipe'))
     } catch (error) {
       setError(
         error instanceof Error
           ? error.message
-          : 'Clipboard access was unavailable. Use Ctrl+V / Cmd+V here, or choose a file.',
+          : 'The image could not be pasted.',
       )
     }
   }
@@ -353,10 +340,7 @@ export function Assistant() {
         <form
           className="editor-form"
           onPaste={(event) => {
-            const files = [...event.clipboardData.items]
-              .filter((item) => item.kind === 'file')
-              .map((item) => item.getAsFile())
-              .filter((file): file is File => !!file)
+            const files = pastedImages(event)
             if (files.length) {
               event.preventDefault()
               void attach(files)

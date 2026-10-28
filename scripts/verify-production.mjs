@@ -1883,10 +1883,28 @@ try {
   // Fire-and-forget: a photo marks Oats bought without any further taps.
   await owner.getByRole('button', { name: 'Snap an item', exact: true }).click()
   await owner.screenshot({ path: 'test-results/photo-capture-mobile.png' })
+  // A copied image can be pasted instead of taking a photo.
+  await owner
+    .context()
+    .grantPermissions(['clipboard-read', 'clipboard-write'], {
+      origin: new URL(owner.url()).origin,
+    })
+  await owner.evaluate(async () => {
+    const photo = await createImageBitmap(
+      await (await fetch('/images/pasta.jpg')).blob(),
+    )
+    const canvas = new OffscreenCanvas(photo.width, photo.height)
+    canvas.getContext('2d').drawImage(photo, 0, 0)
+    const png = await canvas.convertToBlob({ type: 'image/png' })
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })])
+  })
   await owner
     .getByRole('dialog', { name: 'Snap an item' })
-    .getByLabel('I’m buying it now', { exact: true })
-    .setInputFiles('public/images/pasta.jpg')
+    .getByRole('button', {
+      name: 'I’m buying it now from a pasted image',
+      exact: true,
+    })
+    .click()
   await owner.getByRole('dialog', { name: 'Snap an item' }).waitFor({
     state: 'hidden',
   })

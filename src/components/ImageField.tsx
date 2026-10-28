@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { ImagePlus, LoaderCircle, Sparkles, X } from 'lucide-react'
+import {
+  ClipboardPaste,
+  ImagePlus,
+  LoaderCircle,
+  Sparkles,
+  X,
+} from 'lucide-react'
 import { useApp } from '../lib/state'
 import { uploadImage } from '../lib/http'
+import { pastedImages, readClipboardImages } from '../lib/clipboard-image'
 import {
   createAiJob,
   fetchAiJobs,
@@ -162,7 +169,15 @@ export function ImageField({
     ? Math.max(0, Math.floor(Date.now() / 1000) - job.createdAt)
     : 0
   return (
-    <fieldset className="image-field">
+    <fieldset
+      className="image-field"
+      onPaste={(event) => {
+        const [file] = pastedImages(event)
+        if (!file || busy || status === 'offline') return
+        event.preventDefault()
+        void runUpload(() => uploadImage(file))
+      }}
+    >
       <legend>
         Picture <span className="optional">optional</span>
       </legend>
@@ -188,6 +203,19 @@ export function ImageField({
             }}
           />
         </label>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={busy || status === 'offline'}
+          onClick={() =>
+            void runUpload(async () => {
+              const [file] = await readClipboardImages('Pasted picture')
+              return uploadImage(file)
+            })
+          }
+        >
+          <ClipboardPaste size={16} /> Paste
+        </button>
         {session.imageEnabled && (
           <button
             type="button"

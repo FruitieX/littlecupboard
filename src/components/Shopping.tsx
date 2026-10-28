@@ -1092,6 +1092,7 @@ export function ItemEditor({
               busy={uploading}
               disabled={busy || status === 'offline'}
               onFile={(file) => void addPhoto(file)}
+              onError={setFillError}
             />
           </div>
         )}

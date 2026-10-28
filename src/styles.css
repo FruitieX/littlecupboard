@@ -5604,9 +5604,18 @@ svg {
 }
 .photo-choice-gallery {
   justify-content: center;
-  width: 56px;
+  width: 52px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   border-left: 1px solid #dfe6d2;
   color: #55684a;
+}
+.photo-choice-gallery:last-child {
+  border-radius: 0 16px 16px 0;
+}
+.photo-choice-gallery:disabled {
+  cursor: default;
 }
 .photo-choice input {
   position: absolute;
@@ -5702,7 +5711,8 @@ svg {
     0 14px 32px #293b3026,
     0 0 0 1px #e6e9de;
 }
-.photo-split-menu label {
+.photo-split-menu label,
+.photo-split-menu button {
   position: relative;
   display: flex;
   align-items: center;
@@ -5714,7 +5724,14 @@ svg {
   font-size: 15px;
   cursor: pointer;
 }
-.photo-split-menu label:hover {
+.photo-split-menu button {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+.photo-split-menu label:hover,
+.photo-split-menu button:hover {
   background: #f2f5eb;
 }
 .snap-message {

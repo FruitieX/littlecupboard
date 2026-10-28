@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import {
   Camera,
   Check,
+  ClipboardPaste,
   Image as ImageIcon,
   LoaderCircle,
   ShoppingBasket,
@@ -12,6 +13,7 @@ import { uploadImage } from '../lib/http'
 import { createAiJob, fetchAiJobs, isJobActive } from '../lib/ai-jobs'
 import type { AiJobView } from '../lib/ai-jobs'
 import { useApp } from '../lib/state'
+import { readClipboardImages } from '../lib/clipboard-image'
 import { Modal } from './ui'
 
 export type PhotoMode = 'list' | 'bought' | 'pantry'
@@ -121,6 +123,15 @@ export function PhotoCapture({
       setUploading(null)
     }
   }
+  async function paste(mode: Mode) {
+    setError('')
+    try {
+      const [file] = await readClipboardImages('Pasted photo')
+      await capture(mode, file)
+    } catch (error) {
+      setError(photoError(error))
+    }
+  }
   const choice = (mode: Mode, label: string, hint: string) => (
     <div className={`photo-choice ${uploading ? 'busy' : ''}`}>
       <label className="photo-choice-main">
@@ -163,6 +174,16 @@ export function PhotoCapture({
           }}
         />
       </label>
+      <button
+        type="button"
+        className="photo-choice-gallery"
+        title="Paste image"
+        aria-label={`${label} from a pasted image`}
+        disabled={!!uploading || status === 'offline'}
+        onClick={() => void paste(mode)}
+      >
+        <ClipboardPaste size={18} />
+      </button>
     </div>
   )
   return (

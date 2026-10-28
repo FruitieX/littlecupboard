@@ -315,6 +315,7 @@ function StockView() {
             busy={snapping}
             disabled={status === 'offline'}
             onFile={(file) => void snap(file)}
+            onError={setMessage}
           />
         )}
       </ItemSearch>

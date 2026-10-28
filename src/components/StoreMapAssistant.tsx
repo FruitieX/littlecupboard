@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { ImagePlus, LoaderCircle, Sparkles } from 'lucide-react'
+import { ClipboardPaste, ImagePlus, LoaderCircle, Sparkles } from 'lucide-react'
 import { useApp } from '../lib/state'
 import { post, uploadImage } from '../lib/http'
+import { pastedImages, readClipboardImages } from '../lib/clipboard-image'
 import type { StoreLayoutProposal } from '../lib/api/StoreLayoutProposal'
 
 export function StoreMapAssistant({
@@ -42,8 +43,20 @@ export function StoreMapAssistant({
     }
   }
   const unavailable = busy || disabled || status === 'offline'
+  async function uploadMap(file: File) {
+    setImage(await uploadImage(file, true))
+    setFilename(file.name)
+  }
   return (
-    <fieldset className="store-map-assistant">
+    <fieldset
+      className="store-map-assistant"
+      onPaste={(event) => {
+        const [file] = pastedImages(event)
+        if (!file || unavailable) return
+        event.preventDefault()
+        void run(() => uploadMap(file))
+      }}
+    >
       <legend>Order aisles from a store map</legend>
       <p className="quiet-label">
         Upload a floor plan. Review the suggested route before saving your shop.
@@ -65,15 +78,24 @@ export function StoreMapAssistant({
             disabled={unavailable}
             onChange={(event) => {
               const file = event.target.files?.[0]
-              if (file)
-                void run(async () => {
-                  setImage(await uploadImage(file, true))
-                  setFilename(file.name)
-                })
+              if (file) void run(() => uploadMap(file))
               event.target.value = ''
             }}
           />
         </label>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={unavailable}
+          onClick={() =>
+            void run(async () => {
+              const [file] = await readClipboardImages('Pasted map')
+              await uploadMap(file)
+            })
+          }
+        >
+          <ClipboardPaste size={16} /> Paste
+        </button>
       </div>
       {image && (
         <>

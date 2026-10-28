@@ -2,23 +2,27 @@ import { useEffect, useRef, useState } from 'react'
 import {
   Camera,
   ChevronDown,
+  ClipboardPaste,
   Image as ImageIcon,
   LoaderCircle,
 } from 'lucide-react'
+import { readClipboardImages } from '../lib/clipboard-image'
 
 /**
  * Camera first, gallery when needed: the main button opens the camera and the
- * joined chevron offers "Take photo" or "Choose from gallery".
+ * joined chevron offers "Take photo", "Choose from gallery" or "Paste image".
  */
 export function PhotoButton({
   label,
   onFile,
+  onError,
   disabled = false,
   busy = false,
   className = '',
 }: {
   label: string
   onFile: (file: File) => void
+  onError: (message: string) => void
   disabled?: boolean
   busy?: boolean
   className?: string
@@ -82,6 +86,19 @@ export function PhotoButton({
             <ImageIcon size={16} /> Choose from gallery
             {input({ ariaLabel: 'Choose from gallery' })}
           </label>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setMenu(false)
+              readClipboardImages('Pasted photo').then(
+                ([file]) => onFile(file),
+                (error: Error) => onError(error.message),
+              )
+            }}
+          >
+            <ClipboardPaste size={16} /> Paste image
+          </button>
         </div>
       )}
     </div>
