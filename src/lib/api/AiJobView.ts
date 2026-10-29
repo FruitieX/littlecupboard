@@ -3,6 +3,12 @@ import type { IconResult } from "./IconResult";
 
 export type AiJobView = { id: string, status: string, kind: string, scope: string, proposalId: string | null, recipeId: string | null, productId: string | null, url: string | null, icons: Array<IconResult> | null, 
 /**
- * The item a photo job added or recorded as bought.
+ * The item a photo job added or recorded as bought, or the name typed
+ * for one that has not been added yet.
  */
-name: string | null, error: string | null, createdAt: number, };
+name: string | null, 
+/**
+ * A photo job's first photo and mode (list, bought or pantry), so an
+ * item that could not be added stays visible until retried or dismissed.
+ */
+photo: string | null, mode: string | null, error: string | null, createdAt: number, };

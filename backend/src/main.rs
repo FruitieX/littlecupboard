@@ -138,6 +138,7 @@ pub fn app(server: Server) -> Router {
             "/api/ai/jobs",
             post(image_jobs::create).get(image_jobs::list),
         )
+        .route("/api/ai/jobs/{id}", post(image_jobs::manage))
         .route("/api/ai/icon-batch", post(icon_batch::generate))
         .route(
             "/api/ai/item-icons",
@@ -430,6 +431,23 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             [email.trim().to_lowercase()],
         )?;
         println!("Removed {removed} member account(s).");
+        return Ok(());
+    }
+    if args.first().is_some_and(|arg| arg == "--retry-photo-job") {
+        // Maintenance: requeues a failed photo job for the running server, or
+        // with NAME queues a typed-name copy of it (e.g. a similar item).
+        let Some(id) = args.get(1) else {
+            return Err("Usage: --retry-photo-job JOB_ID [NAME]".into());
+        };
+        let conn = server.db.lock().map_err(|e| e.1)?;
+        if let Some(name) = args.get(2) {
+            let copy = image_jobs::queue_named_copy(&conn, id, name).map_err(|e| e.1)?;
+            println!("Queued {copy} for {name}.");
+        } else if image_jobs::settle(&conn, id, None, "queued").map_err(|e| e.1)? {
+            println!("Queued {id} again.");
+        } else {
+            return Err("That job is not a failed photo job.".into());
+        }
         return Ok(());
     }
     if args.first().is_some_and(|arg| arg == "--set-shelf-lives") {

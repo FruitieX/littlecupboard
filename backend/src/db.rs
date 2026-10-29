@@ -149,7 +149,7 @@ impl Database {
             [],
         )?;
         conn.execute(
-            "DELETE FROM ai_image_jobs WHERE status IN ('done','failed','canceled') AND COALESCE(finished_at,created_at) < unixepoch()-604800",
+            "DELETE FROM ai_image_jobs WHERE status IN ('done','failed','canceled') AND NOT (kind='photo' AND status='failed') AND COALESCE(finished_at,created_at) < unixepoch()-604800",
             [],
         )?;
         conn.execute("DELETE FROM sessions WHERE expires_at < unixepoch()", [])?;

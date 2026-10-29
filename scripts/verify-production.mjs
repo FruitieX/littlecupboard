@@ -922,6 +922,7 @@ try {
   }, iconFixture)
   let imageDelay = 0
   let imageFailures = 0
+  let chatFailures = 0
   provider = createServer(async (req, res) => {
     let body = ''
     for await (const chunk of req) body += chunk
@@ -943,6 +944,13 @@ try {
           data: [{ b64_json: sheetFixtures[grid] ?? iconFixture }],
         }),
       )
+      return
+    }
+    if (chatFailures > 0) {
+      chatFailures--
+      res.statusCode = 429
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ error: 'Fixture usage limit' }))
       return
     }
     const hasImages = input.messages?.some((message) =>
@@ -1947,6 +1955,39 @@ try {
   console.log(
     'Fire-and-forget photos check off or stock items, stay marked AI until approved.',
   )
+  // A photo the AI cannot handle waits in the list with Retry and Dismiss,
+  // on every device and across reloads, instead of disappearing.
+  chatFailures = 1
+  await owner.getByRole('button', { name: 'Snap an item', exact: true }).click()
+  await owner
+    .getByRole('dialog', { name: 'Snap an item' })
+    .getByLabel('Add to list', { exact: true })
+    .setInputFiles('public/images/pasta.jpg')
+  const retryPhoto = (page) =>
+    page.getByRole('button', { name: 'Retry Photographed item', exact: true })
+  await retryPhoto(owner).waitFor({ timeout: 30000 })
+  await owner.reload()
+  await settle(owner)
+  await retryPhoto(owner).waitFor()
+  await owner
+    .locator('.pending-items')
+    .getByText(/usage limit|busy|quota/i)
+    .waitFor()
+  await owner.screenshot({ path: 'test-results/photo-failed-mobile.png' })
+  await retryPhoto(owner).click()
+  await owner.getByRole('button', { name: 'Check Oats', exact: true }).waitFor({
+    timeout: 30000,
+  })
+  await owner.locator('.pending-items').waitFor({ state: 'hidden' })
+  await owner
+    .getByRole('button', { name: 'Check Oats', exact: true })
+    .click({ button: 'right' })
+  await owner.getByRole('button', { name: 'Looks right', exact: true }).click()
+  await eventually(
+    async () =>
+      !(await request(owner, '/state', undefined, 'GET')).state.aiAdded?.oats,
+  )
+  console.log('A failed photo stays in the list until retried.')
   // A variety of a known item becomes that item with a note.
   await owner
     .getByRole('combobox', { name: 'Add a shopping item' })

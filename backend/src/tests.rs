@@ -5183,6 +5183,144 @@ async fn photo_jobs_add_or_buy_items_in_the_background_and_icons_apply_themselve
 }
 
 #[tokio::test]
+async fn failed_photo_jobs_stay_listed_until_retried_or_dismissed() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let busy = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(true));
+    let flag = busy.clone();
+    let fixture = Router::new().route(
+        "/v1/chat/completions",
+        post(move || {
+            let flag = flag.clone();
+            async move {
+                if flag.load(std::sync::atomic::Ordering::SeqCst) {
+                    return (StatusCode::TOO_MANY_REQUESTS, Json(json!({}))).into_response();
+                }
+                let content = json!({"name":"Blueberry soup","productId":null,"group":"Fruits","quantity":1,"unit":"pc","note":"","iconDescription":"x","shelfLifeDays":null}).to_string();
+                Json(json!({"choices":[{"message":{"content":content}}]})).into_response()
+            }
+        }),
+    );
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let provider = tokio::spawn(async move { axum::serve(listener, fixture).await.unwrap() });
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture-chat","imageModel":"","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit"});
+    request(
+        &server,
+        Method::PUT,
+        "/api/ai/config",
+        json!({"config":config,"apiKey":null}),
+        Some(&cookie),
+    )
+    .await;
+    let jobs = |server: &Server| {
+        let server = server.clone();
+        let cookie = cookie.clone();
+        async move {
+            request(
+                &server,
+                Method::GET,
+                "/api/ai/jobs?scope=photo",
+                Value::Null,
+                Some(&cookie),
+            )
+            .await
+            .1["jobs"]
+                .clone()
+        }
+    };
+    let mut queued = vec![];
+    for _ in 0..2 {
+        let photo = upload_png(&server, &cookie).await;
+        let (status, body, _) = request(&server, Method::POST, "/api/ai/jobs", json!({"kind":"photo","scope":"photo","prompt":json!({"photo":photo,"mode":"list"}).to_string(),"requestId":null,"proposalId":null,"recipeId":null,"productId":null,"items":null}), Some(&cookie)).await;
+        assert_eq!(status, StatusCode::OK, "{body}");
+        assert!(crate::image_jobs::run_one(&server).await.unwrap());
+        queued.push((body["jobId"].as_str().unwrap().to_string(), photo));
+    }
+    // Old failures are kept by the daily cleanup and still listed.
+    server
+        .db
+        .lock()
+        .unwrap()
+        .execute(
+            "UPDATE ai_image_jobs SET finished_at=finished_at-700000",
+            [],
+        )
+        .unwrap();
+    let listed = jobs(&server).await;
+    assert_eq!(listed.as_array().unwrap().len(), 2, "{listed}");
+    assert!(
+        listed
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|job| job["status"] == "failed"
+                && job["mode"] == "list"
+                && job["error"].is_string())
+    );
+    assert!(
+        listed
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|job| job["photo"] == queued[0].1.as_str())
+    );
+    // Retrying runs the same photo again; dismissing gives up on the other.
+    busy.store(false, std::sync::atomic::Ordering::SeqCst);
+    let (status, body, _) = request(
+        &server,
+        Method::POST,
+        &format!("/api/ai/jobs/{}", queued[0].0),
+        json!({"action":"retry"}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    assert_eq!(body["status"], "queued");
+    let (status, _, _) = request(
+        &server,
+        Method::POST,
+        &format!("/api/ai/jobs/{}", queued[0].0),
+        json!({"action":"retry"}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST, "not retried twice");
+    assert!(crate::image_jobs::run_one(&server).await.unwrap());
+    let (status, _, _) = request(
+        &server,
+        Method::POST,
+        &format!("/api/ai/jobs/{}", queued[1].0),
+        json!({"action":"dismiss"}),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let listed = jobs(&server).await;
+    assert_eq!(listed.as_array().unwrap().len(), 1, "{listed}");
+    assert_eq!(listed[0]["status"], "done");
+    assert_eq!(listed[0]["name"], "Blueberry soup");
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1["state"]
+        .clone();
+    assert!(
+        state["customProducts"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|p| p["name"] == "Blueberry soup")
+    );
+    provider.abort();
+}
+
+#[tokio::test]
 async fn idle_shopping_trips_finish_automatically_after_an_hour() {
     let (server, _dir) = server();
     let cookie = owner(&server).await;

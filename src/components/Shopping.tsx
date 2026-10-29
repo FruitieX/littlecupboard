@@ -28,6 +28,7 @@ import { useShoppingLayout } from '../lib/shopping-layout'
 import { Confetti, type Burst } from './Confetti'
 import { PhotoCapture, photoError, queueItemJob } from './PhotoCapture'
 import { PhotoButton } from './PhotoButton'
+import { PendingItems } from './PendingItems'
 import { approveAiAdded } from '../lib/ai-added'
 import { ItemSearch } from './ItemSearch'
 import { post, uploadImage } from '../lib/http'
@@ -306,7 +307,6 @@ export function Shopping() {
             }
             onPick={add}
             onCreate={(name) => setAddName(name)}
-            after={<div id="photo-status-slot" />}
           >
             <PhotoCapture onQueued={(text) => announce(text)} />
           </ItemSearch>
@@ -371,6 +371,7 @@ export function Shopping() {
               </motion.section>
             )}
           </AnimatePresence>
+          <PendingItems />
           {active.length === 0 && (
             <div className={`basket-empty ${celebrating ? 'celebrate' : ''}`}>
               <span className="basket-empty-art" aria-hidden="true">

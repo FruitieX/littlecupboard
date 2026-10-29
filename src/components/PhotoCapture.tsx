@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useState } from 'react'
 import {
   Camera,
   Check,
@@ -10,16 +9,18 @@ import {
   X,
 } from 'lucide-react'
 import { uploadImage } from '../lib/http'
-import { createAiJob, fetchAiJobs, isJobActive } from '../lib/ai-jobs'
-import type { AiJobView } from '../lib/ai-jobs'
+import { createAiJob, isJobActive } from '../lib/ai-jobs'
+import {
+  photoJobQueuedEvent as queuedEvent,
+  settlePhotoJob,
+  usePhotoJobs,
+} from '../lib/photo-jobs'
 import { useApp } from '../lib/state'
 import { readClipboardImages } from '../lib/clipboard-image'
 import { Modal } from './ui'
 
 export type PhotoMode = 'list' | 'bought' | 'pantry'
 type Mode = PhotoMode
-
-const queuedEvent = 'littlecupboard:photo-job-queued'
 
 /** Uploads a photo privately and queues the background job for it. */
 export async function queuePhotoJob(file: File, mode: PhotoMode) {
@@ -79,31 +80,11 @@ export function PhotoCapture({
   const [open, setOpen] = useState(false)
   const [uploading, setUploading] = useState<Mode | null>(null)
   const [error, setError] = useState('')
-  const [jobs, setJobs] = useState<AiJobView[]>([])
-  const [dismissed, setDismissed] = useState<string[]>([])
-  const refresh = useCallback(() => {
-    fetchAiJobs({ scope: 'photo' })
-      .then(setJobs)
-      .catch(() => {
-        /* Status is best effort; the work continues on the server. */
-      })
-  }, [])
-  useEffect(() => {
-    if (!session.aiEnabled) return
-    refresh()
-    window.addEventListener(queuedEvent, refresh)
-    return () => window.removeEventListener(queuedEvent, refresh)
-  }, [session.aiEnabled, refresh])
-  const active = jobs.filter(isJobActive)
-  useEffect(() => {
-    if (!active.length) return
-    const timer = window.setInterval(refresh, 4000)
-    return () => window.clearInterval(timer)
-  }, [active.length, refresh])
+  const jobs = usePhotoJobs(session.aiEnabled)
   if (!session.aiEnabled) return null
-  const failed = jobs.filter(
-    (job) => job.status === 'failed' && !dismissed.includes(job.id),
-  )
+  const active = jobs.filter(isJobActive)
+  // Failed items wait in the shopping list itself with Retry and Dismiss.
+  const failed = jobs.filter((job) => job.status === 'failed')
   const recent = jobs.filter((job) => job.status === 'done').slice(0, 3)
   async function capture(mode: Mode, file: File) {
     setUploading(mode)
@@ -116,7 +97,6 @@ export function PhotoCapture({
           ? 'Got it — we’ll mark it bought in the background.'
           : 'Got it — we’ll add it to the list in the background.',
       )
-      refresh()
     } catch (error) {
       setError(photoError(error))
     } finally {
@@ -197,34 +177,6 @@ export function PhotoCapture({
       >
         <Camera size={20} />
       </button>
-      {(active.length > 0 || failed.length > 0) &&
-        typeof document !== 'undefined' &&
-        document.getElementById('photo-status-slot') &&
-        createPortal(
-          <div className="photo-status" role="status">
-            {active.length > 0 && (
-              <button type="button" onClick={() => setOpen(true)}>
-                <LoaderCircle size={14} className="spin" />
-                {active.length === 1
-                  ? 'Adding 1 item…'
-                  : `Adding ${active.length} items…`}
-              </button>
-            )}
-            {failed.length > 0 && (
-              <button
-                type="button"
-                className="failed"
-                onClick={() => setOpen(true)}
-              >
-                <X size={14} />
-                {failed.length === 1
-                  ? 'An item couldn’t be added'
-                  : `${failed.length} items couldn’t be added`}
-              </button>
-            )}
-          </div>,
-          document.getElementById('photo-status-slot')!,
-        )}
       <Modal
         open={open}
         onOpenChange={setOpen}
@@ -259,7 +211,22 @@ export function PhotoCapture({
                 <button
                   type="button"
                   className="text-button"
-                  onClick={() => setDismissed((ids) => [...ids, job.id])}
+                  onClick={() =>
+                    void settlePhotoJob(job.id, 'retry').catch((error) =>
+                      setError(photoError(error)),
+                    )
+                  }
+                >
+                  Retry
+                </button>
+                <button
+                  type="button"
+                  className="text-button"
+                  onClick={() =>
+                    void settlePhotoJob(job.id, 'dismiss').catch((error) =>
+                      setError(photoError(error)),
+                    )
+                  }
                 >
                   Dismiss
                 </button>

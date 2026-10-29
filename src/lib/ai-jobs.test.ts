@@ -14,6 +14,8 @@ function job(overrides: Partial<AiJobView> = {}): AiJobView {
     url: null,
     icons: null,
     name: null,
+    photo: null,
+    mode: null,
     error: null,
     createdAt: 1700000000,
     ...overrides,

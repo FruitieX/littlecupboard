@@ -8,7 +8,7 @@ use crate::{
 };
 use axum::{
     Json,
-    extract::{Query, State},
+    extract::{Path, Query, State},
     http::HeaderMap,
 };
 use rusqlite::{OptionalExtension, params};
@@ -55,8 +55,13 @@ pub struct AiJobView {
     pub product_id: Option<String>,
     pub url: Option<String>,
     pub icons: Option<Vec<IconResult>>,
-    /// The item a photo job added or recorded as bought.
+    /// The item a photo job added or recorded as bought, or the name typed
+    /// for one that has not been added yet.
     pub name: Option<String>,
+    /// A photo job's first photo and mode (list, bought or pantry), so an
+    /// item that could not be added stays visible until retried or dismissed.
+    pub photo: Option<String>,
+    pub mode: Option<String>,
     pub error: Option<String>,
     #[ts(type = "number")]
     pub created_at: i64,
@@ -277,7 +282,7 @@ pub struct JobsQuery {
 }
 
 const VIEW_COLUMNS: &str =
-    "id,status,kind,scope,proposal_id,recipe_id,product_id,result,error,created_at";
+    "id,status,kind,scope,proposal_id,recipe_id,product_id,result,error,created_at,prompt";
 
 fn view_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<AiJobView> {
     let result: Option<String> = row.get(7)?;
@@ -298,10 +303,30 @@ fn view_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<AiJobView> {
             );
         }
     }
+    let kind: String = row.get(2)?;
+    let mut photo = None;
+    let mut mode = None;
+    if kind == "photo"
+        && let Ok(request) = serde_json::from_str::<Value>(&row.get::<_, String>(10)?)
+    {
+        photo = request["photos"]
+            .as_array()
+            .and_then(|photos| photos.first())
+            .or(request.get("photo"))
+            .and_then(Value::as_str)
+            .map(String::from);
+        mode = request["mode"].as_str().map(String::from);
+        if name.is_none() {
+            name = request["name"]
+                .as_str()
+                .filter(|name| !name.is_empty())
+                .map(String::from);
+        }
+    }
     Ok(AiJobView {
         id: row.get(0)?,
         status: row.get(1)?,
-        kind: row.get(2)?,
+        kind,
         scope: row.get(3)?,
         proposal_id: row.get(4)?,
         recipe_id: row.get(5)?,
@@ -309,6 +334,8 @@ fn view_from(row: &rusqlite::Row<'_>) -> rusqlite::Result<AiJobView> {
         url,
         icons,
         name,
+        photo,
+        mode,
         error: row.get(8)?,
         created_at: row.get(9)?,
     })
@@ -329,8 +356,10 @@ pub async fn list(
             .query_map(params![id, actor.household_id], view_from)?
             .collect::<std::result::Result<_, _>>()?
     } else {
+        // A photo the AI could not add stays listed until someone retries
+        // or dismisses it, so it is never silently forgotten.
         let recent = format!(
-            "(status IN ('queued','running') OR (status='done' AND finished_at > unixepoch()-{RECENT_DONE_SECS}))"
+            "(status IN ('queued','running') OR (status='done' AND finished_at > unixepoch()-{RECENT_DONE_SECS}) OR (kind='photo' AND status='failed'))"
         );
         if let Some(scope) = query.scope.filter(|value| !value.is_empty()) {
             let mut statement = conn.prepare(&format!(
@@ -351,6 +380,78 @@ pub async fn list(
         }
     };
     Ok(Json(AiJobs { jobs }))
+}
+
+#[derive(Deserialize, TS)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct AiJobAction {
+    /// `retry` queues a failed photo job again with the same photos and
+    /// details; `dismiss` gives up on it.
+    pub action: String,
+}
+
+pub async fn manage(
+    State(server): State<Server>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+    Json(input): Json<AiJobAction>,
+) -> Result<Json<AiJobCreated>> {
+    let actor = authenticate(&server, &headers)?;
+    let status = match input.action.as_str() {
+        "retry" => {
+            server.rate_limit(&format!("ai-photo:{}", actor.household_id), 60, 3600)?;
+            "queued"
+        }
+        "dismiss" => "canceled",
+        _ => return Err(ApiError::bad("Choose retry or dismiss.")),
+    };
+    if !settle(&*server.db.lock()?, &id, Some(&actor.household_id), status)? {
+        return Err(ApiError::bad("This item was already retried or dismissed."));
+    }
+    server.notify(&actor.household_id);
+    Ok(Json(AiJobCreated {
+        job_id: id,
+        status: status.into(),
+    }))
+}
+
+/// Moves a failed photo job to `queued` (retry) or `canceled` (dismiss).
+pub fn settle(
+    conn: &rusqlite::Connection,
+    id: &str,
+    household: Option<&str>,
+    status: &str,
+) -> Result<bool> {
+    Ok(conn.execute(
+        "UPDATE ai_image_jobs SET status=?3,error=NULL,result=NULL,created_at=CASE WHEN ?3='queued' THEN unixepoch() ELSE created_at END,started_at=NULL,finished_at=CASE WHEN ?3='queued' THEN NULL ELSE unixepoch() END WHERE id=?1 AND (?2 IS NULL OR household_id=?2) AND kind='photo' AND status='failed'",
+        params![id, household, status],
+    )? > 0)
+}
+
+/// Maintenance: queues a typed-name copy of a photo job (same household,
+/// mode and actor, no photos) and returns its id.
+pub fn queue_named_copy(conn: &rusqlite::Connection, id: &str, name: &str) -> Result<String> {
+    let (household, prompt): (String, String) = conn
+        .query_row(
+            "SELECT household_id,prompt FROM ai_image_jobs WHERE id=?1 AND kind='photo'",
+            [id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )
+        .optional()?
+        .ok_or_else(|| ApiError::bad("No such photo job."))?;
+    let mut request: Value = serde_json::from_str(&prompt)?;
+    request["name"] = json!(name.trim());
+    request["photos"] = json!([]);
+    if let Some(object) = request.as_object_mut() {
+        object.remove("photo");
+    }
+    let copy = Uuid::new_v4().to_string();
+    conn.execute(
+        "INSERT INTO ai_image_jobs(id,household_id,request_id,scope,kind,prompt) VALUES(?1,?2,?3,'photo','photo',?4)",
+        params![copy, household, Uuid::new_v4().to_string(), request.to_string()],
+    )?;
+    Ok(copy)
 }
 
 struct Job {
@@ -821,9 +922,8 @@ async fn run_photo(server: &Server, job: &Job) -> Result<()> {
     )?;
     tx.commit()?;
     drop(conn);
-    if status == "done" {
-        server.notify(&job.household);
-    }
+    // Failures notify too, so every device shows the item to retry.
+    server.notify(&job.household);
     Ok(())
 }
 

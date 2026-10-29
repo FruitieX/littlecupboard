@@ -16,6 +16,7 @@ import { getShoppingItems } from './meal-shopping'
 import { diffState, optimistic } from './sync'
 import { replaceEqualDeep } from './structural'
 import { api, HttpError, post } from './http'
+import { householdSyncEvent } from './photo-jobs'
 import { AuthScreen } from '../components/AuthScreen'
 import { Modal } from '../components/ui'
 import { NearestShop } from '../components/NearestShop'
@@ -359,6 +360,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         void refreshRef.current()
       }
       events.addEventListener('sync', (event) => {
+        // Background item jobs also notify without changing the revision.
+        window.dispatchEvent(new Event(householdSyncEvent))
         // Our own acknowledged writes already carried this revision.
         const revision = Number((event as MessageEvent).data)
         if (
