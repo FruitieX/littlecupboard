@@ -11,10 +11,10 @@ nix develop --command node scripts/siwc-probe/index.mjs
 nix develop --command node scripts/siwc-probe/index.mjs --image
 ```
 
-The listener binds only `127.0.0.1:1455`. If the browser is on another machine, first forward its port to Pear, using the normal SSH destination for Pear:
+The listener binds only `127.0.0.1:1455`. If the browser is on another machine, first forward its port to the machine running the probe:
 
 ```sh
-ssh -N -o ExitOnForwardFailure=yes -L 1455:127.0.0.1:1455 rasse@pear
+ssh -N -o ExitOnForwardFailure=yes -L 1455:127.0.0.1:1455 user@probe-host
 ```
 
 Leave that connection open, open the authorization URL printed by the probe, and complete browser consent within 15 minutes. Never paste callback URLs or tokens into chat. The probe validates state, PKCE, the issued client ID, the ID token's signature/issuer/audience/expiry/nonce, and the token response's plan-use scope. Streamed text counts as success only after `response.completed`; partial output followed by a failure does not count.

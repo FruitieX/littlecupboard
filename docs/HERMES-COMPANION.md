@@ -2,11 +2,11 @@
 
 LittleCupboard can use a personal Hermes profile for ChatGPT/Codex chat and native image generation. In Settings choose **Personal Hermes companion**. Chat model and reasoning effort are independent settings; the requested initial configuration is `gpt-6-luna` / `xhigh`, with `gpt-image-2-medium` for images. This is an opt-in personal integration using Hermes's native backend, not SIWC or an OpenAI API key. The native route's hosted-service support boundary is documented in [CHATGPT-INTEGRATION.md](CHATGPT-INTEGRATION.md).
 
-The companion runs on the personal agent machine and polls the private LittleCupboard HTTPS origin. It needs no inbound port. OAuth tokens stay in Hermes; the web app stores only a SHA-256 digest of a random, revocable worker token. That token can claim and complete jobs for one household and report liveness. It cannot read general shopping/history/images APIs or mutate the household. Household members share the owner's selected companion and its usage. Proposals still require review; generated images use the app's existing private attachment handling.
+The companion runs on the personal agent machine and polls the LittleCupboard HTTPS origin. It needs no inbound port. OAuth tokens stay in Hermes; the web app stores only a SHA-256 digest of a random, revocable worker token. That token can claim and complete jobs for one household and report liveness. It cannot read general shopping/history/images APIs or mutate the household. Household members share the owner's selected companion and its usage. Proposals still require review; generated images use the app's existing private attachment handling.
 
 ## Pairing
 
-Use a dedicated profile with exactly one locally owned Codex OAuth credential labeled `personal`; profiles otherwise can borrow the root account. On Honeydew the existing `forkbasket` profile is already created and logged in. Keep that profile name to preserve its isolated personal credential. To set up another machine:
+Use a dedicated profile with exactly one locally owned Codex OAuth credential labeled `personal`; profiles otherwise can borrow the root account. To set up a machine:
 
 ```sh
 hermes profile create littlecupboard --no-alias
@@ -16,7 +16,7 @@ hermes -p littlecupboard auth add openai-codex --type oauth --label personal
 Create a pairing token in LittleCupboard Settings, then run from the checkout on the agent machine:
 
 ```sh
-nix develop --command node scripts/hermes-companion.mjs --profile littlecupboard --setup https://littlecupboard.fruitiex.org
+nix develop --command node scripts/hermes-companion.mjs --profile littlecupboard --setup https://littlecupboard.example.com
 nix develop --command node scripts/hermes-companion.mjs --profile littlecupboard
 ```
 
@@ -24,7 +24,7 @@ The setup command accepts the token at a masked prompt, writes a mode-0600 profi
 
 Administrators can run `--check-companion [HOUSEHOLD_ID] [--image]` in the same server environment to verify model discovery and a live chat reply through the actual queue. The optional image check creates an unattached private test image and prints only its app URL and sanitized connection metadata.
 
-Honeydew's NixOS/Home Manager configuration provides `littlecupboard-companion.service`, using the pinned Node runtime and installed Hermes launcher. The service restricts writes to the personal profile and Hermes's managed installation cache/locks, and blocks access to Codex CLI/root Hermes authentication files. The user manager already has linger enabled. The service remains conditional on pairing and requires a checkout at `~/projects/littlecupboard`; deploy updated scripts before restarting it. Nothing changes the existing Hermes gateway or this coding session's company login.
+A NixOS/Home Manager user service, `littlecupboard-companion.service`, can run the worker using the pinned Node runtime and installed Hermes launcher. The service restricts writes to the personal profile and Hermes's managed installation cache/locks, and blocks access to Codex CLI/root Hermes authentication files. Enable linger for the user manager. The service should be conditional on pairing and run from a checkout of this repository; deploy updated scripts before restarting it.
 
 ```sh
 systemctl --user restart littlecupboard-companion
@@ -47,11 +47,9 @@ The worker refreshes only the explicitly owned personal credential when it nears
 
 Disconnect/removal is inside the collapsed configuration section and requires confirmation, as do replacing a paired token and revoking companion access. If configuration is accidentally deleted, the Hermes ChatGPT login remains intact: pair the household again and install the new scoped token in the existing personal profile. Administrative provisioning with `--pair-companion gpt-6-luna xhigh` can do this without rolling back shopping/recipe data; capture its JSON in memory and pass it to `--pair-stdin`, never to tool logs. Wrappers such as Nix shell hooks may emit additional stdout, so validate the pairing JSON before forwarding it. Restart the worker after updating its pairing file.
 
-Jobs are stored in SQLite, bounded to four per household, expire after six minutes and are claimed once with a random completion lease. A failed/crashed worker never causes automatic regeneration, which would spend usage twice. Only completion delivery retries after transient network errors. Prompt context is erased on claim, results are removed after consumption, and expired jobs are purged on startup/claim. Existing NFS rollback journaling remains unchanged. A separate heartbeat keeps long jobs online; offline companions fail promptly. Backups/restoration cancel pending jobs.
+Jobs are stored in SQLite, bounded to four per household, expire after six minutes and are claimed once with a random completion lease. A failed/crashed worker never causes automatic regeneration, which would spend usage twice. Only completion delivery retries after transient network errors. Prompt context is erased on claim, results are removed after consumption, and expired jobs are purged on startup/claim. A separate heartbeat keeps long jobs online; offline companions fail promptly. Backups/restoration cancel pending jobs.
 
 The worker logs only task kind, success, duration, exception class and optional HTTP status. It never logs prompts, responses, credentials or provider error bodies. Generated image files may also remain in the profile's private Hermes image cache.
-
-On 2026-10-01 this setup was paired with the live private homelab application. The running user service passed native model discovery, `gpt-6-luna` / `xhigh` chat and image generation through the actual HTTPS job queue; the generated image's public unauthenticated request returned 401. Personal token refresh was also verified with root Hermes and Codex CLI credentials blocked. The NixOS configuration is committed; user Home Manager activation installs/runs the service immediately, and the administrator must switch Pear's NixOS generation to preserve that new unit through future system boot activation.
 
 ## Verification
 
@@ -66,6 +64,4 @@ The live test is explicitly opt-in: it consumes personal subscription usage, cre
 
 ### Existing personal companion after rebranding
 
-The production companion runs on Honeydew. Preserve its dedicated `forkbasket` Hermes profile and existing `forkbasket-companion.json` pairing file; the new worker reads that filename when the new filename is absent. Change only the saved URL to `https://littlecupboard.fruitiex.org`, preserving the token and file permissions. Run the new service from `~/projects/littlecupboard` with `--profile forkbasket`. New installations may use a `littlecupboard` profile. This does not import or touch default/company credentials.
-
-This transition was completed on 2026-10-02. Honeydew's Home Manager generation installs and runs `littlecupboard-companion.service`; the former unit is stopped and removed. The pairing URL now uses the new ingress, with its token and mode-0600 permissions preserved. Production model discovery and `gpt-6-luna` / `xhigh` chat passed through the new URL, and the worker remains active with zero restarts. Both machines retain `~/forkbasket` as a compatibility symlink to `~/projects/littlecupboard`.
+An existing companion set up before the rename keeps working: preserve its dedicated `forkbasket` Hermes profile and existing `forkbasket-companion.json` pairing file; the new worker reads that filename when the new filename is absent. Change only the saved URL to the new origin, preserving the token and file permissions, and run the new service with `--profile forkbasket`. New installations may use a `littlecupboard` profile. This does not import or touch default/company credentials.
