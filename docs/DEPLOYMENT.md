@@ -8,7 +8,7 @@ JavaScript/CSS assets have content-hashed URLs and immutable one-year caching. H
 
 The app checks for updates when opened, brought to the foreground, reconnected and every five minutes while visible and online. A small **New version available → Reload app** notice activates the complete cached release and reloads that tab. Unsaved form edits require confirmation; queued shopping operations remain on the device and resume synchronization. Other tabs keep their drafts and display their own update notice. The preceding release's asset cache is retained for old open tabs; older caches are removed. Offline navigation uses the latest activated shell. Older installed versions need one refresh to pick up this update UI, after which hard reloads should no longer be needed.
 
-The live manifests and encrypted secrets are in the homelab repository (`apps/littlecupboard/`), pinned to an image digest. The templates here remain reusable deployment examples. On a new installation, create your owner account, invite your wife and configure the AI provider through Settings when ready. Public ingress does not expose NFS, the companion's inbound ports or OAuth credentials.
+The live manifests and encrypted secrets are in the homelab repository (`apps/littlecupboard/`), pinned to an image digest. The templates here remain reusable deployment examples. On a new installation, create your owner account, invite other family members and configure the AI provider through Settings when ready. Public ingress does not expose NFS, the companion's inbound ports or OAuth credentials.
 
 ## Build and image publishing
 
@@ -47,7 +47,7 @@ The app supports one initial owner household per installation. The API scopes ev
 
 ## First launch
 
-Open the HTTPS site. Use `LITTLECUPBOARD_SETUP_TOKEN` from your deployment secret to create your owner account. Optionally include five editable sample recipes; the shopping list and purchase history start empty. Save your individual recovery code, then invite your wife from Settings. Each member has their own sign-in and recovery code. Password changes sign out other sessions; recovery rotates the code and signs out every previous session. Owner settings can remove a member.
+Open the HTTPS site. Use `LITTLECUPBOARD_SETUP_TOKEN` from your deployment secret to create your owner account. Optionally include five editable sample recipes; the shopping list and purchase history start empty. Save your individual recovery code, then invite the rest of the household from Settings. Each member has their own sign-in and recovery code. Password changes sign out other sessions; recovery rotates the code and signs out every previous session. Owner settings can remove a member.
 
 If you omit the setup token and encryption key environment variables, the app creates private `setup-token` and `secret-key` files in its data directory. Preserve the encryption key: changing or losing it makes saved AI credentials unreadable. In Kubernetes, keep the SOPS secret as part of your backup plan.
 
@@ -57,7 +57,7 @@ LittleCupboard can sign people in through an OpenID Connect provider such as Poc
 
 | Variable                             | Meaning                                                                                                                        |
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `LITTLECUPBOARD_OIDC_ISSUER`         | Provider issuer URL, e.g. `https://id.fruitiex.org`.                                                                           |
+| `LITTLECUPBOARD_OIDC_ISSUER`         | Provider issuer URL, e.g. `https://id.example.com`.                                                                            |
 | `LITTLECUPBOARD_OIDC_CLIENT_ID`      | Client id registered at the provider.                                                                                          |
 | `LITTLECUPBOARD_OIDC_CLIENT_SECRET`  | Client secret (keep it in the SOPS secret).                                                                                    |
 | `LITTLECUPBOARD_OIDC_REDIRECT_URL`   | Optional; defaults to `$LITTLECUPBOARD_ORIGIN/api/auth/oidc/callback`. Register this callback at the provider.                 |

@@ -1,83 +1,94 @@
-# LittleCupboard
+<p align="center">
+  <img src="public/icon.svg" width="96" alt="">
+</p>
 
-A shared family shopping list, recipe book and weekly lunch planner, ready to self-host. Mobile shopping stays one tap: large tiles, hold to edit, recently checked items below, and a searchable shop selector that orders the list by your usual aisles.
+<h1 align="center">LittleCupboard</h1>
 
-![LittleCupboard shopping, weekly lunches and recipes](mockups/overview.png)
+A shopping list, recipe book and lunch planner for one household, meant to be self-hosted and shared between everyone's phones. I wanted something that's quick to use one-handed in a shop and that remembers what we cook, so the list mostly writes itself.
 
-Missing meal ingredients automatically join the list with a small source marker. Recipes support editing, favorites, tags, serving scaling, custom ingredients and private photos. Current/next-week lunches have serving counts and cooked/skipped feedback. Edit pantry quantities, units, notes and expiry directly in its dialog, or use conservative purchase estimates; the app keeps purchased meal ingredients reserved and releases them when plans change.
+<p align="center">
+  <img src="docs/screenshots/mobile.png" alt="Shopping list, recipe book and cupboard on a phone">
+</p>
 
-Settings links to separate pages for stores/aisle order, item groups, items and recipes. Search the item catalog and recipe book without opening accordions. Family/account details and backups stay on the main settings page. Archive catalog items to hide suggestions without breaking existing recipe ingredients; restore them later, or permanently delete unreferenced custom items. Shared deletions and AI disconnection require confirmation. AI connection setup and advanced prompts are collapsed and owner-only.
+![Planning next week's lunches on desktop](docs/screenshots/desktop-week.png)
 
-LittleCupboard is an installable PWA with a standalone manifest, app icons and an offline shell. On Android, open its HTTPS address in Chrome and choose **Add to home screen → Install**. Expose it through a public HTTPS ingress to synchronize from anywhere; queued shopping changes survive offline use.
+_Screenshots use a throwaway household with sample recipes._
 
-Accounts, expiring invitations, secure cookie sessions, SQLite transactions and SSE keep independent devices together. A persisted offline outbox and installable app shell keep shopping usable through connection loss. Concurrent edits get explicit review rather than overwriting another person’s changes. History supports guarded undo and shopping-trip completion.
+## What it does
 
-Each item can have a saved consumption rate, such as 4 L every 7 days. Without one, compatible quantities bought on at least three separate days produce a labeled estimate that can be accepted or overridden in Settings → Items. Saved rates guide restock timing and AI suggestions; estimates do not silently reduce confirmed pantry stock. Shopping patterns produce explained restock suggestions after repeated purchases, with confidence, preferred descriptions/packages, store/day signals, product associations, snoozing and dismissal. Meal suggestions use favorites, ratings, rotation, dietary/ingredient preferences and likely ingredients. Discovery offers reviewed variations of saved recipes. Inventory is best effort, and estimates are distinguished from confirmed observations.
+The shopping list is a grid of big tiles. Tap a tile when it's in the basket, hold it (or right-click on desktop) to change the amount or add a note. Checked items move below the list until the trip is over, in case you tapped the wrong one. Pick the shop you're in and the list follows that shop's aisle order.
 
-An optional assistant supports natural-language shopping, reviewed recipe drafts/variations, weekly plans and generated images. Generated icons and photos run as durable background jobs: a sleeping phone, closed dialog or page reload never fails them, and reopening the editor or the assistant shows the finished image to review and save. Imported recipes keep their supplied source images, filenames and original resolution in a collapsed Source images section; sources remain private and travel with backups. Suggestions close after the server confirms saving, while offline/failed saves retain their review controls. Recipe tags autocomplete existing names, allow new names and create shared filter chips for every tag. Settings offers an OpenAI-compatible API or a [personal Hermes companion](docs/HERMES-COMPANION.md), with chat model and reasoning controls. API keys are encrypted on the server; companion OAuth stays on the personal agent machine. The assistant is hidden until enabled.
+Plan lunches for the week from your recipes, and whatever the plan needs that isn't already at home shows up on the list with a small "Meal plan" marker. Recipes have photos, tags, favourites and serving scaling.
 
-Settings → AI assistant → Configure AI assistant → Compatibility & image generation offers optional automatic icons for new items and **Generate missing icons** for existing cart placeholders. Existing artwork is preserved. Generation runs in a durable server queue with progress, stop and retry controls; flat transparent icons are saved at 256 px. Automatic generation defaults off and uses your configured image provider's quota.
+The Cupboard tab keeps a rough idea of what's at home. You can set how fast you go through something (say 4 L of milk a week) or let it learn from what you buy, and it suggests when to restock. Estimates are always labelled as estimates and never overwrite amounts you've entered yourself.
 
-## Deploy
+Everyone in the household has their own account. Changes show up on other devices right away, and the app works offline as an installed PWA: anything you check or add without a connection is queued and synced later. If two people edit the same item at once you get asked which version to keep.
 
-The live deployment is managed in the [homelab](https://github.com/FruitieX/homelab) repository. See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Flux/SOPS setup, first-owner account, wife/member invitations, HTTPS/PWA behavior, AI compatibility, backups and upgrades.
+An AI assistant is optional and off by default. With an OpenAI-compatible endpoint configured it can add things to the list from a sentence or a photo, draft recipes, suggest a week of lunches and generate item icons. API keys are encrypted on the server and never sent to the browser.
 
-```sh
-nix build .#container
-docker load < result
-```
+## Running it locally
 
-The image serves frontend and API in one Rust process on port 8080. Keep /data on persistent storage and set LITTLECUPBOARD_ORIGIN to the externally visited origin. WAL is the default for local/block storage; NFS requires LITTLECUPBOARD_SQLITE_JOURNAL_MODE=DELETE and reliable NFSv4 locking/sync. The supplied Kubernetes template uses one replica, Recreate, a block PVC, non-root permissions, public/private Gateway API HTTPS routes and health probes; see [the deployment guide](docs/DEPLOYMENT.md). Generate and SOPS-encrypt the deployment secrets before copying them into your homelab. Optional passkey sign-in through an OIDC provider is configured with `LITTLECUPBOARD_OIDC_*` variables; see [Passkey sign-in](docs/DEPLOYMENT.md#passkey-sign-in-oidc-optional).
-
-## Develop
+You need Nix with flakes. The dev shell provides Node, Rust and Chromium.
 
 ```sh
 nix develop
-command -v node npm cargo cc
 npm ci
 npm run dev
-# In another Nix shell:
+# in a second `nix develop` shell
 cargo run --manifest-path backend/Cargo.toml
 ```
 
-Open http://localhost:3100. Vite proxies /api to 127.0.0.1:3001. The server creates a private data/setup-token file on first start; use it to create the owner account and save your recovery code. The list and history start empty, with five editable sample recipes available by choice. Runtime databases, keys and uploaded data are Git-ignored.
+Open http://localhost:3100 (Vite proxies `/api` to the backend on port 3001). On first start the server writes a setup token to `data/setup-token`; paste it into the setup screen to create the first account. You can start with five sample recipes or an empty book. Everything the server stores ends up in `data/`, which is ignored by Git.
 
-## Check the app
+## Configuration
+
+The server is configured with environment variables:
+
+- `LITTLECUPBOARD_ORIGIN`: the exact URL people open, e.g. `https://cupboard.example.com`. Used for cookies and same-origin checks.
+- `LITTLECUPBOARD_DATA_DIR`: where the SQLite database and uploaded photos live (`/data` in the container).
+- `LITTLECUPBOARD_SETUP_TOKEN` and `LITTLECUPBOARD_SECRET_KEY`: the one-time setup token and the 64-character hex key that encrypts AI credentials. Both are generated into the data directory if unset. Keep the key; losing it makes saved AI settings unreadable.
+- `LITTLECUPBOARD_SQLITE_JOURNAL_MODE=DELETE` if the data directory is on NFS. The default WAL mode needs local or block storage.
+- `LITTLECUPBOARD_OIDC_*` for optional passkey sign-in through an OpenID Connect provider such as Pocket ID.
+
+The AI provider is set up in the app under Settings, not through environment variables.
+
+## Deploying
+
+CI publishes `ghcr.io/fruitiex/littlecupboard:main`. The image runs the API and the built frontend in one non-root process on port 8080. Put it behind your own HTTPS reverse proxy, mount persistent storage at `/data`, run a single replica, and set `LITTLECUPBOARD_ORIGIN` to the public URL.
+
+```sh
+docker run --rm -p 127.0.0.1:8080:8080 \
+  -e LITTLECUPBOARD_ORIGIN=http://localhost:8080 \
+  -v littlecupboard-data:/data ghcr.io/fruitiex/littlecupboard:main
+```
+
+You can also build the image yourself with `nix build .#container && docker load < result`. Example Kubernetes manifests are in [deploy/kubernetes](deploy/kubernetes). [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) covers reverse proxy settings, OIDC, backups, upgrades and the AI options in more detail, and [docs/HERMES-COMPANION.md](docs/HERMES-COMPANION.md) describes the optional personal AI worker.
+
+## Development
+
+The frontend is TanStack Start/Router with React, TypeScript and Tailwind. The backend is Rust (Axum, Tokio, SQLite), and the shared API types are generated from Rust with ts-rs. CI runs roughly this:
 
 ```sh
 nix develop --command npm run typecheck
 nix develop --command npm test
-nix develop --command python3 scripts/hermes-companion.check.py
 nix develop --command npm run format:check
 nix develop --command cargo fmt --manifest-path backend/Cargo.toml -- --check
 nix develop --command cargo clippy --manifest-path backend/Cargo.toml -- -D warnings
 nix develop --command cargo test --manifest-path backend/Cargo.toml
 nix develop --command npm run build
 nix develop --command npm run test:production
-nix develop --command npm run test:oidc
-nix build .#container
-docker load -i result
-nix develop --command npm run test:container
 ```
 
-The browser suite starts isolated servers and temporary databases itself. It uses separate owner/wife sessions and checks live shopping, holds, persistence, offline reload/reconnect, photo uploads, recipe/custom-ingredient editing, multi-unit pantry editing with consecutive offline saves, saved/learned consumption rates, separate settings pages, serving changes, 80-shop autocomplete, per-device selection, configured AI proposals, background generation recovery across closed dialogs and reloads, and responsive layouts. Server tests cover authentication, idempotency, concurrency, guarded undo, automatic ingredients, pantry reservations, backups/recovery, learned intervals and controlled chat/image providers. Live AI configuration remains specific to your chosen endpoint and models.
+`test:production` drives the production build in headless Chromium with two signed-in users and temporary databases: shared shopping, offline use, recipe and pantry editing, and AI flows against a fake provider. `npm run test:oidc` and `npm run test:container` cover passkey sign-in and the built image.
 
-After building, regenerate real production screenshots with `nix develop --command npm run mockups`. This uses an isolated test household and fixture provider, then removes the temporary data. Captures are in [mockups/](mockups/), with [an overview board](mockups/overview.html). Linux Chromium is supplied by the flake; on macOS supply a Playwright browser through PLAYWRIGHT_CHROMIUM_EXECUTABLE.
+[docs/PLAN.md](docs/PLAN.md) has the original requirements and design decisions.
 
-## Architecture
+## Credits
 
-TanStack Start/Router, React, TypeScript, Tailwind, Radix Dialog, Motion and Lucide; Rust, Tokio, Axum, SQLite and ts-rs. Typed mutations operate atomically with idempotency keys and guarded changes; household SSE notices trigger authoritative snapshot refreshes. Images are decoded and stored privately in SQLite; display photos are optimized and source archives preserve resolution. The locked Nix flake builds backend, frontend and OCI packages without mutable base-image dependencies.
+Food and household illustrations are [Twemoji](https://github.com/twitter/twemoji) by Twitter and contributors, licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) (license in `public/images/food/LICENSE-GRAPHICS.txt`). `backend/assets/item-style-reference.png` arranges six of them as a style reference for icon generation and is rebuilt by `scripts/render-item-reference.mjs`.
 
-[docs/PLAN.md](docs/PLAN.md) preserves the requirements, accepted design and implementation decisions. [AGENTS.md](AGENTS.md) describes development and maintenance expectations.
+DM Sans and Fraunces come from [Google Fonts](https://github.com/google/fonts) under the SIL Open Font License (see `public/fonts/`).
 
-## Asset credits
+The sample recipe photos are from Unsplash under the [Unsplash License](https://unsplash.com/license): [pasta](https://images.unsplash.com/photo-1473093226795-af9932fe5856), [salmon](https://images.unsplash.com/photo-1467003909585-2f8a72700288), [salad](https://images.unsplash.com/photo-1512621776951-a57141f2eefd), [tomato soup](https://unsplash.com/photos/tomato-soup-6eCpa9J3c_c) and [tacos](https://images.unsplash.com/photo-1551504734-5ee1c4a1479b).
 
-Food and household SVG illustrations are [Twemoji](https://github.com/twitter/twemoji), copyright Twitter and contributors, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The bundled license is in `public/images/food/LICENSE-GRAPHICS.txt`. They replace platform-dependent emoji rendering; the SVG graphics are unmodified. `backend/assets/item-style-reference.png` is a raster arrangement of six of those graphics for companion icon generation, reproduced by `scripts/render-item-reference.mjs`; its license is bundled alongside it.
-
-DM Sans and Fraunces are bundled from [Google Fonts](https://github.com/google/fonts), with their SIL Open Font License files in `public/fonts/`.
-
-Illustrative recipe photography is downloaded from Unsplash and bundled locally under the [Unsplash License](https://unsplash.com/license): [pasta](https://images.unsplash.com/photo-1473093226795-af9932fe5856), [salmon](https://images.unsplash.com/photo-1467003909585-2f8a72700288), [salad](https://images.unsplash.com/photo-1512621776951-a57141f2eefd), [tomato soup](https://unsplash.com/photos/tomato-soup-6eCpa9J3c_c), and [tacos](https://images.unsplash.com/photo-1551504734-5ee1c4a1479b). These photos illustrate the sample recipes rather than documenting their exact preparation.
-
-## Brand assets
-
-`public/icon.svg` is the editable cupboard mark, also used for the favicon and in-app wordmark. Run `nix develop --command npm run icons` to export deterministic 192/512 px opaque maskable PNGs. The mark stays inside Android's central safe area. Local working-directory and deployment compatibility details are in [DEPLOYMENT.md](docs/DEPLOYMENT.md).
+The app icon is `public/icon.svg`; `npm run icons` exports the PWA PNGs from it.
