@@ -43,7 +43,7 @@ The [GPT Image 2 API](https://developers.openai.com/api/docs/guides/image-genera
 
 AI setup and **Advanced prompts** are collapsed by default and available only to household owners. Assistant, item/shop icon and recipe photo instructions are editable, with a restore-defaults action. Server-owned response contracts, household scope, validation, and the review step are retained. These text settings contain no provider credentials.
 
-The worker refreshes only the explicitly owned personal credential when it nears expiry. Invalid/missing/ambiguous local credentials fail; it never switches to root/company accounts or paid API providers. Pairing can be rotated or revoked in Settings. Removing the provider also revokes worker access.
+The worker refreshes only the explicitly owned personal credential when it nears expiry. Invalid/missing/ambiguous local credentials fail; it never switches to root/other accounts or paid API providers. Pairing can be rotated or revoked in Settings. Removing the provider also revokes worker access.
 
 Disconnect/removal is inside the collapsed configuration section and requires confirmation, as do replacing a paired token and revoking companion access. If configuration is accidentally deleted, the Hermes ChatGPT login remains intact: pair the household again and install the new scoped token in the existing personal profile. Administrative provisioning with `--pair-companion gpt-6-luna xhigh` can do this without rolling back shopping/recipe data; capture its JSON in memory and pass it to `--pair-stdin`, never to tool logs. Wrappers such as Nix shell hooks may emit additional stdout, so validate the pairing JSON before forwarding it. Restart the worker after updating its pairing file.
 
@@ -64,4 +64,4 @@ The live test is explicitly opt-in: it consumes personal subscription usage, cre
 
 ### Existing personal companion after rebranding
 
-An existing companion set up before the rename keeps working: preserve its dedicated `forkbasket` Hermes profile and existing `forkbasket-companion.json` pairing file; the new worker reads that filename when the new filename is absent. Change only the saved URL to the new origin, preserving the token and file permissions, and run the new service with `--profile forkbasket`. New installations may use a `littlecupboard` profile. This does not import or touch default/company credentials.
+An existing companion set up before the rename keeps working: preserve its dedicated `forkbasket` Hermes profile and existing `forkbasket-companion.json` pairing file; the new worker reads that filename when the new filename is absent. Change only the saved URL to the new origin, preserving the token and file permissions, and run the new service with `--profile forkbasket`. New installations may use a `littlecupboard` profile. This does not import or touch any other credentials.

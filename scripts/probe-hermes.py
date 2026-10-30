@@ -67,7 +67,7 @@ try:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     # Keep the actual Hermes image provider, but pin credential selection to the
-    # explicitly paired personal login. Never fail over into the company account.
+    # explicitly paired personal login. Never fail over into another account.
     module._read_codex_credential = personal_credential
     provider = module.OpenAICodexImageGenProvider()
     report['available'] = provider.is_available()
