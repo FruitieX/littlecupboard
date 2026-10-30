@@ -171,18 +171,18 @@ try {
     reducedMotion: 'reduce',
   }
   const ownerContext = await browser.newContext(options)
-  const wifeContext = await browser.newContext(options)
+  const partnerContext = await browser.newContext(options)
   owner = await ownerContext.newPage()
-  const wife = await wifeContext.newPage()
+  const partner = await partnerContext.newPage()
   const errors = []
-  for (const page of [owner, wife])
+  for (const page of [owner, partner])
     page.on('pageerror', (error) => errors.push(error.message))
   await owner.goto(frontendUrl)
   await owner
     .getByLabel('Setup token', { exact: true })
     .fill('ui-only-bootstrap-token')
-  await owner.getByLabel('Your name', { exact: true }).fill('Rasse')
-  await owner.getByLabel('Email', { exact: true }).fill('rasse@example.test')
+  await owner.getByLabel('Your name', { exact: true }).fill('Sam')
+  await owner.getByLabel('Email', { exact: true }).fill('sam@example.test')
   await owner
     .getByLabel('Password', { exact: true })
     .fill('a good family passphrase')
@@ -210,23 +210,23 @@ try {
   await settle(owner)
   await owner
     .getByLabel('Invite a family member', { exact: true })
-    .fill('wife@example.test')
+    .fill('kim.partner@example.test')
   await owner
     .getByRole('button', { name: 'Create invitation', exact: true })
     .click()
   const invitation = await owner
     .getByRole('textbox', { name: 'Invitation link', exact: true })
     .inputValue()
-  await wife.goto(invitation)
-  await wife.getByLabel('Your name', { exact: true }).fill('Anna')
-  await wife
+  await partner.goto(invitation)
+  await partner.getByLabel('Your name', { exact: true }).fill('Kim')
+  await partner
     .getByLabel('Password', { exact: true })
     .fill('a different family passphrase')
-  await wife
+  await partner
     .getByRole('button', { name: 'Join our household', exact: true })
     .click()
-  await dismissRecovery(wife)
-  await wife
+  await dismissRecovery(partner)
+  await partner
     .getByRole('button', { name: 'Check Avocado', exact: true })
     .waitFor()
   await owner.goto(frontendUrl)
@@ -266,7 +266,7 @@ try {
   await owner.reload()
   await settle(owner)
   assert.ok((await owner.locator('.shopping-group h2').count()) > 0)
-  assert.equal(await wife.locator('.shopping-main .item-grid').count(), 1)
+  assert.equal(await partner.locator('.shopping-main .item-grid').count(), 1)
   await owner.goto(`${frontendUrl}/settings`)
   await owner.getByRole('checkbox', { name: 'Group by category' }).uncheck()
   await owner.goto(frontendUrl)
@@ -287,7 +287,9 @@ try {
   console.log(
     'Continuous shopping grid defaults, optional persistent category grouping and independent family preferences passed.',
   )
-  await wife.getByRole('button', { name: 'Check Avocado', exact: true }).click()
+  await partner
+    .getByRole('button', { name: 'Check Avocado', exact: true })
+    .click()
   await owner
     .getByRole('button', { name: 'Restore Avocado', exact: true })
     .waitFor()
@@ -297,31 +299,35 @@ try {
   await owner
     .getByRole('button', { name: 'Restore Avocado', exact: true })
     .click()
-  await wife
+  await partner
     .getByRole('button', { name: 'Check Avocado', exact: true })
     .waitFor()
   assert.equal(
-    (await request(wife, '/state', undefined, 'GET')).state.pantry.avocado,
+    (await request(partner, '/state', undefined, 'GET')).state.pantry.avocado,
     undefined,
   )
   await hold(
-    wife,
-    wife.getByRole('button', { name: 'Check Avocado', exact: true }),
+    partner,
+    partner.getByRole('button', { name: 'Check Avocado', exact: true }),
   )
-  await wife.getByLabel('A little more detail').fill('Ripe · for lunch')
-  const shoppingQuantity = wife.getByLabel('Quantity', { exact: true })
+  await partner.getByLabel('A little more detail').fill('Ripe · for lunch')
+  const shoppingQuantity = partner.getByLabel('Quantity', { exact: true })
   await shoppingQuantity.focus()
   await shoppingQuantity.press('ControlOrMeta+A')
   await shoppingQuantity.press('Backspace')
   assert.equal(await shoppingQuantity.inputValue(), '')
-  await wife.getByRole('button', { name: 'Save details', exact: true }).click()
+  await partner
+    .getByRole('button', { name: 'Save details', exact: true })
+    .click()
   assert.equal(
-    await wife.getByRole('dialog').count(),
+    await partner.getByRole('dialog').count(),
     1,
     'Blank quantities cannot save the previous amount',
   )
   await replaceNumber(shoppingQuantity, '2')
-  await wife.getByRole('button', { name: 'Save details', exact: true }).click()
+  await partner
+    .getByRole('button', { name: 'Save details', exact: true })
+    .click()
   await owner
     .getByRole('button', { name: 'Check Avocado', exact: true })
     .filter({ hasText: 'Ripe' })
@@ -345,39 +351,42 @@ try {
     .getByRole('dialog')
     .getByRole('button', { name: /^Green goddess pasta/ })
     .click()
-  const pasta = wife.getByRole('button', { name: 'Check Pasta', exact: true })
+  const pasta = partner.getByRole('button', {
+    name: 'Check Pasta',
+    exact: true,
+  })
   await pasta.waitFor()
   assert.match(await pasta.innerText(), /400 g[\s\S]*Meal plan/)
-  await wife.reload()
-  await settle(wife)
+  await partner.reload()
+  await settle(partner)
   assert.match(await pasta.innerText(), /400 g/)
   await pasta.click()
-  await wife
+  await partner
     .getByRole('button', { name: 'Restore Pasta', exact: true })
     .waitFor()
-  await wife.reload()
-  await settle(wife)
+  await partner.reload()
+  await settle(partner)
   assert.equal(await pasta.count(), 0)
   console.log(
     'Automatic planned ingredients and durable purchase coverage passed.',
   )
-  await wifeContext.setOffline(true)
-  await wife
+  await partnerContext.setOffline(true)
+  await partner
     .getByRole('combobox', { name: 'Add a shopping item' })
     .fill('Coffee')
-  await wife.getByRole('option', { name: /Coffee/ }).click()
-  await wife
+  await partner.getByRole('option', { name: /Coffee/ }).click()
+  await partner
     .getByRole('button', { name: 'Check Coffee', exact: true })
     .waitFor()
   if (production) {
-    await wife.evaluate(() => navigator.serviceWorker.ready)
-    await wife.reload()
-    await settle(wife)
-    await wife
+    await partner.evaluate(() => navigator.serviceWorker.ready)
+    await partner.reload()
+    await settle(partner)
+    await partner
       .getByRole('button', { name: 'Check Coffee', exact: true })
       .waitFor()
   }
-  await wifeContext.setOffline(false)
+  await partnerContext.setOffline(false)
   await owner.goto(frontendUrl)
   await settle(owner)
   await owner
@@ -458,7 +467,7 @@ try {
     .getByRole('button', { name: 'Save item', exact: true })
     .click()
   await catalogDialog.waitFor({ state: 'hidden' })
-  await wife.waitForFunction(async () =>
+  await partner.waitForFunction(async () =>
     (
       await (await fetch('/api/state')).json()
     ).state.productDetails.rice?.aliases?.includes('Cupboard rice'),
@@ -477,15 +486,15 @@ try {
     .click()
   await ownerContext.setOffline(false)
   await eventually(async () => {
-    const pantry = (await request(wife, '/state', undefined, 'GET')).state
+    const pantry = (await request(partner, '/state', undefined, 'GET')).state
       .pantry.rice
     return (
       pantry.note === 'Opened cupboard pack' &&
       pantry.amounts.some((a) => a.unit === 'g' && a.quantity === 800)
     )
   })
-  const editedPantry = (await request(wife, '/state', undefined, 'GET')).state
-    .pantry.rice
+  const editedPantry = (await request(partner, '/state', undefined, 'GET'))
+    .state.pantry.rice
   assert.deepEqual(editedPantry.amounts, [
     { quantity: 2, unit: 'bag' },
     { quantity: 800, unit: 'g' },
@@ -551,7 +560,7 @@ try {
   )
   assert.equal(await owner.getByText(/Review changes/).count(), 0)
   assert.equal(
-    (await request(wife, '/state', undefined, 'GET')).state.pantry.rice,
+    (await request(partner, '/state', undefined, 'GET')).state.pantry.rice,
     undefined,
   )
   await addToCupboard(owner, 'Rice', '500', 'g')
@@ -586,7 +595,7 @@ try {
     .click()
   await moveDialog.waitFor({ state: 'hidden' })
   await eventually(async () => {
-    const moved = (await request(wife, '/state', undefined, 'GET')).state
+    const moved = (await request(partner, '/state', undefined, 'GET')).state
     const jam = moved.customProducts.find((p) => p.name === 'Strawberry jam')
     return (
       jam &&
@@ -786,19 +795,21 @@ try {
     'Rice',
     'Recipe ingredient replacement never renames the shared catalog product',
   )
-  await wife.goto(frontendUrl + '/recipes')
-  await settle(wife)
-  await wife
+  await partner.goto(frontendUrl + '/recipes')
+  await settle(partner)
+  await partner
     .getByRole('button', { name: 'Open Family rice bowl', exact: true })
     .waitFor()
-  await wife
+  await partner
     .getByRole('button', { name: 'Filter by tag Lunchbox', exact: true })
     .click()
-  await wife.waitForFunction(
+  await partner.waitForFunction(
     () => document.querySelectorAll('.recipe-card').length === 1,
   )
-  assert.equal(await wife.locator('.recipe-card').count(), 1)
-  await wife.getByRole('button', { name: 'All recipes', exact: true }).click()
+  assert.equal(await partner.locator('.recipe-card').count(), 1)
+  await partner
+    .getByRole('button', { name: 'All recipes', exact: true })
+    .click()
   console.log(
     'Pantry observations, recipe creation/editing, custom ingredients and private photo persistence passed.',
   )
@@ -818,9 +829,9 @@ try {
     '6',
     'Autosaved fields restore the last valid amount on blur',
   )
-  await wife.goto(frontendUrl)
-  await settle(wife)
-  await wife
+  await partner.goto(frontendUrl)
+  await settle(partner)
+  await partner
     .getByRole('button', { name: 'Check Pasta', exact: true })
     .filter({ hasText: '200 g' })
     .waitFor()
@@ -834,7 +845,7 @@ try {
   await mondayCard
     .getByRole('button', { name: 'skipped', exact: true })
     .waitFor()
-  await wife
+  await partner
     .getByRole('button', { name: 'Restore Pasta', exact: true })
     .waitFor()
   console.log(
@@ -875,7 +886,7 @@ try {
   await settle(owner)
   assert.equal(await shop.inputValue(), 'Neighborhood Market 079')
   assert.equal(
-    await wife
+    await partner
       .getByRole('combobox', { name: 'Shopping at', exact: true })
       .inputValue(),
     'Our shop',
@@ -1306,9 +1317,9 @@ try {
   await owner
     .locator('.icon-generation-settings')
     .screenshot({ path: 'test-results/missing-icons-mobile.png' })
-  await wife.reload()
-  await settle(wife)
-  const sharedIcons = (await request(wife, '/state', undefined, 'GET')).state
+  await partner.reload()
+  await settle(partner)
+  const sharedIcons = (await request(partner, '/state', undefined, 'GET')).state
     .productImages
   assert.equal(
     sharedIcons[fixtureItem.id],
@@ -1384,7 +1395,7 @@ try {
     .getByRole('button', { name: 'Save selected suggestions', exact: true })
     .click()
   await owner.getByRole('dialog').waitFor({ state: 'hidden' })
-  await wife
+  await partner
     .getByRole('button', { name: 'Check Apples', exact: true })
     .waitFor()
   await owner.goto(frontendUrl)
@@ -1411,7 +1422,7 @@ try {
   await owner
     .getByRole('button', { name: 'Family name saved', exact: true })
     .waitFor()
-  await wife.waitForFunction(
+  await partner.waitForFunction(
     () =>
       document.querySelector('.household strong')?.textContent ===
       'Test family',
@@ -1490,41 +1501,41 @@ try {
   assert.deepEqual(editedShop.order, selectedShop.order)
   assert.ok(editedShop.image.startsWith('/api/images/'))
   assert.deepEqual(editedShop.position, { lat: 60.2101, lng: 24.7302 })
-  const wifeShop = wife.getByRole('combobox', {
+  const partnerShop = partner.getByRole('combobox', {
     name: 'Shopping at',
     exact: true,
   })
-  await wife.goto(frontendUrl)
-  await settle(wife)
-  const wifeShopBefore = await wifeShop.inputValue()
-  await wifeContext.grantPermissions(['geolocation'])
-  await wifeContext.setGeolocation({ latitude: 61.5, longitude: 23.76 })
-  await wife.reload()
-  await settle(wife)
-  await wife.waitForFunction(
+  await partner.goto(frontendUrl)
+  await settle(partner)
+  const partnerShopBefore = await partnerShop.inputValue()
+  await partnerContext.grantPermissions(['geolocation'])
+  await partnerContext.setGeolocation({ latitude: 61.5, longitude: 23.76 })
+  await partner.reload()
+  await settle(partner)
+  await partner.waitForFunction(
     () =>
       document.querySelector('[aria-label="Shopping at"]')?.value ===
       'Unknown shop',
   )
-  await wife
+  await partner
     .locator('.shopping-heading')
     .screenshot({ path: 'test-results/store-picker-unknown-mobile.png' })
-  await wifeContext.setGeolocation({ latitude: 60.2105, longitude: 24.731 })
-  await wife.reload()
-  await settle(wife)
-  await wife.waitForFunction(
+  await partnerContext.setGeolocation({ latitude: 60.2105, longitude: 24.731 })
+  await partner.reload()
+  await settle(partner)
+  await partner.waitForFunction(
     () =>
       document.querySelector('[aria-label="Shopping at"]')?.value ===
       'Renamed Neighborhood Market',
   )
-  await wifeContext.clearPermissions()
-  await wifeShop.fill(wifeShopBefore)
-  await wife
+  await partnerContext.clearPermissions()
+  await partnerShop.fill(partnerShopBefore)
+  await partner
     .getByRole('option')
-    .filter({ hasText: wifeShopBefore })
+    .filter({ hasText: partnerShopBefore })
     .first()
     .click()
-  assert.equal(await wifeShop.inputValue(), wifeShopBefore)
+  assert.equal(await partnerShop.inputValue(), partnerShopBefore)
   console.log(
     'Shop map positions save, validate and auto-select the nearby (or unknown) shop on launch.',
   )
@@ -1585,11 +1596,11 @@ try {
         ],
       },
     })
-    await wife.goto(frontendUrl)
-    await settle(wife)
+    await partner.goto(frontendUrl)
+    await settle(partner)
     await eventually(
       async () =>
-        (await wife
+        (await partner
           .getByRole('button', { name: `Check ${name}`, exact: true })
           .locator('img')
           .getAttribute('src')) === `/images/catalog/generated/${image}.webp`,
@@ -1677,7 +1688,7 @@ try {
   await eventually(
     async () =>
       JSON.stringify(
-        (await request(wife, '/state', undefined, 'GET')).state.stores.find(
+        (await request(partner, '/state', undefined, 'GET')).state.stores.find(
           (store) => store.id === selectedShop.id,
         ).order,
       ) === JSON.stringify(['Vegetables', 'Fruits', 'Milk & eggs']),
@@ -2307,7 +2318,7 @@ try {
   )
   for (const source of sourceRecipe.sourceImages) {
     assert.equal(
-      (await wife.request.get(frontendUrl + source.url)).status(),
+      (await partner.request.get(frontendUrl + source.url)).status(),
       200,
     )
     assert.equal((await fetch(backendUrl + source.url)).status, 401)
@@ -2384,7 +2395,7 @@ try {
     sourceRecipe.sourceImages,
   )
   await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
-  await wife.goto(`${frontendUrl}/settings`)
+  await partner.goto(`${frontendUrl}/settings`)
   await owner.getByRole('button', { name: 'All recipes', exact: true }).click()
   await owner.getByRole('button', { name: 'Add recipe', exact: true }).click()
   await owner
@@ -2486,7 +2497,7 @@ try {
   for (const ingredient of batchIngredients) {
     const image = batchRecipeState.productImages[ingredient.id]
     assert.ok(image?.startsWith('/api/images/'))
-    assert.equal((await wife.request.get(frontendUrl + image)).status(), 200)
+    assert.equal((await partner.request.get(frontendUrl + image)).status(), 200)
     assert.equal((await fetch(backendUrl + image)).status, 401)
   }
   console.log(
@@ -2526,25 +2537,27 @@ try {
     0,
   )
   await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
-  await wife.goto(`${frontendUrl}/recipes`)
-  await settle(wife)
-  await wife
+  await partner.goto(`${frontendUrl}/recipes`)
+  await settle(partner)
+  await partner
     .getByRole('button', { name: 'Filter by tag Desserts', exact: true })
     .click()
-  await wife
+  await partner
     .getByRole('button', { name: 'Open Batch icon recipe', exact: true })
     .click()
-  await wife.getByRole('button', { name: 'Edit recipe', exact: true }).click()
+  await partner
+    .getByRole('button', { name: 'Edit recipe', exact: true })
+    .click()
   assert.equal(
-    await wife
+    await partner
       .getByRole('checkbox', { name: 'Include in meal planning', exact: true })
       .isChecked(),
     false,
   )
-  await wife
+  await partner
     .getByRole('checkbox', { name: 'Include in meal planning', exact: true })
     .check()
-  await wife
+  await partner
     .getByRole('button', { name: 'Save to our recipe book', exact: true })
     .click()
   await owner.reload()
@@ -2555,16 +2568,19 @@ try {
     .getByRole('button', { name: /Batch icon recipe/ })
     .waitFor()
   await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
-  await wife.goto(`${frontendUrl}/settings`)
+  await partner.goto(`${frontendUrl}/settings`)
   console.log(
     'User-created dessert collections, planning exclusion, lunch suggestion filtering and shared re-enabling passed.',
   )
-  await settle(wife)
+  await settle(partner)
   assert.equal(
-    await wife.getByText('Configure AI assistant', { exact: true }).count(),
+    await partner.getByText('Configure AI assistant', { exact: true }).count(),
     0,
   )
-  assert.equal(await wife.getByLabel('Family name', { exact: true }).count(), 0)
+  assert.equal(
+    await partner.getByLabel('Family name', { exact: true }).count(),
+    0,
+  )
   console.log(
     'Vision upload/camera/clipboard, reviewed recipe photos/icons, Markdown, shop/family/group edits and owner-only settings passed.',
   )
@@ -3071,11 +3087,11 @@ try {
   await owner.getByRole('button', { name: 'Save item', exact: true }).click()
   await eventually(
     async () =>
-      !!(await request(wife, '/state', undefined, 'GET')).state.consumptionRates
-        .apples,
+      !!(await request(partner, '/state', undefined, 'GET')).state
+        .consumptionRates.apples,
   )
   assert.deepEqual(
-    (await request(wife, '/state', undefined, 'GET')).state.consumptionRates
+    (await request(partner, '/state', undefined, 'GET')).state.consumptionRates
       .apples,
     { quantity: 6, unit: 'pc', days: 7 },
   )
@@ -3107,7 +3123,7 @@ try {
   await owner.getByRole('button', { name: 'Save item', exact: true }).click()
   await eventually(
     async () =>
-      (await request(wife, '/state', undefined, 'GET')).state.shelfLifeDays
+      (await request(partner, '/state', undefined, 'GET')).state.shelfLifeDays
         ?.apples === 10,
   )
   await owner.reload()
@@ -3140,7 +3156,7 @@ try {
   await owner.getByRole('button', { name: 'Save item', exact: true }).click()
   await eventually(
     async () =>
-      (await request(wife, '/state', undefined, 'GET')).state.shelfLifeDays
+      (await request(partner, '/state', undefined, 'GET')).state.shelfLifeDays
         ?.apples === 0,
   )
   // Start a fresh purchase quantity; a non-accumulating add preserves an existing active tile.
@@ -3207,11 +3223,11 @@ try {
   await owner.getByRole('button', { name: 'Save item', exact: true }).click()
   await eventually(
     async () =>
-      (await request(wife, '/state', undefined, 'GET')).state.consumptionRates
-        .apples?.days === 7,
+      (await request(partner, '/state', undefined, 'GET')).state
+        .consumptionRates.apples?.days === 7,
   )
   assert.deepEqual(
-    (await request(wife, '/state', undefined, 'GET')).state.consumptionRates
+    (await request(partner, '/state', undefined, 'GET')).state.consumptionRates
       .apples,
     { quantity: 6, unit: 'pc', days: 7 },
   )
@@ -3248,9 +3264,9 @@ try {
     .click()
   await soapDialog.waitFor({ state: 'hidden' })
   const soap = async () =>
-    (await request(wife, '/state', undefined, 'GET')).state.customProducts.find(
-      (product) => product.name === 'Fixture soap',
-    )
+    (
+      await request(partner, '/state', undefined, 'GET')
+    ).state.customProducts.find((product) => product.name === 'Fixture soap')
   await eventually(async () => (await soap())?.description === 'Lavender')
   await owner.waitForTimeout(900)
   await hold(
@@ -3348,7 +3364,7 @@ try {
     .click()
   await eventually(
     async () =>
-      (await request(wife, '/state', undefined, 'GET')).state.customProducts
+      (await request(partner, '/state', undefined, 'GET')).state.customProducts
         .filter((product) => product.name.startsWith('Fixture '))
         .filter((product) => product.oneOff).length === 2,
   )
@@ -3380,7 +3396,7 @@ try {
   assert.match(await trip.textContent(), /Items\s*\d+/i)
   await trip.getByRole('button', { name: 'Done', exact: true }).click()
   const leftovers = async () => {
-    const state = (await request(wife, '/state', undefined, 'GET')).state
+    const state = (await request(partner, '/state', undefined, 'GET')).state
     return oneOffIds.flatMap((id) =>
       [
         state.customProducts.some((product) => product.id === id) && 'product',
@@ -3520,6 +3536,18 @@ try {
       day.setUTCDate(day.getUTCDate() + offset)
       return day.toISOString().slice(0, 10)
     }
+    // Keep leftovers from the behaviour checks above out of the published
+    // screenshots: fixture and generation-recovery list items and the
+    // batch-icon recipe.
+    const isFixture = (item) =>
+      item.id.startsWith('recovery-') ||
+      item.name.startsWith('Fixture ') ||
+      item.note === 'Fixture note'
+    for (const item of snapshot.state.items.filter(isFixture))
+      await request(owner, '/operations', {
+        id: crypto.randomUUID(),
+        operation: { type: 'removeItem', id: item.id },
+      })
     const changes = snapshot.state.stores
       .filter((store) => store.id !== 'our-store')
       .map((store) => ({
@@ -3529,6 +3557,16 @@ try {
         before: store,
         after: null,
       }))
+    for (const recipe of snapshot.state.recipeBook.filter(
+      (recipe) => recipe.name === 'Batch icon recipe',
+    ))
+      changes.push({
+        collection: 'recipeBook',
+        key: recipe.id,
+        field: null,
+        before: recipe,
+        after: null,
+      })
     for (const [id, name, location] of [
       ['prisma', 'Prisma', 'Our weekly shop'],
       ['lidl', 'Lidl', 'On the way home'],

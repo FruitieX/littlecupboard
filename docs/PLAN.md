@@ -7,7 +7,7 @@ This document records the user’s requirements, the chosen direction, and imple
 ## Decisions and context
 
 - Name: **LittleCupboard**, chosen by the user on 2026-10-02. Previously ForkBasket; historical milestones below retain that name.
-- Household: the user, wife, and kids. Collaboration must work on separate devices simultaneously.
+- Household: the whole household shares one list. Collaboration must work on separate devices simultaneously.
 - Frontend preference: TanStack Start, TypeScript, Tailwind CSS, and Radix or similar accessible components.
 - Backend preference: Rust, Tokio, Axum, and ts-rs for shared API types.
 - Environment: NixOS; use the project’s locked Nix flake, verify tools inside it, and use committed npm and Cargo lockfiles.
@@ -106,7 +106,7 @@ These do not block the bootstrap. Defaults can be chosen for the first family de
 - Dietary preferences, ingredient exclusions, and how the family wants to provide meal feedback.
 - Whether checking alone marks a purchase or a completed trip confirms it.
 - Whether cooking should require a confirmation before reducing estimated pantry stock.
-- Desired offline behavior, shared-device support for kids, and history retention.
+- Desired offline behavior, shared-device support for children, and history retention.
 - Provider/base URL, model, and image-generation capability, if any.
 
 ## Prototype progress (historical)
@@ -126,7 +126,7 @@ Complete all phases in this goal; do not stop at the household core or postpone 
 Acceptance checklist:
 
 - [x] Durable household persistence, migrations, atomic operations, revision checks, idempotency and backup/restore.
-- [x] First-owner setup, login/logout, wife/member invitations, account/profile management, password changes/recovery, household isolation and server validation.
+- [x] First-owner setup, login/logout, member invitations, account/profile management, password changes/recovery, household isolation and server validation.
 - [x] Authenticated SSE across independent devices, reconnect recovery, optimistic shopping, offline operation queue and installable PWA.
 - [x] Quiet mobile shopping, tap/check/restore and long-press editing, meaningful undo/trip history, quantities/variants/notes, product/item images, large searchable catalog, complete and custom groups.
 - [x] Favorite stores, autocomplete, per-store group ordering and local current-store preference.
@@ -152,7 +152,7 @@ AI keys are encrypted on the backend with a persisted application key. Configura
 
 Production uses TanStack Start SPA prerendering, an installable service worker and persisted per-tab offline outboxes. Abandoned outboxes can be recovered using browser locks. Axum serves the compiled frontend and API in one process. The locked Nix OCI image runs as UID 10001 with a read-only root filesystem. CI validates the app and publishes the image to GHCR. Flux manifests match the homelab's gateway, SOPS configuration and block-storage PVC, with one replica and Recreate deployment. The live homelab was unchanged at initial application delivery; it was subsequently deployed at the user's explicit request.
 
-Release validation: TypeScript, formatting, Clippy, 18 frontend tests and 37 Rust tests pass (15 behavior tests plus 22 typed-binding exports). The production browser suite passes separate owner/wife sessions, live check/restore/hold-edit, automatic ingredients across reload, offline addition/reload/reconnect, private photo persistence, recipe/custom-ingredient editing, pantry confirmation, serving changes, skipped-meal stock release, 80-shop autocomplete/device-local selection, provider configuration/testing and reviewed AI additions. All views fit 320/390/768/1440 px. Mobile group wrapping and meal controls were corrected after visual review; actual screenshots are refreshed in `mockups/`.
+Release validation: TypeScript, formatting, Clippy, 18 frontend tests and 37 Rust tests pass (15 behavior tests plus 22 typed-binding exports). The production browser suite passes separate owner/partner sessions, live check/restore/hold-edit, automatic ingredients across reload, offline addition/reload/reconnect, private photo persistence, recipe/custom-ingredient editing, pantry confirmation, serving changes, skipped-meal stock release, 80-shop autocomplete/device-local selection, provider configuration/testing and reviewed AI additions. All views fit 320/390/768/1440 px. Mobile group wrapping and meal controls were corrected after visual review; actual screenshots are refreshed in `mockups/`.
 
 The Nix container builds successfully. Runtime checks verify non-root/read-only operation, SPA deep routes, authentication, persistent list/account data after restart, private consistent online database backups, refusal to overwrite backups and point-in-time restoration into a separate data directory. Kustomize compiles the deployment, service, private HTTPS route, block PVC and secret template. Deployment documentation covers bootstrap/invitations, provider compatibility, offline behavior, backups, restoration and upgrades. Live provider configuration and applying the reviewed templates to the user's cluster are installation steps, not missing app features.
 

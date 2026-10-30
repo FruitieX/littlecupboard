@@ -605,7 +605,7 @@ async fn item_icons_are_opt_in_durable_deduplicated_private_and_retryable() {
         &server,
         Method::POST,
         "/api/invitations",
-        json!({"email":"wife@example.test"}),
+        json!({"email":"kim@example.test"}),
         Some(&owner),
     )
     .await;
@@ -615,7 +615,7 @@ async fn item_icons_are_opt_in_durable_deduplicated_private_and_retryable() {
         .split("invite=")
         .nth(1)
         .unwrap();
-    let (_,_,wife)=request(&server,Method::POST,"/api/auth/join",json!({"token":token,"email":"wife@example.test","name":"Wife","password":"another good long password"}),None).await;
+    let (_,_,partner)=request(&server,Method::POST,"/api/auth/join",json!({"token":token,"email":"kim@example.test","name":"Kim","password":"another good long password"}),None).await;
     for method in [Method::GET, Method::POST] {
         assert_eq!(
             request(
@@ -623,7 +623,7 @@ async fn item_icons_are_opt_in_durable_deduplicated_private_and_retryable() {
                 method,
                 "/api/ai/item-icons",
                 json!({"action":"generate"}),
-                wife.as_deref()
+                partner.as_deref()
             )
             .await
             .0,
@@ -636,7 +636,7 @@ async fn item_icons_are_opt_in_durable_deduplicated_private_and_retryable() {
         Method::GET,
         "/api/state",
         Value::Null,
-        wife.as_deref(),
+        partner.as_deref(),
     )
     .await;
     assert!(
@@ -1426,7 +1426,7 @@ async fn accounts_require_setup_token_then_share_invited_household_and_reject_un
         &server,
         Method::POST,
         "/api/invitations",
-        json!({"email":"wife@example.test"}),
+        json!({"email":"kim@example.test"}),
         Some(&cookie),
     )
     .await;
@@ -1436,9 +1436,9 @@ async fn accounts_require_setup_token_then_share_invited_household_and_reject_un
         .split("invite=")
         .nth(1)
         .unwrap();
-    let (status,wife,wife_cookie)=request(&server,Method::POST,"/api/auth/join",json!({"token":token,"email":"wife@example.test","name":"Wife","password":"another good long password"}),None).await;
-    assert_eq!(status, StatusCode::OK, "{wife}");
-    assert_eq!(wife["session"]["householdId"], owner_info["householdId"]);
+    let (status,partner,partner_cookie)=request(&server,Method::POST,"/api/auth/join",json!({"token":token,"email":"kim@example.test","name":"Kim","password":"another good long password"}),None).await;
+    assert_eq!(status, StatusCode::OK, "{partner}");
+    assert_eq!(partner["session"]["householdId"], owner_info["householdId"]);
     let (status,_)=operation(&server,&cookie,json!({"type":"addItem","productId":"pasta","quantity":400,"unit":"g","note":"Whole wheat","accumulate":true})).await;
     assert_eq!(status, StatusCode::OK);
     let (status, shared, _) = request(
@@ -1446,7 +1446,7 @@ async fn accounts_require_setup_token_then_share_invited_household_and_reject_un
         Method::GET,
         "/api/state",
         Value::Null,
-        wife_cookie.as_deref(),
+        partner_cookie.as_deref(),
     )
     .await;
     assert_eq!(status, StatusCode::OK);
@@ -1457,19 +1457,19 @@ async fn accounts_require_setup_token_then_share_invited_household_and_reject_un
             Method::POST,
             "/api/invitations",
             json!({"email":"child@example.test"}),
-            wife_cookie.as_deref()
+            partner_cookie.as_deref()
         )
         .await
         .0,
         StatusCode::FORBIDDEN
     );
-    assert_eq!(request(&server,Method::POST,"/api/auth/join",json!({"token":token,"email":"wife@example.test","name":"Repeat","password":"another good long password"}),None).await.0,StatusCode::BAD_REQUEST);
+    assert_eq!(request(&server,Method::POST,"/api/auth/join",json!({"token":token,"email":"kim@example.test","name":"Repeat","password":"another good long password"}),None).await.0,StatusCode::BAD_REQUEST);
     request(
         &server,
         Method::POST,
         "/api/auth/logout",
         json!({}),
-        wife_cookie.as_deref(),
+        partner_cookie.as_deref(),
     )
     .await;
     assert_eq!(
@@ -1478,7 +1478,7 @@ async fn accounts_require_setup_token_then_share_invited_household_and_reject_un
             Method::GET,
             "/api/state",
             Value::Null,
-            wife_cookie.as_deref()
+            partner_cookie.as_deref()
         )
         .await
         .0,
@@ -5521,14 +5521,14 @@ async fn oidc_links_mapped_accounts_provisions_family_and_refuses_other_groups()
         client_secret: "secret".into(),
         redirect_url: "http://localhost:3100/api/auth/oidc/callback".into(),
         allowed_groups: vec!["family".into()],
-        user_map: vec![("rasse".into(), "owner@example.test".into())],
+        user_map: vec![("sam".into(), "owner@example.test".into())],
     })));
     let status = request(&server, Method::GET, "/api/auth/status", Value::Null, None).await;
     assert_eq!(status.1["oidc"], true);
     let password_cookie = owner(&server).await;
 
     // The owner's existing password account is linked through the map.
-    *user.lock().unwrap() = json!({"sub":"sub-rasse","preferred_username":"rasse","name":"Rasse","groups":["admins","family"]});
+    *user.lock().unwrap() = json!({"sub":"sub-sam","preferred_username":"sam","name":"Sam","groups":["admins","family"]});
     let (location, session, set) = oidc_sign_in(&server).await;
     assert_eq!(location, "/");
     assert!(
@@ -5552,7 +5552,7 @@ async fn oidc_links_mapped_accounts_provisions_family_and_refuses_other_groups()
     assert_eq!(me.1["user"]["role"], "owner");
     // The link is by subject from now on, even if the username changes.
     *user.lock().unwrap() =
-        json!({"sub":"sub-rasse","preferred_username":"renamed","groups":["family"]});
+        json!({"sub":"sub-sam","preferred_username":"renamed","groups":["family"]});
     let me_again = request(
         &server,
         Method::GET,
@@ -5576,7 +5576,7 @@ async fn oidc_links_mapped_accounts_provisions_family_and_refuses_other_groups()
 
     // A recreated provider user with the mapped username cannot take over.
     *user.lock().unwrap() =
-        json!({"sub":"sub-imposter","preferred_username":"rasse","groups":["family"]});
+        json!({"sub":"sub-imposter","preferred_username":"sam","groups":["family"]});
     let (location, session, _) = oidc_sign_in(&server).await;
     assert_eq!(location, "/?oidcError=no_account");
     assert!(session.is_none());
