@@ -6,6 +6,6 @@
     "test": "node --test protocol.check.mjs"
   },
   "dependencies": {
-    "jose": "6.2.12"
+    "jose": "6.2.14"
   }
 }
