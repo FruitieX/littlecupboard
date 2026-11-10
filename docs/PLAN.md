@@ -430,3 +430,7 @@ Follow-up: after accidentally pinch-zooming the installed app, the user asked to
 
 - `trip_finish` runs every 5 minutes on the server. If a household has checked items and its last `checkItem` event (check, restore or undo) is more than an hour old, it finishes the trip as an undoable `finishTrip` event by `LittleCupboard`, with `automatic: true` and `lastCheckAt` in the detail. Trends trip minutes count such a trip as ending at that last check. History shows "Finished shopping automatically".
 - The reported wrapped and overflowing text in the Recently checked chips appears only in feedback-hub screenshots. Its DOM capture (`modern-screenshot`) lays the text out again inside the chips' exact shrink-to-fit widths. The chip widths in the screenshot match the real layout, so the app's layout was left unchanged.
+
+### Family meal candidate import — 2026-11-10
+
+Added a repeatable recipe patch builder in `scripts/recipe-import/`, using existing catalog IDs, transactional API mutations and stable recipe IDs. It adds nine mild weeknight candidates and enriches the existing spinach pancake recipe with serving notes and a pan-fried variation while preserving the original oven recipe. The lean-mince macaroni casserole is a separate variant. It does not edit the meal plan. Schema limitations (optional ingredients and extended metadata in text) and image-download limitations are documented beside the importer.
