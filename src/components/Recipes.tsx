@@ -330,6 +330,17 @@ export function RecipeDetail({
           </span>
         </div>
         <Markdown>{recipe.subtitle}</Markdown>
+        {recipe.sourceUrl && (
+          <p className="markdown">
+            <a
+              href={recipe.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Original recipe reference
+            </a>
+          </p>
+        )}
         <RecipeSources sources={recipe.sourceImages} />
         <div className="ingredients-heading">
           <h3>Gather the good stuff</h3>
@@ -465,6 +476,7 @@ export function RecipeEditor({
   const { state, update, groups, allRecipes, session, status } = useApp()
   const [name, setName] = useState(recipe?.name ?? '')
   const [subtitle, setSubtitle] = useState(recipe?.subtitle ?? '')
+  const [sourceUrl, setSourceUrl] = useState(recipe?.sourceUrl ?? '')
   const [minutes, setMinutes] = useState(recipe?.minutes ?? 20)
   const [servings, setServings] = useState(
     recipe?.servings ?? state.preferences?.servings ?? 4,
@@ -683,6 +695,7 @@ export function RecipeEditor({
             id: recipe?.id ?? crypto.randomUUID(),
             name: name.trim(),
             subtitle: subtitle.trim(),
+            ...(sourceUrl.trim() ? { sourceUrl: sourceUrl.trim() } : {}),
             image: image || '/images/recipe-placeholder.svg',
             minutes,
             servings,
@@ -739,6 +752,17 @@ export function RecipeEditor({
           <small>
             Markdown supported: **bold**, *italic*, lists, headings and links.
           </small>
+        </label>
+        <label>
+          Original recipe URL
+          <input
+            type="url"
+            maxLength={2048}
+            pattern="https?://.+"
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            placeholder="https://example.com/recipe"
+          />
         </label>
         {!!subtitle.trim() && (
           <details className="description-preview">

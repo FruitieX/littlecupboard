@@ -65,6 +65,7 @@ export type Ingredient = {
   note?: string
 }
 export type Recipe = {
+  sourceUrl?: string
   id: string
   name: string
   subtitle: string

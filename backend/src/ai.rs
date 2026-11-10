@@ -745,6 +745,7 @@ pub async fn assistant(
             .map(|ingredient| resolve(&mut state, ingredient, &mut products))
             .collect::<Result<Vec<_>>>()?;
         recipes.push(Recipe {
+            source_url: None,
             id: Uuid::new_v4().to_string(),
             name: recipe.name,
             subtitle: recipe.subtitle,

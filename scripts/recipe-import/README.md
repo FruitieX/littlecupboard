@@ -46,3 +46,23 @@ the consistent application header worked for both thumbnails and originals.
 Accidental deletion recovery is separate: retrieve the exact recipe from the
 household's deletion event and insert it via the same patch mechanism only when
 its original ID is absent. Do not restore a whole historical household backup.
+
+## Original recipe references
+
+Recipes support an optional `sourceUrl`, separate from `image` and source-image
+attachments. The editor accepts HTTP(S) URLs and recipe details show a reference
+link. Backups retain it; legacy recipes need no migration because household
+recipes are serialized JSON with an optional field.
+
+`sources.json` maps the ten existing candidates to the supplied original recipe
+references and records the reviewed image decisions. After the supporting app
+version is running, `attach-sources.py API_ORIGIN` reads a session token from
+stdin and submits a transactional patch. It updates references and four matching
+source photos, preserving all ingredients, steps, servings, preferences and
+plans. The optional homemade fish-finger reference is appended to that recipe's
+notes. Every replacement image is downloaded and uploaded to SQLite through
+`/api/images`; no external image URL is used to display a recipe. Repeating the
+import after success makes no uploads or changes.
+
+The replacement source photos are household attachments only. They are not
+bundled in this repository or distributed as public application assets.

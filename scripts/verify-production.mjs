@@ -732,6 +732,9 @@ try {
     .getByLabel('Recipe name', { exact: true })
     .fill('Family rice bowl')
   await owner
+    .getByLabel('Original recipe URL', { exact: true })
+    .fill('https://example.com/family-rice')
+  await owner
     .locator('.editable-ingredients summary')
     .filter({ hasText: 'Rice' })
     .click()
@@ -781,6 +784,7 @@ try {
   const editedRecipe = editedRecipeState.recipeBook.find(
     (recipe) => recipe.name === 'Family rice bowl',
   )
+  assert.equal(editedRecipe.sourceUrl, 'https://example.com/family-rice')
   assert.deepEqual(
     editedRecipe.ingredients.find((i) => i.productId === 'barley'),
     { productId: 'barley', quantity: 300, unit: 'g', note: 'Rinse thoroughly' },
@@ -799,7 +803,16 @@ try {
   await settle(partner)
   await partner
     .getByRole('button', { name: 'Open Family rice bowl', exact: true })
-    .waitFor()
+    .click()
+  assert.equal(
+    await partner
+      .getByRole('link', { name: 'Original recipe reference', exact: true })
+      .getAttribute('href'),
+    'https://example.com/family-rice',
+  )
+  await partner
+    .getByRole('button', { name: 'Close dialog', exact: true })
+    .click()
   await partner
     .getByRole('button', { name: 'Filter by tag Lunchbox', exact: true })
     .click()

@@ -1,0 +1,57 @@
+[
+  {
+    "sourceUrl": "https://www.valio.fi/reseptit/uunilohi-peruna-kasvispedilla/",
+    "imageDecision": "Keep the existing salmon/potato photo: source shows a creamy gratin.",
+    "recipeId": "family-meals-oven-salmon"
+  },
+  {
+    "sourceUrl": "https://www.k-ruoka.fi/reseptit/paahdettu-broileri-ja-uunikasvikset",
+    "imageDecision": "Keep existing boneless chicken photo: source shows skin-on, bone-in chicken.",
+    "recipeId": "family-meals-chicken-tray"
+  },
+  {
+    "sourceUrl": "https://www.k-ruoka.fi/reseptit/lohipasta",
+    "imageDecision": "Use source: pale salmon pasta with leafy greens resembles the oat-based adaptation.",
+    "recipeId": "family-meals-salmon-pasta",
+    "imageUrl": "https://public.keskofiles.com/f/recipe/Lohipasta_PI4_20?w=1200&fit=crop&q=85&fm=jpg"
+  },
+  {
+    "sourceUrl": "https://www.k-ruoka.fi/reseptit/liha-makaronilaatikko",
+    "imageDecision": "Use source: familiar mince and macaroni casserole.",
+    "recipeId": "family-meals-macaroni",
+    "imageUrl": "https://public.keskofiles.com/f/recipe/liha-makaronilaati_2018?w=1440&fit=crop&q=60&auto=format&fm=jpg&ar=16%3A7"
+  },
+  {
+    "sourceUrl": "https://www.k-ruoka.fi/reseptit/perunamuusi",
+    "imageDecision": "Keep fish fingers and mash photo: source depicts only mashed potatoes.",
+    "recipeId": "family-meals-fish-fingers",
+    "additionalReference": "https://www.k-ruoka.fi/reseptit/kalapuikot"
+  },
+  {
+    "sourceUrl": "https://www.k-ruoka.fi/reseptit/broileritortillat",
+    "imageDecision": "Use source: chicken and vegetable wraps; toppings are illustrative.",
+    "recipeId": "family-meals-wraps",
+    "imageUrl": "https://public.keskofiles.com/f/recipe/PI19_3_broileritor?w=1200&fit=crop&q=85&fm=jpg"
+  },
+  {
+    "sourceUrl": "https://www.k-ruoka.fi/reseptit/pinaattiletut",
+    "imageDecision": "Keep existing family oven-pancake photo; source depicts the pan-fried variation.",
+    "recipeName": "Spinach pancakes"
+  },
+  {
+    "sourceUrl": "https://www.kikkoman.fi/reseptit/detail/paistettu-munariisi",
+    "imageDecision": "Keep mild vegetable rice photo: source has visible chili and spring onions.",
+    "recipeId": "family-meals-fried-rice"
+  },
+  {
+    "sourceUrl": "https://www.valio.fi/reseptit/helppo-linssibolognese/",
+    "imageDecision": "Use source: tomato pasta with a modest amount of lentils.",
+    "recipeId": "family-meals-lentil-pasta",
+    "imageUrl": "https://www.valio.fi/cdn-cgi/image/format=auto/https://cdn-wp.valio.fi/valio-fi/2024/08/43498-helppo-linssibolognese.jpeg"
+  },
+  {
+    "sourceUrl": "https://www.k-ruoka.fi/reseptit/porkkanasosekeitto",
+    "imageDecision": "Keep plain carrot soup photo: source has a bacon topping.",
+    "recipeId": "family-meals-carrot-soup"
+  }
+]

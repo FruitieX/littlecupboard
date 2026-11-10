@@ -113,6 +113,9 @@ pub struct Ingredient {
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[ts(export, export_to = "../../src/lib/api/")]
 pub struct Recipe {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub source_url: Option<String>,
     pub id: String,
     pub name: String,
     pub subtitle: String,

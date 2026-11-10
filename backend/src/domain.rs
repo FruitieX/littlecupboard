@@ -1396,6 +1396,16 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
             || recipe.servings <= 0.0
             || recipe.servings > 100.0
             || !valid_image(&recipe.image)
+            || recipe.source_url.as_ref().is_some_and(|url| {
+                !text(url, 2048)
+                    || url.chars().any(char::is_whitespace)
+                    || reqwest::Url::parse(url).map_or(true, |parsed| {
+                        !matches!(parsed.scheme(), "http" | "https")
+                            || parsed.host_str().is_none()
+                            || !parsed.username().is_empty()
+                            || parsed.password().is_some()
+                    })
+            })
             || recipe.ingredients.is_empty()
             || recipe.ingredients.len() > 100
             || recipe.steps.len() > 100

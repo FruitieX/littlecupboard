@@ -5684,3 +5684,50 @@ async fn oidc_sessions_slide_and_refresh_their_cookie() {
         StatusCode::NOT_FOUND
     );
 }
+
+#[tokio::test]
+async fn recipe_source_urls_are_optional_validated_and_preserved_by_backup() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let original = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    let recipe = &original["state"]["recipeBook"][0];
+    assert!(recipe.get("sourceUrl").is_none());
+    for invalid in [
+        "javascript:alert(1)",
+        "file:///etc/passwd",
+        "https://user:pass@example.com/recipe",
+        "https://example.com/a b",
+        "not a URL",
+    ] {
+        let (status, _) = operation(&server, &cookie, json!({"type":"patch","label":"Source","changes":[{"collection":"recipeBook","key":recipe["id"],"field":"sourceUrl","before":null,"after":invalid}]})).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{invalid}");
+    }
+    let source = "https://example.com/recipe?version=2#method";
+    let (status, saved) = operation(&server, &cookie, json!({"type":"patch","label":"Source","changes":[{"collection":"recipeBook","key":recipe["id"],"field":"sourceUrl","before":null,"after":source}]})).await;
+    assert_eq!(status, StatusCode::OK, "{saved}");
+    let mut expected = recipe.clone();
+    expected["sourceUrl"] = json!(source);
+    assert_eq!(saved["state"]["recipeBook"][0], expected);
+    assert_eq!(saved["state"]["plan"], original["state"]["plan"]);
+    let (status, backup, _) = request(
+        &server,
+        Method::GET,
+        "/api/backup",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{backup}");
+    assert_eq!(backup["state"]["recipeBook"][0]["sourceUrl"], source);
+    let (status, removed) = operation(&server, &cookie, json!({"type":"patch","label":"Clear source","changes":[{"collection":"recipeBook","key":recipe["id"],"field":"sourceUrl","before":source,"after":null}]})).await;
+    assert_eq!(status, StatusCode::OK, "{removed}");
+    assert_eq!(removed["state"]["recipeBook"][0], *recipe);
+}

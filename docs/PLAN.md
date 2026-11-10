@@ -438,3 +438,7 @@ Added a repeatable recipe patch builder in `scripts/recipe-import/`, using exist
 ### Candidate recipe photos — 2026-11-10
 
 Added a repeatable private-photo attachment script and reviewed Commons photo manifest. It fills only missing images, preserving family-selected photos, recipes and scheduling. Source/author/license metadata stays in the import manifest rather than recipe descriptions, as requested. Photo links are distinguished from actual original recipe URLs; directly supplied recipes have no external recipe source to invent.
+
+### Original recipe references and cached source photos — 2026-11-10
+
+Recipes now have an optional, validated HTTP(S) `sourceUrl`, editable in the recipe form and linked in details, independently of private image attachments. Existing JSON records remain compatible without a SQL migration. Household backups retain the reference. The candidate source manifest and idempotent API importer preserve adapted ingredients, instructions and servings while attaching the supplied references and caching visually suitable source photos in SQLite. Existing photos remain where the external photograph depicts a materially different dish.
