@@ -72,3 +72,10 @@ photorealistic style, stored under `images/`. Their full generation prompts are
 in `image-prompts.json` (built-in image_gen). The photo manifest uses these local
 assets for missing images; it never replaces an existing household attachment.
 The recipe title uses “Fish sticks” while retaining the existing catalog IDs.
+
+`roast-chicken.json` is an additional four-portion candidate with a whole-chicken
+catalog entry, a source reference and a generated image. Reuse an equivalent
+whole-chicken catalog entry if one exists, upload the local PNG through
+`/api/images`, then insert the product (if missing) and recipe as one API patch.
+Its stable recipe ID makes an existing import a no-op. Oven timing is separate
+from the ready-cooked shortcut; neither changes the weekly plan.

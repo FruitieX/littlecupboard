@@ -75,5 +75,12 @@
     "license": "CC BY 2.0",
     "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
     "note": "Carrot soup with bread."
+  },
+  {
+    "recipeId": "family-meals-roast-chicken-rice",
+    "asset": "images/roast-chicken-rice.png",
+    "origin": "AI-generated with built-in image_gen",
+    "promptFile": "roast-chicken-prompt.json",
+    "note": "Roast chicken with separate rice, carrots and cucumber."
   }
 ]

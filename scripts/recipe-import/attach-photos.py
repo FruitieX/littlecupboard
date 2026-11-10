@@ -42,8 +42,8 @@ def run(origin, token):
     manifest = json.loads(Path(__file__).with_name('photos.json').read_text())
     changes = []
     for entry in manifest:
-        recipe = next(r for r in state['recipeBook'] if r['id'] == entry['recipeId'])
-        if recipe['image']:
+        recipe = next((r for r in state['recipeBook'] if r['id'] == entry['recipeId']), None)
+        if recipe is None or recipe['image']:
             continue  # Never replace a family's chosen photo.
         if entry.get('asset'):
             data = Path(__file__).with_name('images').joinpath(Path(entry['asset']).name).read_bytes()

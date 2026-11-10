@@ -446,3 +446,7 @@ Recipes now have an optional, validated HTTP(S) `sourceUrl`, editable in the rec
 ### More appetizing salmon and fish sticks images — 2026-11-10
 
 Replaced the two candidate photos with generated food images matching the saved ingredients, cached as private SQLite attachments. Reusable PNGs and generation prompts live with the recipe import assets. The convenience-meal recipe now uses “Fish sticks” in its title and prose while preserving its recipe ID, catalog links, quantities and references.
+
+### Roast chicken and rice candidate — 2026-11-10
+
+Added a four-portion grillibroileri meal with plain rice and separate vegetables, a raw whole-chicken oven method and a ready-cooked shortcut. It uses existing side-ingredient IDs and one whole-chicken catalog item, with a private generated image and an original-recipe reference. The template, image and generation prompt are retained with the recipe importer; scheduling remains manual.

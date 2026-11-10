@@ -1,0 +1,55 @@
+{
+  "product": {
+    "id": "family-whole-chicken",
+    "name": "Whole chicken",
+    "category": "Meat",
+    "icon": "🍗",
+    "aliases": ["Kokonainen broileri", "Hel kyckling"],
+    "description": "Whole unseasoned chicken for oven roasting."
+  },
+  "recipe": {
+    "id": "family-meals-roast-chicken-rice",
+    "name": "Roast chicken (grillibroileri), rice and vegetables",
+    "subtitle": "15 min active · Easy · 4 portions. A simple oven-roasted chicken with familiar sides, served separately. About 110 minutes from raw, mostly unattended. Shortcut: use a ready-cooked chicken for a roughly 25-minute meal; choose one without onion or garlic in the seasoning. Optional: replace rice with boiled potatoes or add a little wholegrain rice gradually. Any spare chicken works in next-day wraps; cool and refrigerate promptly, and reheat thoroughly. Cool cooked rice rapidly and refrigerate promptly; do not leave it standing at room temperature.",
+    "sourceUrl": "https://www.k-ruoka.fi/reseptit/kokonainen-broileri-ja-uuniriisi",
+    "image": "",
+    "minutes": 110,
+    "tag": "Chicken",
+    "servings": 4,
+    "tags": ["family-friendly", "chicken", "oven", "low-effort"],
+    "mealPlanEligible": true,
+    "ingredients": [
+      {
+        "productId": "family-whole-chicken",
+        "quantity": 1,
+        "unit": "pc",
+        "note": "About 1.4 kg raw, unseasoned. Shortcut: substitute 1 ready-cooked whole chicken without onion/garlic seasoning."
+      },
+      {
+        "productId": "rice",
+        "quantity": 250,
+        "unit": "g",
+        "note": "Dry rice; familiar white rice is fine."
+      },
+      { "productId": "carrots", "quantity": 350, "unit": "g" },
+      { "productId": "cucumber", "quantity": 1, "unit": "pc" },
+      { "productId": "rapeseed-oil", "quantity": 1, "unit": "tbsp" },
+      { "productId": "lemon", "quantity": 1, "unit": "pc" },
+      {
+        "productId": "paprika",
+        "quantity": 1,
+        "unit": "tsp",
+        "note": "Mild, not hot."
+      }
+    ],
+    "steps": [
+      "Heat the oven to 175°C. Place the raw, unseasoned chicken in an oven dish. Do not rinse it. Keep raw chicken and its utensils separate from ready-to-eat vegetables.",
+      "Rub the chicken with rapeseed oil, mild paprika and juice from half the lemon. Optional: a little dried thyme and a small amount of salt. No onion or garlic. Keep some meat plain when serving if preferred.",
+      "Roast for approximately 75–90 minutes, depending on size and the package instructions, until fully cooked. Check with a thermometer in the thickest breast and thigh, away from bone: at least 75°C. Let rest for 10 minutes before carving.",
+      "Near the end of roasting, cook the rice according to its packet. Peel and slice the carrots, then boil or steam until tender. Slice the cucumber and cut the remaining lemon into wedges.",
+      "Carve the chicken and check carefully for bones. Serve boneless pieces to children, with rice, carrots and cucumber separately. Add adult pepper or other seasoning at the table.",
+      "Ready-cooked shortcut: skip the raw-chicken roasting steps and start with rice and vegetables. Serve freshly hot cooked chicken, or reheat chilled cooked chicken according to its instructions until thoroughly steaming hot. Oil and paprika can be omitted if the chicken is already seasoned."
+    ]
+  },
+  "imageAsset": "images/roast-chicken-rice.png"
+}
