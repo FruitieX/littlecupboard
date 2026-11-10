@@ -43,7 +43,7 @@ def run(origin, token):
         if entry.get('additionalReference') and entry['additionalReference'] not in recipe['subtitle']:
             changes.append(dict(collection='recipeBook', key=recipe['id'], field='subtitle',
                 before=recipe['subtitle'], after=recipe['subtitle'] +
-                '\n\nOptional later: [Homemade fish fingers](' + entry['additionalReference'] + ').'))
+                '\n\nOptional later: [Homemade fish sticks](' + entry['additionalReference'] + ').'))
         if not entry.get('imageUrl'):
             continue
         data = fetch(entry['imageUrl'])

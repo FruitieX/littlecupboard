@@ -60,9 +60,9 @@ def build(state, catalog):
          'Bake 40–45 minutes until set and golden and meat is thoroughly cooked. Rest 5–10 minutes.',
          'Cool leftovers promptly and refrigerate; reheat portions thoroughly. Freeze spare portions.'],
         '8 portions, intentionally includes leftovers. Optional wholegrain macaroni and lentils can be introduced gradually. Original family casserole is preserved.',servings=8,tags=['family-favourite','batch-cooking','leftovers','oven'])
-    add('fish-fingers','Fish fingers, mashed potatoes and peas',30,10,'Fish',[
+    add('fish-fingers','Fish sticks, mashed potatoes and peas',30,10,'Fish',[
         ('fish-fingers',450,'g','Frozen; choose high fish content and moderate salt'),('potatoes',800,'g'),('frozen-peas',200,'g'),('milk',125,'ml','Low-fat; lactose-free if preferred'),oil],
-        ['Cook fish fingers in the oven according to their packet.',
+        ['Cook fish sticks in the oven according to their packet.',
          'Peel potatoes and boil until soft, then drain.',
          'Mash with warm milk and rapeseed oil; add a little extra milk if needed.',
          'Cook peas until tender. Serve all components separately, with optional sliced cucumber.'],

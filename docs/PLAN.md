@@ -442,3 +442,7 @@ Added a repeatable private-photo attachment script and reviewed Commons photo ma
 ### Original recipe references and cached source photos — 2026-11-10
 
 Recipes now have an optional, validated HTTP(S) `sourceUrl`, editable in the recipe form and linked in details, independently of private image attachments. Existing JSON records remain compatible without a SQL migration. Household backups retain the reference. The candidate source manifest and idempotent API importer preserve adapted ingredients, instructions and servings while attaching the supplied references and caching visually suitable source photos in SQLite. Existing photos remain where the external photograph depicts a materially different dish.
+
+### More appetizing salmon and fish sticks images — 2026-11-10
+
+Replaced the two candidate photos with generated food images matching the saved ingredients, cached as private SQLite attachments. Reusable PNGs and generation prompts live with the recipe import assets. The convenience-meal recipe now uses “Fish sticks” in its title and prose while preserving its recipe ID, catalog links, quantities and references.

@@ -1,12 +1,10 @@
 [
   {
     "recipeId": "family-meals-oven-salmon",
-    "file": "Salmon with potatoes.jpg",
-    "source": "https://commons.wikimedia.org/wiki/File:Salmon_with_potatoes.jpg",
-    "author": "SmockingBomb",
-    "license": "CC BY-SA 3.0",
-    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
-    "note": "Salmon and potatoes; pictured with a butter topping, omitted from our recipe."
+    "asset": "images/oven-salmon.png",
+    "origin": "AI-generated with built-in image_gen",
+    "promptFile": "image-prompts.json",
+    "note": "Illustrative image matching the saved recipe."
   },
   {
     "recipeId": "family-meals-chicken-tray",
@@ -37,12 +35,10 @@
   },
   {
     "recipeId": "family-meals-fish-fingers",
-    "file": "Fish fingers as a convenience food.jpg",
-    "source": "https://commons.wikimedia.org/wiki/File:Fish_fingers_as_a_convenience_food.jpg",
-    "author": "JIP",
-    "license": "CC BY-SA 4.0",
-    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
-    "note": "Fish fingers with mashed potatoes; serve peas alongside."
+    "asset": "images/fish-sticks.png",
+    "origin": "AI-generated with built-in image_gen",
+    "promptFile": "image-prompts.json",
+    "note": "Illustrative image matching the saved recipe."
   },
   {
     "recipeId": "family-meals-wraps",

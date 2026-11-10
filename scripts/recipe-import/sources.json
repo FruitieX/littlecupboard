@@ -1,7 +1,7 @@
 [
   {
     "sourceUrl": "https://www.valio.fi/reseptit/uunilohi-peruna-kasvispedilla/",
-    "imageDecision": "Keep the existing salmon/potato photo: source shows a creamy gratin.",
+    "imageDecision": "Use the generated oven salmon, potato and carrot image instead of the creamy gratin source photo.",
     "recipeId": "family-meals-oven-salmon"
   },
   {
@@ -23,7 +23,7 @@
   },
   {
     "sourceUrl": "https://www.k-ruoka.fi/reseptit/perunamuusi",
-    "imageDecision": "Keep fish fingers and mash photo: source depicts only mashed potatoes.",
+    "imageDecision": "Use the generated fish sticks, mash and peas image instead of the mash-only source photo.",
     "recipeId": "family-meals-fish-fingers",
     "additionalReference": "https://www.k-ruoka.fi/reseptit/kalapuikot"
   },

@@ -45,13 +45,18 @@ def run(origin, token):
         recipe = next(r for r in state['recipeBook'] if r['id'] == entry['recipeId'])
         if recipe['image']:
             continue  # Never replace a family's chosen photo.
-        info = metadata(entry['file'])
-        if info['extmetadata']['LicenseShortName']['value'] != entry['license']:
-            raise ValueError('Image license changed; review the manifest before importing.')
-        data = fetch(info.get('thumburl', info['url']))
+        if entry.get('asset'):
+            data = Path(__file__).with_name('images').joinpath(Path(entry['asset']).name).read_bytes()
+        else:
+            info = metadata(entry['file'])
+            if info['extmetadata']['LicenseShortName']['value'] != entry['license']:
+                raise ValueError('Image license changed; review the manifest before importing.')
+            data = fetch(info.get('thumburl', info['url']))
+        mime = 'image/png' if data.startswith(b'\x89PNG') else 'image/jpeg'
+        extension = 'png' if mime == 'image/png' else 'jpg'
         boundary = 'LittleCupboard' + uuid.uuid4().hex
-        body = (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="recipe.jpg"\r\n'
-                'Content-Type: image/jpeg\r\n\r\n').encode() + data + f'\r\n--{boundary}--\r\n'.encode()
+        body = (f'--{boundary}\r\nContent-Disposition: form-data; name="file"; filename="recipe.{extension}"\r\n'
+                f'Content-Type: {mime}\r\n\r\n').encode() + data + f'\r\n--{boundary}--\r\n'.encode()
         image = api('images', body, 'multipart/form-data; boundary=' + boundary)['url']
         changes.append(dict(collection='recipeBook', key=recipe['id'], field='image',
                             before=recipe['image'], after=image))

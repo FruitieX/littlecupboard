@@ -66,3 +66,9 @@ import after success makes no uploads or changes.
 
 The replacement source photos are household attachments only. They are not
 bundled in this repository or distributed as public application assets.
+
+The oven salmon and fish sticks images are generated illustrations in a
+photorealistic style, stored under `images/`. Their full generation prompts are
+in `image-prompts.json` (built-in image_gen). The photo manifest uses these local
+assets for missing images; it never replaces an existing household attachment.
+The recipe title uses “Fish sticks” while retaining the existing catalog IDs.
