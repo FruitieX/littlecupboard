@@ -63,6 +63,15 @@ async function replaceNumber(field, value) {
     'Typing must not prefix a forced zero',
   )
 }
+async function filterRecipeTag(page, tag) {
+  const button = page.getByRole('button', {
+    name: `Filter by tag ${tag}`,
+    exact: true,
+  })
+  if (!(await button.isVisible()))
+    await page.locator('.recipe-tag-filter > summary').click()
+  await button.click()
+}
 function cupboardSearch(page) {
   return page.getByRole('combobox', { name: 'Add something we have' })
 }
@@ -176,7 +185,10 @@ try {
   const partner = await partnerContext.newPage()
   const errors = []
   for (const page of [owner, partner])
-    page.on('pageerror', (error) => errors.push(error.message))
+    page.on('pageerror', (error) => {
+      errors.push(error.message)
+      console.error('Browser error:', error.stack)
+    })
   await owner.goto(frontendUrl)
   await owner
     .getByLabel('Setup token', { exact: true })
@@ -697,7 +709,10 @@ try {
     .fill('Cook the rice.\nAdd the seasoning and serve.')
   const tagInput = owner.getByRole('combobox', { name: 'Tags', exact: true })
   await tagInput.fill('veg')
-  await owner.getByRole('option', { name: 'Vegetarian', exact: true }).click()
+  await owner
+    .getByRole('listbox', { name: 'Recipe tag suggestions', exact: true })
+    .getByRole('option', { name: 'Vegetarian', exact: true })
+    .click()
   await tagInput.fill('Vegetarian, Lunchbox')
   await owner
     .getByRole('option', { name: 'Create “Lunchbox”', exact: true })
@@ -710,16 +725,12 @@ try {
     .waitFor()
   await owner.reload()
   await settle(owner)
-  await owner
-    .getByRole('button', { name: 'Filter by tag Lunchbox', exact: true })
-    .click()
+  await filterRecipeTag(owner, 'Lunchbox')
   await owner.waitForFunction(
     () => document.querySelectorAll('.recipe-card').length === 1,
   )
   assert.equal(await owner.locator('.recipe-card').count(), 1)
-  await owner
-    .getByRole('button', { name: 'Filter by tag Vegetarian', exact: true })
-    .click()
+  await filterRecipeTag(owner, 'Vegetarian')
   await owner
     .getByRole('button', { name: 'Open Family test bowl', exact: true })
     .waitFor()
@@ -806,16 +817,14 @@ try {
     .click()
   assert.equal(
     await partner
-      .getByRole('link', { name: 'Original recipe reference', exact: true })
+      .getByRole('link', { name: 'Source reference', exact: true })
       .getAttribute('href'),
     'https://example.com/family-rice',
   )
   await partner
     .getByRole('button', { name: 'Close dialog', exact: true })
     .click()
-  await partner
-    .getByRole('button', { name: 'Filter by tag Lunchbox', exact: true })
-    .click()
+  await filterRecipeTag(partner, 'Lunchbox')
   await partner.waitForFunction(
     () => document.querySelectorAll('.recipe-card').length === 1,
   )
@@ -2393,9 +2402,7 @@ try {
     .click()
   await owner.reload()
   await settle(owner)
-  await owner
-    .getByRole('button', { name: 'Filter by tag Imported', exact: true })
-    .click()
+  await filterRecipeTag(owner, 'Imported')
   await owner
     .getByRole('button', { name: 'Open Imported recipe', exact: true })
     .click()
@@ -2516,9 +2523,7 @@ try {
   console.log(
     'Recipe ingredient icon autocomplete, local replacement, batch draft review and shared private crops passed.',
   )
-  await owner
-    .getByRole('button', { name: 'Filter by tag Desserts', exact: true })
-    .click()
+  await filterRecipeTag(owner, 'Desserts')
   await owner
     .getByRole('button', { name: 'Open Batch icon recipe', exact: true })
     .waitFor()
@@ -2552,9 +2557,7 @@ try {
   await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
   await partner.goto(`${frontendUrl}/recipes`)
   await settle(partner)
-  await partner
-    .getByRole('button', { name: 'Filter by tag Desserts', exact: true })
-    .click()
+  await filterRecipeTag(partner, 'Desserts')
   await partner
     .getByRole('button', { name: 'Open Batch icon recipe', exact: true })
     .click()
@@ -3172,6 +3175,32 @@ try {
       (await request(partner, '/state', undefined, 'GET')).state.shelfLifeDays
         ?.apples === 0,
   )
+  // Keep the consumption fixture independent of earlier meal-plan requirements:
+  // checking 6 manual apples must not also buy apples requested by a planned meal.
+  const trainingState = (await request(owner, '/state', undefined, 'GET')).state
+  const appleRecipes = new Set(
+    [...trainingState.recipeBook, ...trainingState.customRecipes]
+      .filter((r) => r.ingredients.some((i) => i.productId === 'apples'))
+      .map((r) => r.id),
+  )
+  const trainingChanges = Object.entries(trainingState.plan)
+    .filter(([, id]) => appleRecipes.has(id))
+    .map(([day, id]) => ({
+      collection: 'plan',
+      key: day,
+      field: null,
+      before: id,
+      after: null,
+    }))
+  if (trainingChanges.length)
+    await request(owner, '/operations', {
+      id: crypto.randomUUID(),
+      operation: {
+        type: 'patch',
+        label: 'Isolate purchase training fixture',
+        changes: trainingChanges,
+      },
+    })
   // Start a fresh purchase quantity; a non-accumulating add preserves an existing active tile.
   await request(owner, '/operations', {
     id: crypto.randomUUID(),
@@ -3194,10 +3223,10 @@ try {
       id: crypto.randomUUID(),
       operation: { type: 'checkItem', id: 'apples', checked: true },
     })
-    dated.push([
-      new Date(Date.now() - days * 86400000).toISOString(),
-      bought.eventId,
-    ])
+    // Noon UTC keeps weekly local dates stable across daylight-saving changes.
+    const purchasedAt = new Date(Date.now() - days * 86400000)
+    purchasedAt.setUTCHours(12, 0, 0, 0)
+    dated.push([purchasedAt.toISOString(), bought.eventId])
   }
   // Only this disposable test database is changed; production history is untouched.
   execFileSync('python3', [
@@ -3450,6 +3479,230 @@ try {
     .waitFor()
   console.log(
     'Running-low projection, usual quantities, trip summary, cupboard trends and history passed.',
+  )
+  // Recipe options, variants, approval, sorting and both-device persistence.
+  const optionsRecipe = {
+    id: 'options-test-meal',
+    name: 'Options test meal',
+    subtitle: 'A test meal with a selectable side and dip.',
+    image: '/images/recipe-placeholder.svg',
+    minutes: 25,
+    servings: 4,
+    tag: 'Candidate',
+    tags: ['Candidate'],
+    mealType: 'vegetarian',
+    variantGroup: 'test-variants',
+    variantLabel: 'Rice',
+    kidApproved: false,
+    ingredients: [{ productId: 'rice', quantity: 250, unit: 'g' }],
+    steps: ['Cook the selected ingredients.', 'Serve separately.'],
+    optionGroups: [
+      {
+        id: 'side',
+        name: 'Test side',
+        optional: false,
+        choices: [
+          {
+            id: 'potato',
+            name: 'Potatoes',
+            ingredients: [{ productId: 'potatoes', quantity: 800, unit: 'g' }],
+            steps: ['Boil potatoes.'],
+          },
+          {
+            id: 'carrot',
+            name: 'Carrots',
+            ingredients: [{ productId: 'carrots', quantity: 300, unit: 'g' }],
+            steps: ['Steam carrots.'],
+          },
+        ],
+      },
+      {
+        id: 'dip',
+        name: 'Test dip',
+        optional: true,
+        choices: [
+          {
+            id: 'yoghurt',
+            name: 'Yoghurt',
+            ingredients: [{ productId: 'yogurt', quantity: 150, unit: 'g' }],
+            steps: ['Stir yoghurt.'],
+          },
+        ],
+      },
+    ],
+  }
+  const tofuVariant = {
+    ...optionsRecipe,
+    id: 'options-test-tofu',
+    name: 'Options test tofu',
+    variantLabel: 'Tofu',
+    ingredients: [{ productId: 'tofu', quantity: 540, unit: 'g' }],
+  }
+  await request(owner, '/operations', {
+    id: crypto.randomUUID(),
+    operation: {
+      type: 'patch',
+      label: 'Recipe options fixtures',
+      changes: [optionsRecipe, tofuVariant].map((recipe) => ({
+        collection: 'recipeBook',
+        key: recipe.id,
+        field: null,
+        before: null,
+        after: recipe,
+      })),
+    },
+  })
+  await owner.goto(frontendUrl + '/recipes')
+  await settle(owner)
+  await owner.getByLabel('Search recipes', { exact: true }).fill('Options test')
+  await owner
+    .getByRole('button', { name: 'Favorite Options test tofu', exact: true })
+    .click()
+  await owner
+    .getByLabel('Sort recipes', { exact: true })
+    .selectOption('favorites')
+  await owner.waitForFunction(
+    () =>
+      document.querySelector('.recipe-card-body h3')?.textContent ===
+      'Options test tofu',
+  )
+  await owner
+    .getByRole('button', { name: 'Open Options test meal', exact: true })
+    .click()
+  assert.equal(
+    await owner
+      .getByRole('combobox', { name: 'Test dip', exact: true })
+      .inputValue(),
+    '',
+  )
+  await owner
+    .getByRole('combobox', { name: 'Test dip', exact: true })
+    .selectOption('yoghurt')
+  await owner
+    .getByRole('combobox', { name: 'Test side', exact: true })
+    .selectOption('carrot')
+  await owner
+    .getByRole('button', { name: 'Mark kid-approved', exact: true })
+    .click()
+  await owner
+    .getByRole('button', { name: /^Add 3 ingredients to list$/ })
+    .click()
+  await owner
+    .getByRole('button', { name: 'Added to our shopping list', exact: true })
+    .waitFor()
+  await owner.waitForFunction(async () => {
+    const r = await fetch('/api/state')
+    const { state } = await r.json()
+    return state.recipeUsage?.['options-test-meal']?.shopping === 1
+  })
+  const optionsState = (await request(owner, '/state', undefined, 'GET')).state
+  assert.equal(
+    optionsState.recipeBook.find((r) => r.id === optionsRecipe.id).kidApproved,
+    true,
+  )
+  assert.ok(optionsState.items.some((i) => i.id === 'yogurt' && !i.checked))
+  await owner
+    .getByRole('combobox', { name: 'Recipe variant', exact: true })
+    .selectOption(tofuVariant.id)
+  await owner
+    .getByRole('dialog', { name: tofuVariant.name, exact: true })
+    .waitFor()
+  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  await partner.goto(frontendUrl + '/recipes')
+  await settle(partner)
+  await partner
+    .getByRole('button', { name: 'Open Options test meal', exact: true })
+    .click()
+  await partner
+    .getByRole('button', { name: '✓ Kid-approved', exact: true })
+    .waitFor()
+  await partner
+    .getByRole('button', { name: 'Close dialog', exact: true })
+    .click()
+  // Planned choices survive a different device and change automatic groceries.
+  const plannedState = (await request(owner, '/state', undefined, 'GET')).state
+  const nextLunch = new Date()
+  nextLunch.setUTCDate(nextLunch.getUTCDate() + 1)
+  const optionDay = nextLunch.toISOString().slice(0, 10)
+  await request(owner, '/operations', {
+    id: crypto.randomUUID(),
+    operation: {
+      type: 'patch',
+      label: 'Plan selected choices',
+      changes: [
+        {
+          collection: 'plan',
+          key: optionDay,
+          field: null,
+          before: plannedState.plan[optionDay] ?? null,
+          after: optionsRecipe.id,
+        },
+        {
+          collection: 'mealFeedback',
+          key: optionDay,
+          field: null,
+          before: plannedState.mealFeedback?.[optionDay] ?? null,
+          after: null,
+        },
+        {
+          collection: 'planOptions',
+          key: optionDay,
+          field: null,
+          before: plannedState.planOptions?.[optionDay] ?? null,
+          after: {
+            recipeId: optionsRecipe.id,
+            choices: { side: 'carrot', dip: 'yoghurt' },
+          },
+        },
+      ],
+    },
+  })
+  await partner.goto(frontendUrl + '/week')
+  await settle(partner)
+  const optionCard = partner.locator('.day-card').filter({
+    has: partner.getByRole('button', {
+      name: new RegExp(`lunch: ${optionsRecipe.name}$`),
+    }),
+  })
+  await optionCard.locator('.planned-options summary').click()
+  assert.equal(
+    await optionCard
+      .getByRole('combobox', { name: 'Test side', exact: true })
+      .inputValue(),
+    'carrot',
+  )
+  assert.equal(
+    await optionCard
+      .getByRole('combobox', { name: 'Test dip', exact: true })
+      .inputValue(),
+    'yoghurt',
+  )
+  await optionCard
+    .getByRole('combobox', { name: 'Test side', exact: true })
+    .selectOption('potato')
+  await partner.waitForFunction(async (day) => {
+    const r = await fetch('/api/state')
+    const { state } = await r.json()
+    return state.planOptions?.[day]?.choices.side === 'potato'
+  }, optionDay)
+  await owner.goto(frontendUrl + '/recipes')
+  await settle(owner)
+  await owner.setViewportSize({ width: 390, height: 900 })
+  await mkdir('test-results', { recursive: true })
+  await owner.screenshot({
+    path: 'test-results/recipes-sorting-mobile.png',
+    fullPage: true,
+  })
+  await owner
+    .getByRole('button', { name: 'Open Options test meal', exact: true })
+    .click()
+  await owner.screenshot({
+    path: 'test-results/recipe-options-mobile.png',
+    fullPage: true,
+  })
+  await owner.getByRole('button', { name: 'Close dialog', exact: true }).click()
+  console.log(
+    'Recipe choices, variants, kid approval, favorites-first ordering, shopping counts and two-device planned options passed.',
   )
   for (const width of [320, 390, 768, 1440]) {
     await owner.setViewportSize({ width, height: 900 })

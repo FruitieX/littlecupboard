@@ -1,3 +1,11 @@
+import { RecipeOptions, RecipeOptionsEditor } from './RecipeOptions'
+import {
+  defaultChoices,
+  recipeIngredients,
+  recipeSteps,
+  type RecipeOptionGroup,
+} from '../lib/recipe-options'
+import { sortRecipes } from '../lib/recipe-ranking'
 import { NumberInput } from './NumberInput'
 import { getProducts } from '../lib/catalog'
 import { deleteRecipe } from '../lib/catalog'
@@ -42,15 +50,20 @@ import { fetchAiJobs, isJobActive, watchAiJob } from '../lib/ai-jobs'
 
 export function Recipes() {
   const { state, update, allRecipes } = useApp()
+  const [sort, setSort] = useState<
+    'favorites' | 'popular' | 'recommended' | 'name' | 'quick'
+  >('favorites')
+  const [tagQuery, setTagQuery] = useState('')
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<{
-    kind: 'all' | 'favorites' | 'quick' | 'tag'
+    kind: 'all' | 'favorites' | 'quick' | 'tag' | 'kids'
     tag?: string
   }>({ kind: 'all' })
   const [selected, setSelected] = useState<Recipe | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [editing, setEditing] = useState<Recipe | null>(null)
   const newIdea = discovery(allRecipes, state)
+  const featured = sortRecipes(allRecipes, state, 'recommended')[0]
   const tags = availableRecipeTags(allRecipes)
   useEffect(() => {
     if (
@@ -59,14 +72,19 @@ export function Recipes() {
     )
       setFilter({ kind: 'all' })
   }, [filter, tags.join('\n')])
-  const visible = allRecipes.filter(
-    (r) =>
-      matchesSearch(recipeSearchFields(state, r), query) &&
-      (filter.kind === 'all' ||
-        (filter.kind === 'favorites' &&
-          state.favoriteRecipeIds.includes(r.id)) ||
-        (filter.kind === 'quick' && r.minutes <= 20) ||
-        (filter.kind === 'tag' && hasRecipeTag(r, filter.tag!))),
+  const visible = sortRecipes(
+    allRecipes.filter(
+      (r) =>
+        matchesSearch(recipeSearchFields(state, r), query) &&
+        (filter.kind === 'all' ||
+          (filter.kind === 'favorites' &&
+            state.favoriteRecipeIds.includes(r.id)) ||
+          (filter.kind === 'quick' && r.minutes <= 30) ||
+          (filter.kind === 'kids' && r.kidApproved === true) ||
+          (filter.kind === 'tag' && hasRecipeTag(r, filter.tag!))),
+    ),
+    state,
+    sort,
   )
   return (
     <>
@@ -85,17 +103,17 @@ export function Recipes() {
           <span>Add recipe</span>
         </button>
       </div>
-      {allRecipes[0] && (
+      {featured && (
         <div className="recipe-banner">
           <div>
             <span className="banner-overline">FROM OUR KITCHEN</span>
-            <h2>{allRecipes[0].name}</h2>
-            <Markdown compact>{allRecipes[0].subtitle}</Markdown>
-            <button onClick={() => setSelected(allRecipes[0])}>
+            <h2>{featured.name}</h2>
+            <Markdown compact>{featured.subtitle}</Markdown>
+            <button onClick={() => setSelected(featured)}>
               Take a look <ArrowUpRight size={18} />
             </button>
           </div>
-          <img src={allRecipes[0].image} alt={allRecipes[0].name} />
+          <img src={featured.image} alt={featured.name} />
           <span className="banner-flower">✳</span>
         </div>
       )}
@@ -111,7 +129,7 @@ export function Recipes() {
                 setEditing(newIdea)
               }}
             >
-              Review & save variation
+              Review & save recipe
             </button>
             <button
               className="text-button"
@@ -155,6 +173,7 @@ export function Recipes() {
             { kind: 'all', label: 'All recipes' },
             { kind: 'favorites', label: 'Favorites' },
             { kind: 'quick', label: 'Quick & easy' },
+            { kind: 'kids', label: 'Kid-approved' },
           ] as const
         ).map(({ kind, label }) => (
           <button
@@ -167,21 +186,58 @@ export function Recipes() {
             {label}
           </button>
         ))}
-        {tags.map((tag) => (
-          <button
-            key={`tag:${tag}`}
-            aria-label={`Filter by tag ${tag}`}
-            aria-pressed={filter.kind === 'tag' && filter.tag === tag}
-            className={
-              filter.kind === 'tag' && filter.tag === tag ? 'selected' : ''
-            }
-            onClick={() => setFilter({ kind: 'tag', tag })}
+      </div>
+      <div className="recipe-browse-controls">
+        <label>
+          Sort recipes
+          <select
+            aria-label="Sort recipes"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as typeof sort)}
           >
-            {['All recipes', 'Favorites', 'Quick & easy'].includes(tag)
-              ? `${tag} · tag`
-              : tag}
-          </button>
-        ))}
+            <option value="favorites">Favorites first</option>
+            <option value="popular">Most used</option>
+            <option value="recommended">Recommended for this week</option>
+            <option value="name">Name</option>
+            <option value="quick">Quickest</option>
+          </select>
+        </label>
+        <details className="recipe-tag-filter">
+          <summary>
+            Tags ({tags.length})
+            {filter.kind === 'tag' ? ` · ${filter.tag}` : ''}
+          </summary>
+          <input
+            aria-label="Search recipe tags"
+            placeholder="Find a tag"
+            value={tagQuery}
+            onChange={(e) => setTagQuery(e.target.value)}
+          />
+          <div className="filter-chips">
+            {' '}
+            {tags
+              .filter((tag) =>
+                tag.toLowerCase().includes(tagQuery.toLowerCase()),
+              )
+              .map((tag) => (
+                <button
+                  key={`tag:${tag}`}
+                  aria-label={`Filter by tag ${tag}`}
+                  aria-pressed={filter.kind === 'tag' && filter.tag === tag}
+                  className={
+                    filter.kind === 'tag' && filter.tag === tag
+                      ? 'selected'
+                      : ''
+                  }
+                  onClick={() => setFilter({ kind: 'tag', tag })}
+                >
+                  {['All recipes', 'Favorites', 'Quick & easy'].includes(tag)
+                    ? `${tag} · tag`
+                    : tag}
+                </button>
+              ))}
+          </div>
+        </details>
       </div>
       <div className="recipe-grid">
         <AnimatePresence mode="popLayout">
@@ -228,6 +284,19 @@ export function Recipes() {
                 onClick={() => setSelected(recipe)}
               >
                 <h3>{recipe.name}</h3>
+                <div className="recipe-badges">
+                  {state.favoriteRecipeIds.includes(recipe.id) && (
+                    <span>♥ Favorite</span>
+                  )}
+                  {recipe.kidApproved && <span>Kid-approved</span>}
+                  {recipe.variantLabel && <span>{recipe.variantLabel}</span>}
+                </div>
+                {!!state.recipeUsage?.[recipe.id] && (
+                  <small className="quiet-label">
+                    Planned {state.recipeUsage[recipe.id].planned} · Shopped{' '}
+                    {state.recipeUsage[recipe.id].shopping}
+                  </small>
+                )}
                 <Markdown compact>{recipe.subtitle}</Markdown>
                 <div>
                   <span>
@@ -254,7 +323,9 @@ export function Recipes() {
       )}
       {selected && (
         <RecipeDetail
-          recipe={selected}
+          key={selected.id}
+          recipe={allRecipes.find((r) => r.id === selected.id) ?? selected}
+          onVariantSelect={setSelected}
           onClose={() => setSelected(null)}
           onEdit={() => {
             setEditing(selected)
@@ -279,16 +350,24 @@ export function RecipeDetail({
   recipe,
   onClose,
   onEdit,
+  onVariantSelect,
 }: {
   recipe: Recipe
   onClose: () => void
   onEdit?: () => void
+  onVariantSelect?: (recipe: Recipe) => void
 }) {
-  const { action, state, update } = useApp()
+  const { action, state, update, allRecipes } = useApp()
+  const [choices, setChoices] = useState(defaultChoices(recipe))
+  const ingredients = recipeIngredients(recipe, choices)
+  const variants = recipe.variantGroup
+    ? allRecipes.filter((r) => r.variantGroup === recipe.variantGroup)
+    : []
   const [servings, setServings] = useState(recipe.servings)
-  const [include, setInclude] = useState<string[]>(
-    recipe.ingredients.map((i) => i.productId),
-  )
+  const [excluded, setExcluded] = useState<string[]>([])
+  const include = ingredients
+    .map((i) => i.productId)
+    .filter((id) => !excluded.includes(id))
   const [added, setAdded] = useState(false)
   const multiplier = servings / recipe.servings
   return (
@@ -337,11 +416,65 @@ export function RecipeDetail({
               target="_blank"
               rel="noopener noreferrer"
             >
-              Original recipe reference
+              Source reference
             </a>
           </p>
         )}
         <RecipeSources sources={recipe.sourceImages} />
+        <div className="recipe-badges">
+          <button
+            type="button"
+            className="chip-button"
+            aria-pressed={recipe.kidApproved === true}
+            onClick={() =>
+              update(
+                (s) => ({
+                  ...s,
+                  recipeBook: s.recipeBook?.map((r) =>
+                    r.id === recipe.id
+                      ? { ...r, kidApproved: !r.kidApproved }
+                      : r,
+                  ),
+                  customRecipes: s.customRecipes.map((r) =>
+                    r.id === recipe.id
+                      ? { ...r, kidApproved: !r.kidApproved }
+                      : r,
+                  ),
+                }),
+                'Update kid approval',
+              )
+            }
+          >
+            {recipe.kidApproved ? '✓ Kid-approved' : 'Mark kid-approved'}
+          </button>
+        </div>
+        {variants.length > 1 && onVariantSelect && (
+          <label className="recipe-variant">
+            Variant
+            <select
+              aria-label="Recipe variant"
+              value={recipe.id}
+              onChange={(e) => {
+                const next = variants.find((r) => r.id === e.target.value)
+                if (next) onVariantSelect(next)
+              }}
+            >
+              {variants.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.variantLabel || r.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <RecipeOptions
+          recipe={recipe}
+          value={choices}
+          onChange={(value) => {
+            setChoices(value)
+            setAdded(false)
+          }}
+        />
         <div className="ingredients-heading">
           <h3>Gather the good stuff</h3>
           <div className="servings-control">
@@ -372,21 +505,21 @@ export function RecipeDetail({
           Already have something? Untick it before adding.
         </p>
         <div className="ingredient-list">
-          {recipe.ingredients.map((ingredient) => {
+          {ingredients.map((ingredient) => {
             const product =
               getProducts(state).find(
                 (product) => product.id === ingredient.productId,
               ) ?? findProduct(ingredient.productId)
             return (
-              <label key={ingredient.productId}>
+              <label key={`${ingredient.productId}:${ingredient.unit}`}>
                 <input
                   type="checkbox"
                   checked={include.includes(ingredient.productId)}
                   onChange={(e) => {
-                    setInclude((current) =>
+                    setExcluded((current) =>
                       e.target.checked
-                        ? [...current, ingredient.productId]
-                        : current.filter((id) => id !== ingredient.productId),
+                        ? current.filter((id) => id !== ingredient.productId)
+                        : [...current, ingredient.productId],
                     )
                     setAdded(false)
                   }}
@@ -412,7 +545,8 @@ export function RecipeDetail({
           onClick={() => {
             action({
               type: 'addIngredients',
-              ingredients: recipe.ingredients.filter((i) =>
+              recipeId: recipe.id,
+              ingredients: ingredients.filter((i) =>
                 include.includes(i.productId),
               ),
               multiplier,
@@ -432,7 +566,7 @@ export function RecipeDetail({
         </p>
         <h3 className="method-heading">Let’s make something good</h3>
         <ol className="recipe-steps">
-          {recipe.steps.map((step, i) => (
+          {recipeSteps(recipe, choices).map((step, i) => (
             <li key={i}>
               <span>{i + 1}</span>
               <Markdown>{step}</Markdown>
@@ -476,6 +610,16 @@ export function RecipeEditor({
   const { state, update, groups, allRecipes, session, status } = useApp()
   const [name, setName] = useState(recipe?.name ?? '')
   const [subtitle, setSubtitle] = useState(recipe?.subtitle ?? '')
+  const [optionGroups, setOptionGroups] = useState<RecipeOptionGroup[]>(
+    recipe?.optionGroups ?? [],
+  )
+  const [kidApproved, setKidApproved] = useState(recipe?.kidApproved ?? false)
+  const [mealType, setMealType] = useState(recipe?.mealType ?? '')
+  const [makesLeftovers, setMakesLeftovers] = useState(
+    recipe?.makesLeftovers ?? false,
+  )
+  const [variantGroup, setVariantGroup] = useState(recipe?.variantGroup ?? '')
+  const [variantLabel, setVariantLabel] = useState(recipe?.variantLabel ?? '')
   const [sourceUrl, setSourceUrl] = useState(recipe?.sourceUrl ?? '')
   const [minutes, setMinutes] = useState(recipe?.minutes ?? 20)
   const [servings, setServings] = useState(
@@ -694,6 +838,26 @@ export function RecipeEditor({
           const saved: Recipe = {
             id: recipe?.id ?? crypto.randomUUID(),
             name: name.trim(),
+            kidApproved,
+            makesLeftovers,
+            ...(mealType ? { mealType: mealType as Recipe['mealType'] } : {}),
+            ...(variantGroup.trim()
+              ? {
+                  variantGroup: variantGroup.trim(),
+                  variantLabel: variantLabel.trim(),
+                }
+              : {}),
+            ...(optionGroups.length
+              ? {
+                  optionGroups: optionGroups.map((g) => ({
+                    ...g,
+                    choices: g.choices.map((c) => ({
+                      ...c,
+                      steps: c.steps.map((s) => s.trim()).filter(Boolean),
+                    })),
+                  })),
+                }
+              : {}),
             subtitle: subtitle.trim(),
             ...(sourceUrl.trim() ? { sourceUrl: sourceUrl.trim() } : {}),
             image: image || '/images/recipe-placeholder.svg',
@@ -792,6 +956,61 @@ export function RecipeEditor({
             />
           </label>
         </div>
+        <label>
+          Meal category
+          <select
+            value={mealType}
+            onChange={(e) => setMealType(e.target.value as typeof mealType)}
+          >
+            <option value="">Infer from ingredients</option>
+            <option value="fish">Fish</option>
+            <option value="vegetarian">Vegetarian</option>
+            <option value="poultry">Poultry</option>
+            <option value="meat">Meat</option>
+          </select>
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={kidApproved}
+            onChange={(e) => setKidApproved(e.target.checked)}
+          />
+          Kid-approved
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={makesLeftovers}
+            onChange={(e) => setMakesLeftovers(e.target.checked)}
+          />
+          Good for a planned extra batch
+        </label>
+        <details>
+          <summary>Related recipe variants</summary>
+          <label>
+            Recipe family
+            <input
+              value={variantGroup}
+              maxLength={100}
+              placeholder="e.g. Tortillas"
+              onChange={(e) => setVariantGroup(e.target.value)}
+            />
+          </label>
+          <label>
+            Variant name
+            <input
+              value={variantLabel}
+              maxLength={100}
+              placeholder="e.g. Vegetarian"
+              onChange={(e) => setVariantLabel(e.target.value)}
+            />
+          </label>
+        </details>
+        <RecipeOptionsEditor
+          groups={optionGroups}
+          onChange={setOptionGroups}
+          products={[...getProducts(state), ...products]}
+        />
         <RecipeTagsInput value={tags} onChange={setTags} options={knownTags} />
         <label className="checkbox-label">
           <input

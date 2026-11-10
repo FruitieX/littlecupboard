@@ -1,3 +1,6 @@
+import { RecipeOptions } from './RecipeOptions'
+import { selectedChoices, isLeftover } from '../lib/recipe-options'
+import { balancedWeek, rankForDay } from '../lib/recipe-ranking'
 import { NumberInput } from './NumberInput'
 import { useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
@@ -15,7 +18,6 @@ import type { Recipe } from '../lib/data'
 import { dateKey, mondayOfWeek, householdDate } from '../lib/shopping'
 import { EmptyState, Modal } from './ui'
 import { FoodIcon } from './FoodIcon'
-import { recipeScore, suggestWeek } from '../lib/learning'
 
 export function Week() {
   const { state, update, action, allRecipes } = useApp()
@@ -39,8 +41,14 @@ export function Week() {
   })
   const shortDate = (d: Date) =>
     d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-  const proposed = suggestWeek(allRecipes, state, rotation)
-  const ranked = proposed
+  const proposed = balancedWeek(allRecipes, state, days.map(dateKey), rotation)
+  const ranked = proposed.filter(Boolean)
+  const pickEntries = rankForDay(
+    planningRecipes,
+    state,
+    dateKey(pickDay ?? now),
+  )
+  const pickRecipes = pickEntries.map((entry) => entry.recipe)
   function notify(text: string) {
     setMessage(text)
     setTimeout(() => setMessage(''), 4000)
@@ -162,6 +170,42 @@ export function Week() {
                   <span>Pick something tasty</span>
                 </button>
               )}
+              {recipe &&
+                (!!recipe.optionGroups?.length ||
+                  isLeftover(state, key, recipe)) && (
+                  <details className="planned-options">
+                    <summary>
+                      {isLeftover(state, key, recipe)
+                        ? 'Leftovers · meal options'
+                        : 'Meal options'}
+                    </summary>
+                    {isLeftover(state, key, recipe) && (
+                      <p className="quiet-label">
+                        Use the saved extra batch from the previous day. No
+                        ingredients are added twice.
+                      </p>
+                    )}
+                    {!isLeftover(state, key, recipe) && (
+                      <RecipeOptions
+                        recipe={recipe}
+                        value={selectedChoices(state, key, recipe)}
+                        disabled={!!state.mealFeedback?.[key]}
+                        onChange={(choices) =>
+                          update(
+                            (s) => ({
+                              ...s,
+                              planOptions: {
+                                ...s.planOptions,
+                                [key]: { recipeId: recipe.id, choices },
+                              },
+                            }),
+                            'Change meal options',
+                          )
+                        }
+                      />
+                    )}
+                  </details>
+                )}
               {recipe && (
                 <div className="meal-feedback">
                   <label>
@@ -224,7 +268,7 @@ export function Week() {
         description="Something quick, something cozy, something everyone loves."
       >
         <div className="recipe-picker">
-          {planningRecipes.map((recipe) => (
+          {pickRecipes.map((recipe) => (
             <button
               key={recipe.id}
               onClick={() => {
@@ -232,6 +276,13 @@ export function Week() {
                   update((s) => ({
                     ...s,
                     plan: { ...s.plan, [dateKey(pickDay)]: recipe.id },
+                    planOptions: Object.fromEntries(
+                      Object.entries(s.planOptions ?? {}).filter(
+                        ([day, options]) =>
+                          day !== dateKey(pickDay) &&
+                          options.leftoverFrom !== dateKey(pickDay),
+                      ),
+                    ),
                     mealFeedback: Object.fromEntries(
                       Object.entries(s.mealFeedback ?? {}).filter(
                         ([day]) => day !== dateKey(pickDay),
@@ -245,13 +296,20 @@ export function Week() {
               <span>
                 <strong>{recipe.name}</strong>
                 <small>
-                  {recipe.minutes} min · {recipe.tag}
+                  {recipe.minutes} min · {recipe.variantLabel || recipe.tag} ·{' '}
+                  {
+                    rankForDay(
+                      planningRecipes,
+                      state,
+                      dateKey(pickDay ?? now),
+                    ).find((r) => r.recipe.id === recipe.id)?.reasons[0]
+                  }
                 </small>
               </span>
               <ArrowUpRight size={18} />
             </button>
           ))}
-          {!planningRecipes.length && (
+          {!pickRecipes.length && (
             <p>
               No recipes included in meal planning. Enable a recipe in its
               editor to add it here.
@@ -265,7 +323,17 @@ export function Week() {
               update((s) => {
                 const plan = { ...s.plan }
                 delete plan[dateKey(pickDay)]
-                return { ...s, plan }
+                return {
+                  ...s,
+                  plan,
+                  planOptions: Object.fromEntries(
+                    Object.entries(s.planOptions ?? {}).filter(
+                      ([day, options]) =>
+                        day !== dateKey(pickDay) &&
+                        options.leftoverFrom !== dateKey(pickDay),
+                    ),
+                  ),
+                }
               })
               setPickDay(null)
             }}
@@ -278,25 +346,39 @@ export function Week() {
         open={suggestOpen}
         onOpenChange={setSuggestOpen}
         title="A tasty starting point"
-        description="Uses your preferences, ratings, meal rotation and likely ingredients. Adjust any day afterward."
+        description="Fills open days with fish, vegetarian and familiar meals, considering kid approval, ingredients and intentional leftovers. Existing lunches stay. These are variety suggestions, not a nutrient calculation."
       >
         {ranked.length ? (
           <>
             <div className="plan-suggestions">
-              {proposed.map((recipe, i) => (
+              {proposed.map((suggestion, i) => (
                 <div key={i}>
                   <span>
                     {days[i].toLocaleDateString('en-GB', { weekday: 'short' })}
                   </span>
-                  <img src={recipe.image} alt="" />
-                  <div className="plan-suggestion-details">
-                    <strong>{recipe.name}</strong>
-                    <small>
-                      {recipeScore(recipe, state)
-                        .reasons.slice(0, 2)
-                        .join(' · ')}
-                    </small>
-                  </div>
+                  {suggestion ? (
+                    <>
+                      <img src={suggestion.recipe.image} alt="" />
+                      <div className="plan-suggestion-details">
+                        <strong>
+                          {suggestion.leftoverFrom ? 'Leftovers: ' : ''}
+                          {suggestion.recipe.name}
+                        </strong>
+                        <small>
+                          {suggestion.reasons.slice(0, 2).join(' · ')} ·{' '}
+                          {suggestion.servings} servings
+                        </small>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <img src="/images/recipe-placeholder.svg" alt="" />
+                      <div className="plan-suggestion-details">
+                        <strong>Leave this day open</strong>
+                        <small>Past lunches stay unchanged.</small>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -311,20 +393,25 @@ export function Week() {
               <button
                 className="primary-button"
                 onClick={() => {
-                  update((s) => ({
-                    ...s,
-                    plan: {
-                      ...s.plan,
-                      ...Object.fromEntries(
-                        days.map((day, i) => [dateKey(day), proposed[i].id]),
-                      ),
-                    },
-                    mealFeedback: Object.fromEntries(
-                      Object.entries(s.mealFeedback ?? {}).filter(
-                        ([day]) => !days.some((date) => dateKey(date) === day),
-                      ),
-                    ),
-                  }))
+                  update((s) => {
+                    const plan = { ...s.plan },
+                      servings = { ...s.servings },
+                      planOptions = { ...s.planOptions }
+                    proposed.forEach((entry, i) => {
+                      const day = dateKey(days[i])
+                      if (!entry || s.plan[day] || day < dateKey(now)) return
+                      plan[day] = entry.recipe.id
+                      servings[day] = entry.servings
+                      planOptions[day] = {
+                        recipeId: entry.recipe.id,
+                        choices: {},
+                        ...(entry.leftoverFrom
+                          ? { leftoverFrom: entry.leftoverFrom }
+                          : {}),
+                      }
+                    })
+                    return { ...s, plan, servings, planOptions }
+                  }, 'Fill open lunches')
                   setSuggestOpen(false)
                   notify(
                     'Plan saved. Missing ingredients are on your shopping list.',

@@ -65,6 +65,12 @@ export type Ingredient = {
   note?: string
 }
 export type Recipe = {
+  kidApproved?: boolean
+  mealType?: 'fish' | 'vegetarian' | 'poultry' | 'meat'
+  variantGroup?: string
+  variantLabel?: string
+  makesLeftovers?: boolean
+  optionGroups?: import('./api/RecipeOptionGroup').RecipeOptionGroup[]
   sourceUrl?: string
   id: string
   name: string
@@ -112,6 +118,8 @@ export type AppState = {
   stores: Store[]
   storeId: string
   plan: Plan
+  planOptions?: Record<string, import('./api/MealOptions').MealOptions>
+  recipeUsage?: Record<string, import('./api/RecipeUsage').RecipeUsage>
   purchases: Record<string, string>
   customProducts: Product[]
   customRecipes: Recipe[]

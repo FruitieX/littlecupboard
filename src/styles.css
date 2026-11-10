@@ -5982,3 +5982,88 @@ html {
 .auth-card a.primary-button {
   text-decoration: none;
 }
+
+.recipe-options,
+.recipe-browse-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 14px 0;
+}
+.recipe-options > label,
+.recipe-browse-controls > label {
+  display: grid;
+  gap: 5px;
+  min-width: 180px;
+  flex: 1;
+  font-size: 13px;
+}
+.recipe-options select,
+.recipe-browse-controls select,
+.recipe-tag-filter input,
+.recipe-variant select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line, #dedbd1);
+  border-radius: 10px;
+  background: var(--cream, #fffdf5);
+}
+.recipe-tag-filter {
+  flex: 1;
+  min-width: 180px;
+}
+.recipe-tag-filter summary,
+.recipe-options-editor summary,
+.planned-options summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-size: 13px;
+}
+.recipe-tag-filter .filter-chips {
+  flex-wrap: wrap;
+  max-height: 220px;
+  overflow: auto;
+  margin-top: 10px;
+}
+.recipe-options-editor fieldset {
+  border: 1px solid #dedbd1;
+  border-radius: 12px;
+  padding: 12px;
+  margin: 12px 0;
+  min-width: 0;
+}
+.recipe-options-editor fieldset > label {
+  display: grid;
+  gap: 5px;
+  margin: 8px 0;
+}
+.option-ingredient {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) 65px 55px auto;
+  gap: 6px;
+  align-items: center;
+  margin: 8px 0;
+}
+.option-ingredient input {
+  min-width: 0;
+  width: 100%;
+}
+.recipe-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0;
+  font-size: 11px;
+  color: #315647;
+}
+.recipe-badges > span {
+  background: #e9efe4;
+  border-radius: 8px;
+  padding: 4px 7px;
+}
+.planned-options {
+  margin: 0 16px;
+}
+.planned-options .recipe-options > label {
+  min-width: 0;
+}

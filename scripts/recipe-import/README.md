@@ -22,8 +22,8 @@ The input must contain the existing Spinach pancakes recipe and catalog entries
 named Tomatoes, Water and Basil. Their existing IDs are resolved by name; all
 other ingredients use built-in catalog IDs. One missing oat cooking product is
 added to Dairy (or Ingredients). Inspect a household's catalog for an equivalent
-before using this import elsewhere. Optional ingredients are described in notes
-because the schema has no optional-ingredient flag.
+before using this import elsewhere. This original import describes optional ingredients in notes; later imports can
+use structured option groups.
 
 Recipe images are private `/api/images/…` uploads. After applying the recipe
 patch, `attach-photos.py API_ORIGIN` reads an authenticated session token from
@@ -79,3 +79,65 @@ whole-chicken catalog entry if one exists, upload the local PNG through
 `/api/images`, then insert the product (if missing) and recipe as one API patch.
 Its stable recipe ID makes an existing import a no-op. Oven timing is separate
 from the ready-cooked shortcut; neither changes the weekly plan.
+
+## Family candidates, selectable components and variants
+
+`batch2.json` defines 13 additional Finnish-titled candidate meals: Pirkka Parhaat
+chicken nuggets with rice, fish balls with mash, homemade chicken nuggets, IKEA
+plant balls, vegetarian meatball pasta, creamy Quorn pasta, Quorn with wedges,
+tofu nuggets, tofu stir-fry, mild coconut tofu, vegetable omelette, Apetit plant
+nuggets, and plant-based wraps. Exact branded products are retained separately
+from generic ingredients; the Pirkka Parhaat product must not be replaced with
+regular Pirkka nuggets. Product and inspiration references live in the manifest.
+Use current package instructions and labels if products change.
+
+Run `batch2.py API_ORIGIN [PRIVATE_SAUCE_IMAGE]` with an authenticated session token
+on stdin after installing the supporting app version. It resolves existing
+catalog names/aliases, rejects ambiguous matches, uploads local photos through
+`/api/images`, and submits one validated compare-and-set API patch. Stable IDs
+make repeat runs no-ops; retrying the same mutation is idempotent. Existing recipe
+ingredients, directions, photos, references and portions are preserved. Five
+existing candidates receive additive variant/batch metadata or the optional
+fish-sticks sauce. Preferences, favorites, usage history and meal plans are not
+changed. The optional sauce source image is a private attachment, never a public
+asset. The import assumes the catalog entries used by the earlier candidate
+batch, including its oat cooking product.
+
+Optional groups start off; required groups default to their first choice. A
+choice holds scalable ingredient amounts and extra ordered cooking steps. The
+fish-sticks dip selects exactly one flavor (including mustard cucumber relish),
+never all flavors together. Planned selections are stored per date and used by
+both shopping requirements and meal consumption. Catalog deletion checks include
+all selectable ingredients. Related complete recipes share a variant group;
+switching a variant opens that recipe without rewriting either version.
+
+Recipes support kid approval, meal category, leftovers suitability and variant
+metadata. Favorites sort first by default; most-used ordering counts actual new
+planning and manual recipe-shopping actions. Earlier activity is not guessed or
+backfilled. Recommended ordering and lunch suggestions use weekly fish,
+vegetarian and meat variety, preferences, repeats and kid approval. This is a
+variety heuristic, not nutrient analysis. Suggestions fill future open days only.
+A leftover suggestion requires an explicitly prepared extra batch on the previous
+day; it adds neither another grocery requirement nor another pantry deduction.
+Suggested new recipes are independent complete drafts, reviewed before saving.
+
+### Generated image assets
+
+These are generated illustrative meal photos, not photographs of the branded
+products. All are uploaded and cached as private SQLite attachments at import;
+recipe cards do not depend on external photo hosting. Full built-in image_gen
+prompts: [batch2-prompts.json](batch2-prompts.json).
+
+- [coconut-tofu](batch2-images/coconut-tofu.jpg)
+- [diy-chicken-nuggets](batch2-images/diy-chicken-nuggets.jpg)
+- [fish-balls-mash](batch2-images/fish-balls-mash.jpg)
+- [ikea-plant-balls](batch2-images/ikea-plant-balls.jpg)
+- [pirkka-nuggets-rice](batch2-images/pirkka-nuggets-rice.jpg)
+- [plant-nuggets](batch2-images/plant-nuggets.jpg)
+- [plant-wraps](batch2-images/plant-wraps.jpg)
+- [quorn-pasta](batch2-images/quorn-pasta.jpg)
+- [quorn-wedges](batch2-images/quorn-wedges.jpg)
+- [tofu-nuggets](batch2-images/tofu-nuggets.jpg)
+- [tofu-stir-fry](batch2-images/tofu-stir-fry.jpg)
+- [vegetable-omelette](batch2-images/vegetable-omelette.jpg)
+- [veggie-meatball-pasta](batch2-images/veggie-meatball-pasta.jpg)

@@ -20,6 +20,8 @@ const lists = [
 ] as const
 const maps = [
   'plan',
+  'planOptions',
+  'recipeUsage',
   'planCoverage',
   'pantry',
   'servings',

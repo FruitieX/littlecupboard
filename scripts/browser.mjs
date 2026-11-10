@@ -13,7 +13,15 @@ export async function settle(page) {
     await page.locator('[data-app-ready="true"]').waitFor()
   await page.evaluate(() => document.fonts.ready)
   await page.waitForFunction(() =>
-    [...document.images].every((img) => img.complete),
+    [...document.images].every((img) => {
+      if (img.complete) return true
+      // Offscreen lazy images deliberately wait until scrolled into view.
+      const bounds = img.getBoundingClientRect()
+      return (
+        img.loading === 'lazy' &&
+        (bounds.bottom < 0 || bounds.top > window.innerHeight)
+      )
+    }),
   )
   await page.waitForTimeout(300)
 }

@@ -1,3 +1,4 @@
+import { allRecipeIngredients } from './recipe-options'
 import type { AppState, Product, Recipe } from './data'
 import { getProducts } from './catalog'
 import { recipeTags } from './recipe-tags'
@@ -38,7 +39,7 @@ export function recipeSearchFields(state: AppState, recipe: Recipe) {
     recipe.name,
     recipe.subtitle,
     ...recipeTags(recipe),
-    ...recipe.ingredients.flatMap((ingredient) => {
+    ...allRecipeIngredients(recipe).flatMap((ingredient) => {
       const product = products.find((p) => p.id === ingredient.productId)
       return [product?.name, ...(product?.aliases ?? []), ingredient.note]
     }),

@@ -30,7 +30,7 @@ describe('household meal suggestions', () => {
     const household = state()
     household.favoriteRecipeIds = [dessert.id]
     expect(suggestWeek([dessert], household)).toEqual([])
-    expect(discovery([dessert], household)).toBeNull()
+    expect(discovery([dessert], household)?.id).not.toBe(dessert.id)
     expect(
       suggestWeek([dessert, recipes[1]], household).every(
         (recipe) => recipe.id === recipes[1].id,
@@ -78,6 +78,6 @@ describe('household meal suggestions', () => {
         until: null,
       },
     }
-    expect(discovery(recipes, household)).toBeNull()
+    expect(discovery(recipes, household)?.id).not.toBe(suggestion.id)
   })
 })

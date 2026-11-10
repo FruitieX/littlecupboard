@@ -1,3 +1,8 @@
+import {
+  recipeIngredients,
+  selectedChoices,
+  isLeftover,
+} from './recipe-options'
 import { getProducts } from './catalog'
 import { listFields, recipes } from './data'
 import type { Amount, AppState, PlanCredit, ShoppingItem } from './data'
@@ -61,6 +66,7 @@ function requirements(state: AppState, now: Date): Requirement[] {
       const recipe = recipeMap.get(id)
       if (
         !recipe ||
+        isLeftover(state, day, recipe) ||
         day < today ||
         day >= dateKey(end) ||
         ['cooked', 'skipped'].includes(state.mealFeedback?.[day]?.status ?? '')
@@ -70,16 +76,18 @@ function requirements(state: AppState, now: Date): Requirement[] {
         (state.servings?.[day] ??
           state.preferences?.servings ??
           recipe.servings) / recipe.servings
-      return recipe.ingredients.map((ingredient) => ({
-        day,
-        productId: ingredient.productId,
-        mealName: recipe.name,
-        note: ingredient.note,
-        ...normalize({
-          ...ingredient,
-          quantity: ingredient.quantity * multiplier,
+      return recipeIngredients(recipe, selectedChoices(state, day, recipe)).map(
+        (ingredient) => ({
+          day,
+          productId: ingredient.productId,
+          mealName: recipe.name,
+          note: ingredient.note,
+          ...normalize({
+            ...ingredient,
+            quantity: ingredient.quantity * multiplier,
+          }),
         }),
-      }))
+      )
     })
 }
 function outstanding(state: AppState, now: Date): Requirement[] {

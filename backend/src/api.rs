@@ -130,7 +130,7 @@ pub async fn mutate(
                     .chain(
                         selected_recipes
                             .iter()
-                            .flat_map(|recipe| recipe.ingredients.iter()),
+                            .flat_map(domain::all_recipe_ingredients),
                     )
                     .map(|ingredient| ingredient.product_id.clone())
                     .collect::<std::collections::BTreeSet<_>>();
@@ -156,6 +156,7 @@ pub async fn mutate(
                 domain::apply(
                     &mut snapshot.state,
                     &Operation::AddIngredients {
+                        recipe_id: None,
                         ingredients: selected_shopping,
                         multiplier: 1.0,
                     },
@@ -282,6 +283,14 @@ pub async fn mutate(
             }
         }
         crate::icon_jobs::enqueue_new(&tx, &actor.household_id, &before, &snapshot.state)?;
+        if !matches!(input.operation, Operation::Undo { .. }) {
+            for (day, id) in &snapshot.state.plan {
+                if before.plan.get(day) != Some(id) {
+                    let usage = snapshot.state.recipe_usage.entry(id.clone()).or_default();
+                    usage.planned = usage.planned.saturating_add(1);
+                }
+            }
+        }
         let changes = domain::changes(&before, &snapshot.state)?;
         let kind = serde_json::to_value(&input.operation)?["type"]
             .as_str()

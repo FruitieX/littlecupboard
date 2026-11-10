@@ -450,3 +450,29 @@ Replaced the two candidate photos with generated food images matching the saved 
 ### Roast chicken and rice candidate — 2026-11-10
 
 Added a four-portion grillibroileri meal with plain rice and separate vegetables, a raw whole-chicken oven method and a ready-cooked shortcut. It uses existing side-ingredient IDs and one whole-chicken catalog item, with a private generated image and an original-recipe reference. The template, image and generation prompt are retained with the recipe importer; scheduling remains manual.
+
+### Selectable meal components, family candidates and recipe ordering — 2026-11-10
+
+Recipes now support optional components, one-of ingredient choices, related
+complete variants, kid approval, meal type and intentional leftovers. Defaults
+and per-day choices use the same quantity semantics in client shopping,
+server purchase coverage and pantry consumption. Optional ingredients stay off
+until selected. Leftovers require a previous-day extra batch and never create
+another shopping requirement or pantry deduction. New fields are backward
+compatible JSON metadata; Rust API bindings remain generated.
+
+The recipe page defaults to favorites first and offers most-used, recommended,
+name and time ordering. Shared counters record new planning and manual
+recipe-shopping operations with idempotent retries and undo. Tags are searchable
+inside a collapsed filter. Empty-day selection and future open-day suggestions
+use weekly meal variety, household preferences and kid approval while retaining
+saved lunches. This is a variety heuristic, not nutritional analysis. Discovery
+uses independent complete drafts instead of cloning an existing favorite; AI
+prompts also request distinct meals.
+
+The repeatable batch importer adds 13 Finnish-titled convenience and vegetarian
+candidates, with normalized catalog associations, source/product references and
+local generated meal images. Existing candidate records receive only additive
+variant/batch metadata and the optional fish-sticks sauce. No candidate is
+scheduled automatically. See `scripts/recipe-import/README.md` for import and
+image details.

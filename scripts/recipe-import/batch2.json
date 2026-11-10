@@ -1,0 +1,1657 @@
+{
+  "products": [
+    {
+      "id": "family-pirkka-parhaat-nuggets",
+      "name": "Pirkka Parhaat kananugget 300 g (pakaste)",
+      "category": "Frozen",
+      "icon": "🍗",
+      "aliases": ["Pirkka Parhaat chicken nuggets"],
+      "description": "Vain Pirkka Parhaat 300 g, EAN 6410405338143. Ei tavallinen Pirkka. Sisältää valkosipulia."
+    },
+    {
+      "id": "family-fish-balls",
+      "name": "Kalapyörykät",
+      "category": "Fish",
+      "icon": "🐟",
+      "aliases": ["Fish balls", "Fiskbullar"],
+      "description": "Valitse tavalliset kalapyörykät; kuumenna pakkauksen mukaan."
+    },
+    {
+      "id": "family-ikea-plant-balls",
+      "name": "IKEA HUVUDROLL kasviproteiinipyörykät 500 g",
+      "category": "Frozen",
+      "icon": "🧆",
+      "aliases": ["IKEA plant balls"],
+      "description": "Kasviproteiinipyörykät, ei lihapyörykät eikä eri kasvispallot. Sisältää sipulia ja omenaa."
+    },
+    {
+      "id": "family-apetit-meatballs",
+      "name": "Apetit Kasvisjauhispyörykät 240 g",
+      "category": "Frozen",
+      "icon": "🧆",
+      "aliases": ["Apetit vegetarian meatballs"],
+      "description": "Herneproteiinipyörykät; sisältää sipulia ja valkosipulia."
+    },
+    {
+      "id": "family-quorn-fillets",
+      "name": "Quorn Fileet 312 g",
+      "category": "Frozen",
+      "icon": "🍽️",
+      "aliases": ["Quorn fillets"],
+      "description": "Maustamattomat fileet, ei paneroidut pihvit. Sisältää kananmunaa; kasvisruoka, ei vegaaninen."
+    },
+    {
+      "id": "family-apetit-nuggets",
+      "name": "Apetit Kasvisjauhis Crispy Chick nugetit 240 g",
+      "category": "Frozen",
+      "icon": "🌱",
+      "aliases": ["Apetit plant nuggets"],
+      "description": "Tavalliset Crispy Chick -nugetit, ei muu makuversio. Sisältää sipulimaustetta."
+    },
+    {
+      "id": "family-goldgreen-strips",
+      "name": "Valio Gold&Green Suikale Original 240 g",
+      "category": "Convenience",
+      "icon": "🌱",
+      "aliases": ["Gold and Green strips"],
+      "description": "Original-suikaleet. Kypsä kasviproteiini; sisältää sipulitäysmehutiivistettä."
+    },
+    {
+      "id": "family-kermaviili",
+      "name": "Kermaviili 200 g",
+      "category": "Dairy",
+      "icon": "🥛",
+      "aliases": ["Finnish cultured sour cream"],
+      "description": "Kermaviili, esimerkiksi Valio; laktoositon vaihtoehto käy."
+    },
+    {
+      "id": "family-mustard-pickle",
+      "name": "Sinappikurkkusalaatti",
+      "category": "Ingredients",
+      "icon": "🥒",
+      "aliases": ["Mustard cucumber relish"],
+      "description": "Valmis sinappikurkkusalaatti kastikkeeseen."
+    },
+    {
+      "id": "family-chili-ketchup",
+      "name": "Chiliketsuppi",
+      "category": "Ingredients",
+      "icon": "🍅",
+      "aliases": ["Chili ketchup"]
+    }
+  ],
+  "recipes": [
+    {
+      "recipe": {
+        "id": "family-batch2-pirkka-nuggets-rice",
+        "name": "Pirkka Parhaat -kananugetit, riisi ja kasvikset",
+        "subtitle": "10 min aktiivista työtä · Helppo · 4 annosta. Tarkoituksella helppo pakastinateria. Juuri tämä Parhaat-tuote on valittu; älä vaihda tavalliseen Pirkkaan. Tuotesivulla tyydyttynyttä rasvaa 1,2 g / 100 g; tarkista ajantasaiset tiedot pakkauksesta. Tuote sisältää valkosipulia.",
+        "image": "",
+        "minutes": 25,
+        "tag": "Broileri",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "family-pirkka-parhaat-nuggets",
+            "quantity": 600,
+            "unit": "g",
+            "note": "2 × 300 g. Vain Pirkka Parhaat, EAN 6410405338143; ei tavallinen Pirkka."
+          },
+          {
+            "productId": "rice",
+            "quantity": 250,
+            "unit": "g",
+            "note": "Kuivapaino."
+          },
+          {
+            "productId": "carrots",
+            "quantity": 300,
+            "unit": "g"
+          },
+          {
+            "productId": "cucumber",
+            "quantity": 0.5,
+            "unit": "pc"
+          }
+        ],
+        "steps": [
+          "Kuumenna uuni 225 °C:een. Keitä riisi pakkauksen ohjeen mukaan.",
+          "Kuumenna Pirkka Parhaat -nugetteja jäisinä uunissa noin 15 minuuttia nykyisen pakkausohjeen mukaan, kunnes ne ovat kauttaaltaan kuumia.",
+          "Kuori porkkanat ja keitä tai höyrytä pehmeiksi. Viipaloi kurkku.",
+          "Tarjoa nugetit, riisi ja kasvikset erillään."
+        ],
+        "tags": ["Ehdokas", "Helppo arki", "Pakaste"],
+        "mealType": "poultry",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://www.k-ruoka.fi/kauppa/tuote/pirkka-parhaat-suom-kananugetti-300g-6410405338143",
+        "optionGroups": [
+          {
+            "id": "dip",
+            "name": "Dippi",
+            "optional": true,
+            "choices": [
+              {
+                "id": "ketchup",
+                "name": "Ketsuppi",
+                "ingredients": [
+                  {
+                    "productId": "ketchup",
+                    "quantity": 40,
+                    "unit": "g"
+                  }
+                ],
+                "steps": []
+              }
+            ]
+          }
+        ],
+        "variantGroup": "pakastenugetit",
+        "variantLabel": "Broileri"
+      },
+      "imageAsset": "batch2-images/pirkka-nuggets-rice.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-fish-balls-mash",
+        "name": "Kalapyörykät, perunamuusi, herneet ja kurkku",
+        "subtitle": "15 min aktiivista työtä · Helppo · 4 annosta. Tuttu pyörykkämuoto ja erilliset lisukkeet. Valitse tavallisia kalapyöryköitä; tuotteen mausteet vaihtelevat. Tämä on kokeiltava ehdokas, ei vielä lasten hyväksymä.",
+        "image": "",
+        "minutes": 30,
+        "tag": "Kala",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "family-fish-balls",
+            "quantity": 500,
+            "unit": "g"
+          },
+          {
+            "productId": "potatoes",
+            "quantity": 800,
+            "unit": "g"
+          },
+          {
+            "productId": "milk",
+            "quantity": 125,
+            "unit": "ml",
+            "note": "Vähärasvainen tai laktoositon."
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "frozen-peas",
+            "quantity": 200,
+            "unit": "g"
+          },
+          {
+            "productId": "cucumber",
+            "quantity": 0.5,
+            "unit": "pc"
+          }
+        ],
+        "steps": [
+          "Kuori perunat ja keitä pehmeiksi.",
+          "Kuumenna kalapyörykät niiden oman pakkauksen ohjeen mukaan.",
+          "Valuta perunat ja soseuta lämpimän maidon ja rypsiöljyn kanssa.",
+          "Keitä herneet kypsiksi ja viipaloi kurkku. Tarkista kalapyörykät mahdollisten ruotojen varalta.",
+          "Tarjoa kaikki osat erillään."
+        ],
+        "tags": ["Ehdokas", "Helppo arki", "Kala"],
+        "mealType": "fish",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://www.sydanmerkki.fi/resepti/kalapyorykkapelti"
+      },
+      "imageAsset": "batch2-images/fish-balls-mash.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-diy-chicken-nuggets",
+        "name": "Omat kananugetit tai helpot broilerisuikaleet",
+        "subtitle": "20 min aktiivista työtä · Helppo · 4 annosta. Voit valita fileet tai valmiit suikaleet, leivityksen tai laiskan pannuversion sekä perunalohkot, ranskalaiset tai riisin. Aika 40 min lohkoperunoilla, riisillä ja suikaleilla noin 25 min. Aikuisten mausteet erikseen.",
+        "image": "",
+        "minutes": 40,
+        "tag": "Broileri",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "paprika",
+            "quantity": 1,
+            "unit": "tsp",
+            "note": "Mieto."
+          },
+          {
+            "productId": "cucumber",
+            "quantity": 0.5,
+            "unit": "pc"
+          }
+        ],
+        "steps": [
+          "Valitse kana, valmistustapa ja lisuke alta. Lohkoperunat kannattaa aloittaa ensin; riisi ja pakasteranskalaiset valmistuvat oman pakkauksensa mukaan.",
+          "Pidä raaka kana ja sen välineet erillään kurkusta ja valmiista ruoasta. Mausta kana miedolla paprikalla.",
+          "Tarjoa kypsä kana valitun lisukkeen ja viipaloidun kurkun kanssa."
+        ],
+        "tags": ["Ehdokas", "Kokeilu", "Muokattava"],
+        "mealType": "poultry",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "optionGroups": [
+          {
+            "id": "chicken",
+            "name": "Kana",
+            "optional": false,
+            "choices": [
+              {
+                "id": "fillet",
+                "name": "Broilerifilee",
+                "ingredients": [
+                  {
+                    "productId": "chicken-breast",
+                    "quantity": 500,
+                    "unit": "g",
+                    "note": "Raaka, maustamaton."
+                  }
+                ],
+                "steps": []
+              },
+              {
+                "id": "strips",
+                "name": "Valmiiksi leikatut broilerisuikaleet",
+                "ingredients": [
+                  {
+                    "productId": "@Chicken strips",
+                    "quantity": 500,
+                    "unit": "g",
+                    "note": "Raaka, maustamaton."
+                  }
+                ],
+                "steps": []
+              }
+            ]
+          },
+          {
+            "id": "coating",
+            "name": "Valmistustapa",
+            "optional": false,
+            "choices": [
+              {
+                "id": "breaded",
+                "name": "Paneroidut nugetit",
+                "ingredients": [
+                  {
+                    "productId": "breadcrumbs",
+                    "quantity": 60,
+                    "unit": "g"
+                  },
+                  {
+                    "productId": "flour",
+                    "quantity": 30,
+                    "unit": "g"
+                  },
+                  {
+                    "productId": "eggs",
+                    "quantity": 1,
+                    "unit": "pc"
+                  }
+                ],
+                "steps": [
+                  "Leikkaa kana suupaloiksi, jos se ei ole jo suikaleina. Pyörittele jauhoissa, kananmunassa ja korppujauhoissa. Aseta leivinpaperille ja sivele reseptin öljyllä. Paista 220 °C:ssa noin 15–20 minuuttia, kunnes kana on sisältä vähintään 75 °C."
+                ]
+              },
+              {
+                "id": "plain",
+                "name": "Nopeat suikaleet ilman leivitystä",
+                "ingredients": [],
+                "steps": [
+                  "Paista maustamattomat suikaleet reseptin öljyssä pannulla noin 8–12 minuuttia paksuudesta riippuen, kunnes ne ovat kauttaaltaan kypsiä, vähintään 75 °C sisältä."
+                ]
+              }
+            ]
+          },
+          {
+            "id": "side",
+            "name": "Lisuke",
+            "optional": false,
+            "choices": [
+              {
+                "id": "wedges",
+                "name": "Lohkoperunat",
+                "ingredients": [
+                  {
+                    "productId": "potatoes",
+                    "quantity": 800,
+                    "unit": "g"
+                  },
+                  {
+                    "productId": "rapeseed-oil",
+                    "quantity": 1,
+                    "unit": "tbsp"
+                  }
+                ],
+                "steps": [
+                  "Leikkaa perunat lohkoiksi, sekoita öljyyn ja paahda 220–225 °C:ssa noin 30–35 minuuttia. Aloita ne ennen muuta valmistusta."
+                ]
+              },
+              {
+                "id": "fries",
+                "name": "Uuniranskalaiset",
+                "ingredients": [
+                  {
+                    "productId": "frozen-chips",
+                    "quantity": 600,
+                    "unit": "g"
+                  }
+                ],
+                "steps": [
+                  "Kypsennä pakasteranskalaiset niiden pakkauksen ohjeen mukaan."
+                ]
+              },
+              {
+                "id": "rice",
+                "name": "Riisi",
+                "ingredients": [
+                  {
+                    "productId": "rice",
+                    "quantity": 250,
+                    "unit": "g",
+                    "note": "Kuivapaino."
+                  }
+                ],
+                "steps": ["Keitä riisi pakkauksen ohjeen mukaan."]
+              }
+            ]
+          },
+          {
+            "id": "dip",
+            "name": "Dippi",
+            "optional": true,
+            "choices": [
+              {
+                "id": "ketchup",
+                "name": "Ketsuppi",
+                "ingredients": [
+                  {
+                    "productId": "ketchup",
+                    "quantity": 40,
+                    "unit": "g"
+                  }
+                ],
+                "steps": []
+              }
+            ]
+          }
+        ],
+        "variantGroup": "kotinugetit",
+        "variantLabel": "Broileri"
+      },
+      "imageAsset": "batch2-images/diy-chicken-nuggets.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-ikea-plant-balls",
+        "name": "IKEA-kasviproteiinipyörykät, muusi ja puolukkahillo",
+        "subtitle": "15 min aktiivista työtä · Helppo · 4 annosta. Käytä IKEA HUVUDROLL -kasviproteiinipyöryköitä, ei lihapyöryköitä tai eri kasvispalloja. Pyörykät sisältävät sipulia ja omenaa. Vegaaninen kokonaisuus syntyy vaihtamalla maito kaurajuomaan.",
+        "image": "",
+        "minutes": 30,
+        "tag": "Kasvis",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "family-ikea-plant-balls",
+            "quantity": 500,
+            "unit": "g",
+            "note": "HUVUDROLL kasviproteiinipyörykät, 1 pussi."
+          },
+          {
+            "productId": "potatoes",
+            "quantity": 800,
+            "unit": "g"
+          },
+          {
+            "productId": "milk",
+            "quantity": 125,
+            "unit": "ml",
+            "note": "Vähärasvainen; halutessasi kaurajuoma."
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "@Lingonberry jam",
+            "quantity": 80,
+            "unit": "g"
+          },
+          {
+            "productId": "frozen-peas",
+            "quantity": 200,
+            "unit": "g"
+          }
+        ],
+        "steps": [
+          "Kuori perunat ja keitä pehmeiksi.",
+          "Kypsennä HUVUDROLL-kasviproteiinipyörykät nykyisen pakkauksen ohjeen mukaan kauttaaltaan kuumiksi.",
+          "Valuta perunat ja soseuta lämpimän maidon tai kaurajuoman ja rypsiöljyn kanssa.",
+          "Keitä herneet kypsiksi.",
+          "Tarjoa pyörykät, muusi, herneet ja pieni annos puolukkahilloa erillään."
+        ],
+        "tags": ["Ehdokas", "Helppo arki", "Kasvis"],
+        "mealType": "vegetarian",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://www.ikea.com/fi/fi/p/huvudroll-kasviproteiinipyoerykaet-pakaste-20483592/"
+      },
+      "imageAsset": "batch2-images/ikea-plant-balls.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-veggie-meatball-pasta",
+        "name": "Kasvispyörykkä-tomaattipasta",
+        "subtitle": "15 min aktiivista työtä · Helppo · 4 annosta. Pyörykät sisältävät sipulia ja valkosipulia. Tarvittaessa aikuiselle voi paistaa tilalle maustamatonta tofua. [Tuote](https://apetit.fi/tuotteet/apetit-kasvisjauhispyorykat-pakaste-240g-1/).",
+        "image": "",
+        "minutes": 25,
+        "tag": "Kasvis",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "family-apetit-meatballs",
+            "quantity": 480,
+            "unit": "g",
+            "note": "2 × 240 g."
+          },
+          {
+            "productId": "pasta",
+            "quantity": 300,
+            "unit": "g",
+            "note": "Kuivapaino."
+          },
+          {
+            "productId": "passata",
+            "quantity": 400,
+            "unit": "g"
+          },
+          {
+            "productId": "carrots",
+            "quantity": 160,
+            "unit": "g",
+            "note": "Noin 2 keskikokoista."
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "oregano",
+            "quantity": 1,
+            "unit": "tsp"
+          },
+          {
+            "productId": "dried-basil",
+            "quantity": 1,
+            "unit": "tsp"
+          },
+          {
+            "productId": "@Water",
+            "quantity": 100,
+            "unit": "ml"
+          }
+        ],
+        "steps": [
+          "Keitä pasta pakkauksen mukaan ja kuumenna uuni 225 °C:een.",
+          "Kuumenna Apetit Kasvisjauhispyöryköitä jäisinä uunissa noin 10 minuuttia nykyisen pakkausohjeen mukaan.",
+          "Raasta porkkanat hienoksi ja pehmennä öljyssä kattilassa noin 3 minuuttia.",
+          "Lisää passata, vesi ja yrtit. Hauduta noin 10 minuuttia. Halutessasi soseuta kastike.",
+          "Tarjoa pasta, kastike ja pyörykät yhdessä tai erillään."
+        ],
+        "tags": ["Ehdokas", "Kasvis", "Nopea"],
+        "mealType": "vegetarian",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://apetit.fi/reseptit/kasvisjauhispyorykka-pastavuoka/",
+        "optionGroups": [
+          {
+            "id": "cheese",
+            "name": "Juustolisä",
+            "optional": true,
+            "choices": [
+              {
+                "id": "oil-cheese",
+                "name": "Oltermanni Kasviöljy",
+                "ingredients": [
+                  {
+                    "productId": "@Valio Oltermanni vegetable-oil cheese",
+                    "quantity": 40,
+                    "unit": "g"
+                  }
+                ],
+                "steps": []
+              }
+            ]
+          }
+        ]
+      },
+      "imageAsset": "batch2-images/veggie-meatball-pasta.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-quorn-pasta",
+        "name": "Kermainen Quorn-pasta",
+        "subtitle": "15 min aktiivista työtä · Helppo · 4 annosta. Quorn Fileet sisältää kananmunaa: kasvisruoka, ei vegaaninen. Noudata aina oman pakkauksen ohjetta. [Tuote](https://www.k-ruoka.fi/kauppa/tuote/quorn-fileet-312g-5019503015850).",
+        "image": "",
+        "minutes": 25,
+        "tag": "Kasvis",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "family-quorn-fillets",
+            "quantity": 624,
+            "unit": "g",
+            "note": "2 × 312 g."
+          },
+          {
+            "productId": "pasta",
+            "quantity": 300,
+            "unit": "g"
+          },
+          {
+            "productId": "family-oat-cooking",
+            "quantity": 250,
+            "unit": "ml",
+            "note": "Makeuttamaton, vähän tyydyttynyttä rasvaa."
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "lemon",
+            "quantity": 0.5,
+            "unit": "pc"
+          },
+          {
+            "productId": "oregano",
+            "quantity": 1,
+            "unit": "tsp"
+          },
+          {
+            "productId": "black-pepper",
+            "quantity": 0.25,
+            "unit": "tsp",
+            "note": "Aikuisten annoksiin maun mukaan."
+          }
+        ],
+        "steps": [
+          "Keitä pasta pakkauksen ohjeen mukaan ja ota talteen noin 100 ml keitinvettä.",
+          "Kypsennä jäiset Quorn-fileet pakkauksen pannumenetelmällä, noin 12 minuuttia öljyssä keskilämmöllä käännellen, kunnes ne ovat kauttaaltaan kuumia. Leikkaa suikaleiksi.",
+          "Lisää kauraruoka, oregano ja tarpeen mukaan pastavettä; kuumenna rauhallisesti. Lisää sitruunamehua ja aikuisille pippuria.",
+          "Tarjoa pastan ja valitun vihreän lisän kanssa. Halutessasi säästä lapsille pastaa ja Quornia erilleen."
+        ],
+        "tags": ["Ehdokas", "Kasvis", "Nopea"],
+        "mealType": "vegetarian",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://www.quorn.se/produkter/quorn-fileer",
+        "optionGroups": [
+          {
+            "id": "vegetable",
+            "name": "Vihreä lisä",
+            "optional": false,
+            "choices": [
+              {
+                "id": "peas",
+                "name": "Herneet",
+                "ingredients": [
+                  {
+                    "productId": "frozen-peas",
+                    "quantity": 150,
+                    "unit": "g"
+                  }
+                ],
+                "steps": [
+                  "Kypsennä herneet kuumiksi ja sekoita kastikkeeseen tai tarjoa erikseen."
+                ]
+              },
+              {
+                "id": "spinach",
+                "name": "Pinaatti",
+                "ingredients": [
+                  {
+                    "productId": "frozen-spinach",
+                    "quantity": 100,
+                    "unit": "g"
+                  }
+                ],
+                "steps": ["Kypsennä pinaatti kastikkeessa tai erikseen."]
+              }
+            ]
+          }
+        ],
+        "variantGroup": "kermainen-pasta",
+        "variantLabel": "Quorn"
+      },
+      "imageAsset": "batch2-images/quorn-pasta.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-quorn-wedges",
+        "name": "Quorn-fileet ja lohkoperunat",
+        "subtitle": "15 min aktiivista työtä · Helppo · 4 annosta. Helppo vaihtoehto kanafileille ja ranskalaisille. Quorn sisältää kananmunaa. Pakastelohkot käyvät kiireessä; seuraa niiden pakkausohjetta. [Tuote](https://www.k-ruoka.fi/kauppa/tuote/quorn-fileet-312g-5019503015850).",
+        "image": "",
+        "minutes": 40,
+        "tag": "Kasvis",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "family-quorn-fillets",
+            "quantity": 624,
+            "unit": "g",
+            "note": "2 × 312 g."
+          },
+          {
+            "productId": "potatoes",
+            "quantity": 800,
+            "unit": "g"
+          },
+          {
+            "productId": "carrots",
+            "quantity": 300,
+            "unit": "g"
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 2,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "paprika",
+            "quantity": 1,
+            "unit": "tsp",
+            "note": "Mieto."
+          },
+          {
+            "productId": "oregano",
+            "quantity": 1,
+            "unit": "tsp"
+          },
+          {
+            "productId": "cucumber",
+            "quantity": 0.5,
+            "unit": "pc"
+          }
+        ],
+        "steps": [
+          "Kuumenna uuni 220 °C:een (kiertoilma 200 °C). Leikkaa perunat lohkoiksi ja porkkanat tikuiksi.",
+          "Sekoita kasviksiin 1 rkl öljyä ja miedot mausteet. Paahda noin 30–35 minuuttia, käännä puolivälissä.",
+          "Kun kasviksilla on noin 15 minuuttia jäljellä, laita jäiset Quorn-fileet eri pellille, sivele lopulla öljyllä ja kypsennä noin 15 minuuttia pakkauksen mukaan kauttaaltaan kuumiksi.",
+          "Tarjoa fileet, lohkot, porkkanat ja kurkku erillään."
+        ],
+        "tags": ["Ehdokas", "Kasvis", "Uuni"],
+        "mealType": "vegetarian",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://www.quorn.se/produkter/quorn-fileer",
+        "optionGroups": [
+          {
+            "id": "dip",
+            "name": "Jogurttidippi",
+            "optional": true,
+            "choices": [
+              {
+                "id": "lemon",
+                "name": "Sitruunajogurtti",
+                "ingredients": [
+                  {
+                    "productId": "yogurt",
+                    "quantity": 150,
+                    "unit": "g",
+                    "note": "Laktoositon, maustamaton."
+                  },
+                  {
+                    "productId": "lemon",
+                    "quantity": 0.1,
+                    "unit": "pc",
+                    "note": "Noin 1 tl mehua."
+                  }
+                ],
+                "steps": [
+                  "Sekoita jogurttiin noin teelusikallinen sitruunamehua."
+                ]
+              }
+            ]
+          }
+        ],
+        "variantGroup": "uunipelti",
+        "variantLabel": "Quorn"
+      },
+      "imageAsset": "batch2-images/quorn-wedges.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-tofu-nuggets",
+        "name": "Rapeat tofunugetit ja perunalohkot",
+        "subtitle": "20 min aktiivista työtä · Helppo · 4 annosta. Kokeile ensin pientä erää. Käytä maustamatonta tofua ja mietoa omaa leivitystä. [Tuote](https://jalotofu.fi/product/jalotofu-maustamaton-270g/).",
+        "image": "",
+        "minutes": 40,
+        "tag": "Kasvis",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "tofu",
+            "quantity": 540,
+            "unit": "g",
+            "note": "Jalotofu Maustamaton, 2 × 270 g."
+          },
+          {
+            "productId": "breadcrumbs",
+            "quantity": 60,
+            "unit": "g"
+          },
+          {
+            "productId": "cornflour",
+            "quantity": 2,
+            "unit": "tbsp",
+            "note": "Maissitärkkelys."
+          },
+          {
+            "productId": "@Water",
+            "quantity": 4,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "paprika",
+            "quantity": 1,
+            "unit": "tsp",
+            "note": "Mieto."
+          },
+          {
+            "productId": "oregano",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "cucumber",
+            "quantity": 0.5,
+            "unit": "pc"
+          }
+        ],
+        "steps": [
+          "Kuumenna uuni 225 °C:een. Aloita valittu lisuke ensin, jos se on perunaa.",
+          "Taputtele tofu kuivaksi ja leikkaa nugettipaloiksi. Sekoita maissitärkkelys ja vesi löysäksi pinnoitukseksi.",
+          "Sekoita korppujauhot ja mausteet. Kasta tofu tärkkelysveteen ja kierittele kevyesti korppujauhoissa.",
+          "Aseta leivinpaperille, sivele reseptin öljyllä ja paista noin 20–25 minuuttia kerran kääntäen rapeaksi.",
+          "Tarjoa valitun lisukkeen ja kurkun kanssa."
+        ],
+        "tags": ["Ehdokas", "Vegaaninen", "Kokeilu"],
+        "mealType": "vegetarian",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://jalotofu.fi/reseptit/rapeat-tofunugetit/",
+        "optionGroups": [
+          {
+            "id": "side",
+            "name": "Lisuke",
+            "optional": false,
+            "choices": [
+              {
+                "id": "wedges",
+                "name": "Lohkoperunat",
+                "ingredients": [
+                  {
+                    "productId": "potatoes",
+                    "quantity": 800,
+                    "unit": "g"
+                  },
+                  {
+                    "productId": "rapeseed-oil",
+                    "quantity": 1,
+                    "unit": "tbsp"
+                  }
+                ],
+                "steps": [
+                  "Leikkaa perunat lohkoiksi, sekoita öljyyn ja paahda 220–225 °C:ssa noin 30–35 minuuttia. Aloita ne ennen muuta valmistusta."
+                ]
+              },
+              {
+                "id": "fries",
+                "name": "Uuniranskalaiset",
+                "ingredients": [
+                  {
+                    "productId": "frozen-chips",
+                    "quantity": 600,
+                    "unit": "g"
+                  }
+                ],
+                "steps": [
+                  "Kypsennä pakasteranskalaiset niiden pakkauksen ohjeen mukaan."
+                ]
+              },
+              {
+                "id": "rice",
+                "name": "Riisi",
+                "ingredients": [
+                  {
+                    "productId": "rice",
+                    "quantity": 250,
+                    "unit": "g",
+                    "note": "Kuivapaino."
+                  }
+                ],
+                "steps": ["Keitä riisi pakkauksen ohjeen mukaan."]
+              }
+            ]
+          },
+          {
+            "id": "dip",
+            "name": "Dippi",
+            "optional": true,
+            "choices": [
+              {
+                "id": "ketchup",
+                "name": "Ketsuppi",
+                "ingredients": [
+                  {
+                    "productId": "ketchup",
+                    "quantity": 40,
+                    "unit": "g"
+                  }
+                ],
+                "steps": []
+              }
+            ]
+          }
+        ],
+        "variantGroup": "kotinugetit",
+        "variantLabel": "Tofu"
+      },
+      "imageAsset": "batch2-images/tofu-nuggets.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-tofu-stir-fry",
+        "name": "Tofu-kasviswokki riisillä",
+        "subtitle": "20 min aktiivista työtä · Helppo · 4 annosta. Soijakastikkeen voi lisätä vasta aikuisten annoksiin. Tuoreet porkkanat, herneet ja parsakaali käyvät pakastesekoituksen tilalle.",
+        "image": "",
+        "minutes": 30,
+        "tag": "Kasvis",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "tofu",
+            "quantity": 540,
+            "unit": "g",
+            "note": "Jalotofu Maustamaton, 2 × 270 g."
+          },
+          {
+            "productId": "rice",
+            "quantity": 250,
+            "unit": "g"
+          },
+          {
+            "productId": "frozen-vegetables",
+            "quantity": 400,
+            "unit": "g",
+            "note": "Mieto wok-sekoitus; halutessasi ilman sipulia."
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1.5,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "soy-sauce",
+            "quantity": 1,
+            "unit": "tbsp",
+            "note": "Vähäsuolainen."
+          },
+          {
+            "productId": "@Water",
+            "quantity": 50,
+            "unit": "ml"
+          }
+        ],
+        "steps": [
+          "Keitä riisi pakkauksen mukaan. Taputtele tofu kuivaksi ja leikkaa kuutioiksi.",
+          "Paista tofua 1 rkl öljyssä noin 6–8 minuuttia kullanruskeaksi ja siirrä sivuun.",
+          "Lisää loppu öljy ja pakastekasvikset. Kypsennä pehmeiksi ja kauttaaltaan kuumiksi.",
+          "Palauta tofu pannulle ja lisää soijakastike sekä vesi. Kuumenna. Halutessasi lisää 1/2 tl raastettua inkivääriä.",
+          "Tarjoa riisin kanssa, tarvittaessa tofu, kasvikset ja kastike erillään."
+        ],
+        "tags": ["Ehdokas", "Vegaaninen", "Kokeilu", "Nopea"],
+        "mealType": "vegetarian",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://jalotofu.fi/product/jalotofu-maustamaton-270g/"
+      },
+      "imageAsset": "batch2-images/tofu-stir-fry.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-coconut-tofu",
+        "name": "Mieto kookostofu riisillä",
+        "subtitle": "15 min aktiivista työtä · Helppo · 4 annosta. Vain pieni osa kastikkeesta on kookosmaitoa; loppu on kauraruokaa. Lisää mausteita vasta aikuisten annoksiin. Quorn käy vaihtoehtona pakkauksen mukaan kypsennettynä.",
+        "image": "",
+        "minutes": 30,
+        "tag": "Kasvis",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "tofu",
+            "quantity": 540,
+            "unit": "g",
+            "note": "Jalotofu Maustamaton, 2 × 270 g."
+          },
+          {
+            "productId": "rice",
+            "quantity": 250,
+            "unit": "g"
+          },
+          {
+            "productId": "coconut-milk",
+            "quantity": 100,
+            "unit": "ml"
+          },
+          {
+            "productId": "family-oat-cooking",
+            "quantity": 300,
+            "unit": "ml",
+            "note": "Makeuttamaton, vähän tyydyttynyttä rasvaa; ei kookosöljyä."
+          },
+          {
+            "productId": "carrots",
+            "quantity": 250,
+            "unit": "g"
+          },
+          {
+            "productId": "bell-pepper",
+            "quantity": 1,
+            "unit": "pc"
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "curry-powder",
+            "quantity": 1,
+            "unit": "tsp",
+            "note": "Mieto, halutessasi ilman sipulia tai valkosipulia."
+          },
+          {
+            "productId": "@Water",
+            "quantity": 100,
+            "unit": "ml"
+          }
+        ],
+        "steps": [
+          "Keitä riisi. Kuivaa ja kuutioi tofu. Kuori ja viipaloi porkkanat ohueksi, suikaloi paprika.",
+          "Ruskista tofua öljyssä noin 5–6 minuuttia. Lisää kasvikset ja kypsennä 3 minuuttia.",
+          "Lisää kookosmaito, kauraruoka, vesi ja mieto curry. Hauduta 10–12 minuuttia kunnes porkkanat ovat pehmeitä.",
+          "Maista ja lisää halutessasi 1 rkl limemehua. Lisää tarvittaessa vettä.",
+          "Tarjoa riisin kanssa. Varaa lapsille tofua ja riisiä erilleen ennen kastikkeen lisäämistä."
+        ],
+        "tags": ["Ehdokas", "Vegaaninen", "Mieto", "Kokeilu"],
+        "mealType": "vegetarian",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://jalotofu.fi/product/jalotofu-maustamaton-270g/"
+      },
+      "imageAsset": "batch2-images/coconut-tofu.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-vegetable-omelette",
+        "name": "Kasvismunakas ja täysjyväleipä",
+        "subtitle": "15 min aktiivista työtä · Helppo · 4 annosta. Vararuoka väsyneeseen iltaan. Tavallinen maustamaton munakas käy lapsille. Oma yksinkertainen resepti.",
+        "image": "",
+        "minutes": 20,
+        "tag": "Kasvis",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "eggs",
+            "quantity": 6,
+            "unit": "pc"
+          },
+          {
+            "productId": "milk",
+            "quantity": 100,
+            "unit": "ml",
+            "note": "Vähärasvainen tai laktoositon."
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "wholegrain-bread",
+            "quantity": 6,
+            "unit": "pc",
+            "note": "Viipaletta."
+          },
+          {
+            "productId": "cucumber",
+            "quantity": 0.5,
+            "unit": "pc"
+          }
+        ],
+        "steps": [
+          "Vatkaa munat ja maito. Valmistele valittu kasvisvaihtoehto.",
+          "Kuumenna öljy tarttumattomalla pannulla. Kypsennä yksi iso munakas kannen alla miedohkolla lämmöllä kokonaan hyytyneeksi tai tee pienempiä munakkaita erissä.",
+          "Tarjoa täysjyväleivän, kurkun ja valitun kasviksen kanssa; vihannekset voivat olla erillään."
+        ],
+        "tags": ["Ehdokas", "Kasvis", "Vararuoka", "Nopea"],
+        "mealType": "vegetarian",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "optionGroups": [
+          {
+            "id": "greens",
+            "name": "Kasvisvaihtoehto",
+            "optional": false,
+            "choices": [
+              {
+                "id": "spinach",
+                "name": "Pinaatti",
+                "ingredients": [
+                  {
+                    "productId": "frozen-spinach",
+                    "quantity": 150,
+                    "unit": "g"
+                  }
+                ],
+                "steps": [
+                  "Sulata pinaatti, purista ylimääräinen vesi pois ja sekoita munaseokseen tai tarjoa kuumana erillään."
+                ]
+              },
+              {
+                "id": "peas",
+                "name": "Herneet",
+                "ingredients": [
+                  {
+                    "productId": "frozen-peas",
+                    "quantity": 150,
+                    "unit": "g"
+                  }
+                ],
+                "steps": [
+                  "Kypsennä herneet ja lisää munakkaaseen tai tarjoa erillään."
+                ]
+              },
+              {
+                "id": "plain",
+                "name": "Pelkkä munakas",
+                "ingredients": [],
+                "steps": []
+              }
+            ]
+          },
+          {
+            "id": "protein",
+            "name": "Raejuustolisä",
+            "optional": true,
+            "choices": [
+              {
+                "id": "cottage",
+                "name": "Raejuusto",
+                "ingredients": [
+                  {
+                    "productId": "cottage-cheese",
+                    "quantity": 150,
+                    "unit": "g"
+                  }
+                ],
+                "steps": []
+              }
+            ]
+          }
+        ]
+      },
+      "imageAsset": "batch2-images/vegetable-omelette.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-plant-nuggets",
+        "name": "Crispy Chick -nugetit, perunalohkot ja herneet",
+        "subtitle": "10 min aktiivista työtä · Helppo · 4 annosta. Vegaaninen pakastinvararuoka. Sisältää sipulimaustetta. Pakasteperunalohkot käyvät kiireessä; käytä niiden pakkausohjetta.",
+        "image": "",
+        "minutes": 35,
+        "tag": "Kasvis",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "family-apetit-nuggets",
+            "quantity": 480,
+            "unit": "g",
+            "note": "2 × 240 g, tavallinen Crispy Chick."
+          },
+          {
+            "productId": "potatoes",
+            "quantity": 800,
+            "unit": "g"
+          },
+          {
+            "productId": "frozen-peas",
+            "quantity": 200,
+            "unit": "g"
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "paprika",
+            "quantity": 0.5,
+            "unit": "tsp",
+            "note": "Mieto."
+          },
+          {
+            "productId": "cucumber",
+            "quantity": 0.5,
+            "unit": "pc"
+          }
+        ],
+        "steps": [
+          "Kuumenna uuni 225 °C:een. Pese ja lohko perunat, sekoita öljyyn ja paprikaan.",
+          "Paahda perunoita noin 30–35 minuuttia. Kun aikaa on jäljellä noin 15 minuuttia, lisää jäiset Crispy Chick -nugetit toiselle pellille.",
+          "Kuumenna nugetteja noin 15 minuuttia nykyisen pakkauksen mukaan kauttaaltaan kuumiksi. Keitä herneet ja viipaloi kurkku.",
+          "Tarjoa nugetit, perunat, herneet ja kurkku erillään."
+        ],
+        "tags": ["Ehdokas", "Vegaaninen", "Vararuoka"],
+        "mealType": "vegetarian",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://apetit.fi/tuotteet/apetit-kasvisjauhis-crispy-chick-nugetit-pakaste-240g/",
+        "optionGroups": [
+          {
+            "id": "dip",
+            "name": "Dippi",
+            "optional": true,
+            "choices": [
+              {
+                "id": "ketchup",
+                "name": "Ketsuppi",
+                "ingredients": [
+                  {
+                    "productId": "ketchup",
+                    "quantity": 40,
+                    "unit": "g"
+                  }
+                ],
+                "steps": []
+              }
+            ]
+          }
+        ],
+        "variantGroup": "pakastenugetit",
+        "variantLabel": "Kasvis"
+      },
+      "imageAsset": "batch2-images/plant-nuggets.jpg"
+    },
+    {
+      "recipe": {
+        "id": "family-batch2-plant-wraps",
+        "name": "Kasviskanasuikale-tortillat",
+        "subtitle": "15 min aktiivista työtä · Helppo · 4 annosta. Gold&Green Original sisältää sipulimehutiivistettä. Vaihtoehdot ovat Quorn tai maustamaton tofu. Quorn sisältää kananmunaa; vegaaniseen kokonaisuuteen tarvitset tofun tai Gold&Greenin ja kasvipohjaisen jogurtin. [Quorn](https://www.k-ruoka.fi/kauppa/tuote/quorn-fileet-312g-5019503015850) · [Tofu](https://jalotofu.fi/product/jalotofu-maustamaton-270g/).",
+        "image": "",
+        "minutes": 20,
+        "tag": "Kasvis",
+        "servings": 4,
+        "ingredients": [
+          {
+            "productId": "tortillas",
+            "quantity": 6,
+            "unit": "pc",
+            "note": "Keskikokoisia."
+          },
+          {
+            "productId": "cucumber",
+            "quantity": 1,
+            "unit": "pc"
+          },
+          {
+            "productId": "carrots",
+            "quantity": 160,
+            "unit": "g",
+            "note": "Noin 2 keskikokoista."
+          },
+          {
+            "productId": "@Tomatoes",
+            "quantity": 2,
+            "unit": "pc"
+          },
+          {
+            "productId": "yogurt",
+            "quantity": 200,
+            "unit": "g",
+            "note": "Laktoositon maustamaton."
+          },
+          {
+            "productId": "rapeseed-oil",
+            "quantity": 1,
+            "unit": "tbsp"
+          },
+          {
+            "productId": "lemon",
+            "quantity": 0.25,
+            "unit": "pc",
+            "note": "Noin 1 rkl mehua."
+          },
+          {
+            "productId": "paprika",
+            "quantity": 0.5,
+            "unit": "tsp",
+            "note": "Mieto."
+          }
+        ],
+        "steps": [
+          "Pese ja pilko kurkku ja tomaatit. Kuori ja raasta porkkanat.",
+          "Sekoita jogurtti ja noin 1 rkl sitruunamehua. Valmista valittu proteiini alla olevan ohjeen mukaan.",
+          "Lämmitä tortillat kuivalla pannulla tai mikrossa.",
+          "Aseta kaikki täytteet erillisiin kulhoihin ja anna jokaisen koota oma tortillansa tai syödä osat erikseen."
+        ],
+        "tags": ["Ehdokas", "Kasvis", "Muokattava", "Nopea"],
+        "mealType": "vegetarian",
+        "kidApproved": false,
+        "mealPlanEligible": true,
+        "sourceUrl": "https://www.valio.fi/tuotteet/valio-goldgreen-suikale-original/",
+        "optionGroups": [
+          {
+            "id": "protein",
+            "name": "Proteiini",
+            "optional": false,
+            "choices": [
+              {
+                "id": "goldgreen",
+                "name": "Gold&Green Original",
+                "ingredients": [
+                  {
+                    "productId": "family-goldgreen-strips",
+                    "quantity": 480,
+                    "unit": "g",
+                    "note": "2 × 240 g."
+                  }
+                ],
+                "steps": [
+                  "Paista kypsät Gold&Green Original -suikaleet kuumassa pannussa reseptin öljyssä pakkauksen mukaan kauttaaltaan kuumiksi. Mausta miedolla paprikalla."
+                ]
+              },
+              {
+                "id": "quorn",
+                "name": "Quorn Fileet",
+                "ingredients": [
+                  {
+                    "productId": "family-quorn-fillets",
+                    "quantity": 624,
+                    "unit": "g",
+                    "note": "2 × 312 g; sisältää kananmunaa."
+                  }
+                ],
+                "steps": [
+                  "Paista jäiset Quorn-fileet reseptin öljyssä noin 12 minuuttia käännellen pakkauksen mukaan kauttaaltaan kuumiksi ja leikkaa suikaleiksi."
+                ]
+              },
+              {
+                "id": "tofu",
+                "name": "Jalotofu Maustamaton",
+                "ingredients": [
+                  {
+                    "productId": "tofu",
+                    "quantity": 540,
+                    "unit": "g",
+                    "note": "2 × 270 g."
+                  }
+                ],
+                "steps": [
+                  "Kuivaa tofu, leikkaa suikaleiksi ja paista reseptin öljyssä kullanruskeaksi noin 6–8 minuuttia."
+                ]
+              }
+            ]
+          },
+          {
+            "id": "lettuce",
+            "name": "Salaattilisä",
+            "optional": true,
+            "choices": [
+              {
+                "id": "lettuce",
+                "name": "Lehtisalaatti",
+                "ingredients": [
+                  {
+                    "productId": "lettuce",
+                    "quantity": 50,
+                    "unit": "g"
+                  }
+                ],
+                "steps": []
+              }
+            ]
+          }
+        ],
+        "variantGroup": "tortillat",
+        "variantLabel": "Kasvis"
+      },
+      "imageAsset": "batch2-images/plant-wraps.jpg"
+    }
+  ],
+  "fishStickSauce": {
+    "id": "sauce",
+    "name": "Kastike",
+    "optional": true,
+    "choices": [
+      {
+        "id": "mustard-pickle",
+        "name": "Sinappikurkkusalaatti",
+        "ingredients": [
+          {
+            "productId": "family-kermaviili",
+            "quantity": 200,
+            "unit": "g",
+            "note": "1 prk, esimerkiksi Valio."
+          },
+          {
+            "productId": "lemon",
+            "quantity": 0.25,
+            "unit": "pc",
+            "note": "1 rkl sitruunamehua."
+          },
+          {
+            "productId": "salt",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "sugar",
+            "quantity": 2,
+            "unit": "tsp"
+          },
+          {
+            "productId": "black-pepper",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "family-mustard-pickle",
+            "quantity": 50,
+            "unit": "ml"
+          }
+        ],
+        "steps": [
+          "Sekoita peruskastikkeen aineet (200 g kermaviiliä, 1 rkl sitruunamehua, 1/2 tl suolaa, 2 tl sokeria ja 1/2 tl mustapippuria). Lisää vain valittu mauste: Sinappikurkkusalaatti. Sinappikurkkusalaattiversioon tulee 1/2 dl sinappikurkkusalaattia. Valkosipuli on jätetty pois. Tarjoa kastike erillisessä kulhossa."
+        ]
+      },
+      {
+        "id": "plain",
+        "name": "Peruskastike",
+        "ingredients": [
+          {
+            "productId": "family-kermaviili",
+            "quantity": 200,
+            "unit": "g",
+            "note": "1 prk, esimerkiksi Valio."
+          },
+          {
+            "productId": "lemon",
+            "quantity": 0.25,
+            "unit": "pc",
+            "note": "1 rkl sitruunamehua."
+          },
+          {
+            "productId": "salt",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "sugar",
+            "quantity": 2,
+            "unit": "tsp"
+          },
+          {
+            "productId": "black-pepper",
+            "quantity": 0.5,
+            "unit": "tsp"
+          }
+        ],
+        "steps": [
+          "Sekoita peruskastikkeen aineet (200 g kermaviiliä, 1 rkl sitruunamehua, 1/2 tl suolaa, 2 tl sokeria ja 1/2 tl mustapippuria). Lisää vain valittu mauste: Peruskastike. Sinappikurkkusalaattiversioon tulee 1/2 dl sinappikurkkusalaattia. Valkosipuli on jätetty pois. Tarjoa kastike erillisessä kulhossa."
+        ]
+      },
+      {
+        "id": "mustard",
+        "name": "Sinappi",
+        "ingredients": [
+          {
+            "productId": "family-kermaviili",
+            "quantity": 200,
+            "unit": "g",
+            "note": "1 prk, esimerkiksi Valio."
+          },
+          {
+            "productId": "lemon",
+            "quantity": 0.25,
+            "unit": "pc",
+            "note": "1 rkl sitruunamehua."
+          },
+          {
+            "productId": "salt",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "sugar",
+            "quantity": 2,
+            "unit": "tsp"
+          },
+          {
+            "productId": "black-pepper",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "mustard",
+            "quantity": 1,
+            "unit": "tbsp"
+          }
+        ],
+        "steps": [
+          "Sekoita peruskastikkeen aineet (200 g kermaviiliä, 1 rkl sitruunamehua, 1/2 tl suolaa, 2 tl sokeria ja 1/2 tl mustapippuria). Lisää vain valittu mauste: Sinappi. Sinappikurkkusalaattiversioon tulee 1/2 dl sinappikurkkusalaattia. Valkosipuli on jätetty pois. Tarjoa kastike erillisessä kulhossa."
+        ]
+      },
+      {
+        "id": "herbs",
+        "name": "Yrttikastike",
+        "ingredients": [
+          {
+            "productId": "family-kermaviili",
+            "quantity": 200,
+            "unit": "g",
+            "note": "1 prk, esimerkiksi Valio."
+          },
+          {
+            "productId": "lemon",
+            "quantity": 0.25,
+            "unit": "pc",
+            "note": "1 rkl sitruunamehua."
+          },
+          {
+            "productId": "salt",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "sugar",
+            "quantity": 2,
+            "unit": "tsp"
+          },
+          {
+            "productId": "black-pepper",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "dill",
+            "quantity": 50,
+            "unit": "ml",
+            "note": "Hienonnettuja yrttejä; esim. tilliä tai persiljaa."
+          }
+        ],
+        "steps": [
+          "Sekoita peruskastikkeen aineet (200 g kermaviiliä, 1 rkl sitruunamehua, 1/2 tl suolaa, 2 tl sokeria ja 1/2 tl mustapippuria). Lisää vain valittu mauste: Yrttikastike. Sinappikurkkusalaattiversioon tulee 1/2 dl sinappikurkkusalaattia. Valkosipuli on jätetty pois. Tarjoa kastike erillisessä kulhossa."
+        ]
+      },
+      {
+        "id": "pesto",
+        "name": "Pesto",
+        "ingredients": [
+          {
+            "productId": "family-kermaviili",
+            "quantity": 200,
+            "unit": "g",
+            "note": "1 prk, esimerkiksi Valio."
+          },
+          {
+            "productId": "lemon",
+            "quantity": 0.25,
+            "unit": "pc",
+            "note": "1 rkl sitruunamehua."
+          },
+          {
+            "productId": "salt",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "sugar",
+            "quantity": 2,
+            "unit": "tsp"
+          },
+          {
+            "productId": "black-pepper",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "pesto",
+            "quantity": 50,
+            "unit": "ml"
+          }
+        ],
+        "steps": [
+          "Sekoita peruskastikkeen aineet (200 g kermaviiliä, 1 rkl sitruunamehua, 1/2 tl suolaa, 2 tl sokeria ja 1/2 tl mustapippuria). Lisää vain valittu mauste: Pesto. Sinappikurkkusalaattiversioon tulee 1/2 dl sinappikurkkusalaattia. Valkosipuli on jätetty pois. Tarjoa kastike erillisessä kulhossa."
+        ]
+      },
+      {
+        "id": "chili",
+        "name": "Chiliketsuppi",
+        "ingredients": [
+          {
+            "productId": "family-kermaviili",
+            "quantity": 200,
+            "unit": "g",
+            "note": "1 prk, esimerkiksi Valio."
+          },
+          {
+            "productId": "lemon",
+            "quantity": 0.25,
+            "unit": "pc",
+            "note": "1 rkl sitruunamehua."
+          },
+          {
+            "productId": "salt",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "sugar",
+            "quantity": 2,
+            "unit": "tsp"
+          },
+          {
+            "productId": "black-pepper",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "family-chili-ketchup",
+            "quantity": 50,
+            "unit": "ml"
+          }
+        ],
+        "steps": [
+          "Sekoita peruskastikkeen aineet (200 g kermaviiliä, 1 rkl sitruunamehua, 1/2 tl suolaa, 2 tl sokeria ja 1/2 tl mustapippuria). Lisää vain valittu mauste: Chiliketsuppi. Sinappikurkkusalaattiversioon tulee 1/2 dl sinappikurkkusalaattia. Valkosipuli on jätetty pois. Tarjoa kastike erillisessä kulhossa."
+        ]
+      },
+      {
+        "id": "aura",
+        "name": "Aura-muru",
+        "ingredients": [
+          {
+            "productId": "family-kermaviili",
+            "quantity": 200,
+            "unit": "g",
+            "note": "1 prk, esimerkiksi Valio."
+          },
+          {
+            "productId": "lemon",
+            "quantity": 0.25,
+            "unit": "pc",
+            "note": "1 rkl sitruunamehua."
+          },
+          {
+            "productId": "salt",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "sugar",
+            "quantity": 2,
+            "unit": "tsp"
+          },
+          {
+            "productId": "black-pepper",
+            "quantity": 0.5,
+            "unit": "tsp"
+          },
+          {
+            "productId": "blue-cheese",
+            "quantity": 50,
+            "unit": "g",
+            "note": "Aura-muru."
+          }
+        ],
+        "steps": [
+          "Sekoita peruskastikkeen aineet (200 g kermaviiliä, 1 rkl sitruunamehua, 1/2 tl suolaa, 2 tl sokeria ja 1/2 tl mustapippuria). Lisää vain valittu mauste: Aura-muru. Sinappikurkkusalaattiversioon tulee 1/2 dl sinappikurkkusalaattia. Valkosipuli on jätetty pois. Tarjoa kastike erillisessä kulhossa."
+        ]
+      }
+    ]
+  },
+  "productReferences": {
+    "pirkka": "https://www.k-ruoka.fi/kauppa/tuote/pirkka-parhaat-suom-kananugetti-300g-6410405338143",
+    "apetit-balls": "https://apetit.fi/tuotteet/apetit-kasvisjauhispyorykat-pakaste-240g-1/",
+    "quorn": "https://www.k-ruoka.fi/kauppa/tuote/quorn-fileet-312g-5019503015850",
+    "quorn-cook": "https://www.quorn.se/produkter/quorn-fileer",
+    "tofu": "https://jalotofu.fi/product/jalotofu-maustamaton-270g/",
+    "apetit-nuggets": "https://apetit.fi/tuotteet/apetit-kasvisjauhis-crispy-chick-nugetit-pakaste-240g/",
+    "strips": "https://www.valio.fi/tuotteet/valio-goldgreen-suikale-original/",
+    "ikea": "https://www.ikea.com/fi/fi/p/huvudroll-kasviproteiinipyoerykaet-pakaste-20483592/"
+  }
+}

@@ -1,3 +1,4 @@
+import { allRecipeIngredients } from './recipe-options'
 import { catalog, listFields, type AppState, type Product } from './data'
 import { defaultCatalogImage } from './catalog-artwork'
 
@@ -114,7 +115,9 @@ export function deleteProduct(state: AppState, id: string): AppState {
     throw new Error('Built-in items can be archived and restored.')
   if (
     [...(state.recipeBook ?? []), ...state.customRecipes].some((recipe) =>
-      recipe.ingredients.some((ingredient) => ingredient.productId === id),
+      allRecipeIngredients(recipe).some(
+        (ingredient) => ingredient.productId === id,
+      ),
     )
   )
     throw new Error(
@@ -164,7 +167,7 @@ export function pruneOneOffs(state: AppState): AppState {
         product.oneOff &&
         !state.items.some((item) => item.id === product.id) &&
         ![...(state.recipeBook ?? []), ...state.customRecipes].some((recipe) =>
-          recipe.ingredients.some(
+          allRecipeIngredients(recipe).some(
             (ingredient) => ingredient.productId === product.id,
           ),
         ),

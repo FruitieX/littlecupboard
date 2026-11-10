@@ -109,10 +109,70 @@ pub struct Ingredient {
     pub note: Option<String>,
 }
 
+#[derive(Clone, Debug, Default, Deserialize, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct RecipeChoice {
+    pub id: String,
+    pub name: String,
+    pub ingredients: Vec<Ingredient>,
+    #[serde(default)]
+    pub steps: Vec<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct RecipeOptionGroup {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub optional: bool,
+    pub choices: Vec<RecipeChoice>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct MealOptions {
+    pub recipe_id: String,
+    #[serde(default)]
+    pub choices: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub leftover_from: Option<String>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, TS, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct RecipeUsage {
+    pub planned: u32,
+    pub shopping: u32,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, TS, PartialEq)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 #[ts(export, export_to = "../../src/lib/api/")]
 pub struct Recipe {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub kid_approved: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub meal_type: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub variant_group: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub variant_label: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub makes_leftovers: Option<bool>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(as = "Option<Vec<RecipeOptionGroup>>", optional)]
+    pub option_groups: Vec<RecipeOptionGroup>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub source_url: Option<String>,
@@ -247,6 +307,10 @@ pub struct HouseholdState {
     pub stores: Vec<Store>,
     pub store_id: String,
     pub plan: BTreeMap<String, String>,
+    #[serde(default)]
+    pub plan_options: BTreeMap<String, MealOptions>,
+    #[serde(default)]
+    pub recipe_usage: BTreeMap<String, RecipeUsage>,
     pub purchases: BTreeMap<String, String>,
     pub custom_products: Vec<Product>,
     pub custom_recipes: Vec<Recipe>,
@@ -352,6 +416,9 @@ pub enum Operation {
         accumulate: bool,
     },
     AddIngredients {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        #[ts(optional)]
+        recipe_id: Option<String>,
         ingredients: Vec<Ingredient>,
         multiplier: f64,
     },
@@ -458,6 +525,8 @@ pub fn fresh_state(samples: bool, time_zone: String) -> HouseholdState {
         }],
         store_id: "our-store".into(),
         plan: BTreeMap::new(),
+        plan_options: BTreeMap::new(),
+        recipe_usage: BTreeMap::new(),
         purchases: BTreeMap::new(),
         custom_products: vec![],
         custom_recipes: vec![],

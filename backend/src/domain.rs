@@ -122,7 +122,7 @@ fn prune_one_offs(state: &mut HouseholdState) {
                     .recipe_book
                     .iter()
                     .chain(&state.custom_recipes)
-                    .any(|recipe| recipe.ingredients.iter().any(|i| &i.product_id == id))
+                    .any(|recipe| all_recipe_ingredients(recipe).any(|i| &i.product_id == id))
         })
         .collect::<BTreeSet<_>>();
     if gone.is_empty() {
@@ -162,6 +162,63 @@ fn recipe(state: &HouseholdState, id: &str) -> Option<Recipe> {
         .cloned()
 }
 
+pub fn all_recipe_ingredients(recipe: &Recipe) -> impl Iterator<Item = &Ingredient> {
+    recipe
+        .ingredients
+        .iter()
+        .chain(recipe.option_groups.iter().flat_map(|group| {
+            group
+                .choices
+                .iter()
+                .flat_map(|choice| choice.ingredients.iter())
+        }))
+}
+pub fn recipe_ingredients(
+    recipe: &Recipe,
+    choices: Option<&BTreeMap<String, String>>,
+) -> Vec<Ingredient> {
+    let mut ingredients = recipe.ingredients.clone();
+    for group in &recipe.option_groups {
+        let selected = choices.and_then(|values| values.get(&group.id));
+        let choice = selected
+            .and_then(|id| group.choices.iter().find(|choice| &choice.id == id))
+            .or_else(|| {
+                if group.optional {
+                    None
+                } else {
+                    group.choices.first()
+                }
+            });
+        if let Some(choice) = choice {
+            ingredients.extend(choice.ingredients.clone());
+        }
+    }
+    ingredients
+}
+pub fn meal_ingredients(state: &HouseholdState, day: &str, recipe: &Recipe) -> Vec<Ingredient> {
+    let choices = state
+        .plan_options
+        .get(day)
+        .filter(|options| options.recipe_id == recipe.id)
+        .map(|options| &options.choices);
+    recipe_ingredients(recipe, choices)
+}
+pub fn is_leftover(state: &HouseholdState, day: &str, recipe: &Recipe) -> bool {
+    state
+        .plan_options
+        .get(day)
+        .filter(|options| options.recipe_id == recipe.id)
+        .and_then(|options| options.leftover_from.as_ref())
+        .is_some_and(|source| {
+            state.plan.get(source) == Some(&recipe.id)
+                && source.as_str() < day
+                && !state
+                    .meal_feedback
+                    .get(source)
+                    .is_some_and(|feedback| feedback.status == "skipped")
+        })
+}
+
 pub fn outstanding(state: &HouseholdState, today: &str) -> Vec<PlanCredit> {
     let date = NaiveDate::parse_from_str(today, "%Y-%m-%d").expect("internal valid date");
     let end = (date - Duration::days(i64::from(date.weekday().num_days_from_monday()))
@@ -187,7 +244,10 @@ pub fn outstanding(state: &HouseholdState, today: &str) -> Vec<PlanCredit> {
             .copied()
             .unwrap_or(state.preferences.servings)
             / recipe.servings;
-        for ingredient in recipe.ingredients {
+        if is_leftover(state, day, &recipe) {
+            continue;
+        }
+        for ingredient in meal_ingredients(state, day, &recipe) {
             let amount = normalize(&Amount {
                 quantity: ingredient.quantity * factor,
                 unit: ingredient.unit,
@@ -286,8 +346,14 @@ pub fn displayed(state: &HouseholdState, id: &str, today: &str) -> Option<Shoppi
         .collect::<Vec<_>>();
     let notes = credits
         .iter()
-        .filter_map(|credit| state.plan.get(&credit.day).and_then(|id| recipe(state, id)))
-        .flat_map(|recipe| recipe.ingredients)
+        .filter_map(|credit| {
+            state
+                .plan
+                .get(&credit.day)
+                .and_then(|id| recipe(state, id))
+                .map(|recipe| (credit.day.clone(), recipe))
+        })
+        .flat_map(|(day, recipe)| meal_ingredients(state, &day, &recipe))
         .filter(|ingredient| ingredient.product_id == id)
         .filter_map(|ingredient| ingredient.note)
         .filter(|note| !note.is_empty())
@@ -577,6 +643,7 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
             json!({"productId":product_id,"quantity":quantity,"unit":unit,"note":note})
         }
         Operation::AddIngredients {
+            recipe_id,
             ingredients,
             multiplier,
         } => {
@@ -597,7 +664,14 @@ pub fn apply(state: &mut HouseholdState, operation: &Operation, today: &str) -> 
                     true,
                 )?;
             }
-            json!({"ingredients":ingredients,"multiplier":multiplier})
+            if let Some(id) = recipe_id {
+                if recipe(state, id).is_none() {
+                    return Err(ApiError::bad("Recipe no longer exists."));
+                }
+                let usage = state.recipe_usage.entry(id.clone()).or_default();
+                usage.shopping = usage.shopping.saturating_add(1);
+            }
+            json!({"ingredients":ingredients,"multiplier":multiplier,"recipeId":recipe_id})
         }
         Operation::RemoveItem { id } => {
             let credits = outstanding(state, today)
@@ -943,11 +1017,48 @@ fn add_item(
 }
 
 pub fn apply_changes(state: &mut HouseholdState, changes: &[Change]) -> Result<()> {
+    let previous = state.clone();
     let mut value = serde_json::to_value(&*state)?;
     for change in changes {
         patch(&mut value, change)?;
     }
     *state = serde_json::from_value(value)?;
+    for (day, options) in &mut state.plan_options {
+        let current = state
+            .recipe_book
+            .iter()
+            .chain(&state.custom_recipes)
+            .find(|r| r.id == options.recipe_id);
+        let old = previous
+            .recipe_book
+            .iter()
+            .chain(&previous.custom_recipes)
+            .find(|r| r.id == options.recipe_id);
+        if let (Some(current), Some(old)) = (current, old)
+            && old.option_groups != current.option_groups
+        {
+            options.choices.retain(|group, choice| {
+                choice.is_empty()
+                    || current
+                        .option_groups
+                        .iter()
+                        .any(|g| &g.id == group && g.choices.iter().any(|c| &c.id == choice))
+            });
+        }
+        if previous.plan.get(day) != state.plan.get(day)
+            && options.recipe_id != *state.plan.get(day).unwrap_or(&String::new())
+        {
+            options.choices.clear();
+            options.leftover_from = None;
+        }
+        if options
+            .leftover_from
+            .as_ref()
+            .is_some_and(|source| state.plan.get(source) != Some(&options.recipe_id))
+        {
+            options.leftover_from = None;
+        }
+    }
     validate(state)
 }
 pub fn apply_history_changes(state: &mut HouseholdState, changes: &[Change]) -> Result<()> {
@@ -983,6 +1094,8 @@ fn patch(state: &mut Value, change: &Change) -> Result<()> {
     ];
     let maps = [
         "plan",
+        "planOptions",
+        "recipeUsage",
         "planCoverage",
         "purchasedCoverage",
         "pantry",
@@ -1170,6 +1283,8 @@ pub fn changes(before: &HouseholdState, after: &HouseholdState) -> Result<Vec<Ch
     }
     for collection in [
         "plan",
+        "planOptions",
+        "recipeUsage",
         "planCoverage",
         "purchasedCoverage",
         "pantry",
@@ -1433,7 +1548,42 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
         {
             return Err(ApiError::bad("Invalid recipe details."));
         }
-        for ingredient in &recipe.ingredients {
+        if recipe.option_groups.len() > 12
+            || recipe.variant_group.as_ref().is_some_and(|s| !text(s, 100))
+            || recipe.variant_label.as_ref().is_some_and(|s| !text(s, 100))
+            || recipe
+                .meal_type
+                .as_ref()
+                .is_some_and(|s| !["fish", "vegetarian", "poultry", "meat"].contains(&s.as_str()))
+        {
+            return Err(ApiError::bad("Invalid recipe options."));
+        }
+        let mut group_ids = BTreeSet::new();
+        for group in &recipe.option_groups {
+            if !valid_id(&group.id)
+                || !group_ids.insert(&group.id)
+                || group.name.trim().is_empty()
+                || !text(&group.name, 100)
+                || group.choices.is_empty()
+                || group.choices.len() > 12
+            {
+                return Err(ApiError::bad("Invalid option group."));
+            }
+            let mut choice_ids = BTreeSet::new();
+            for choice in &group.choices {
+                if !valid_id(&choice.id)
+                    || !choice_ids.insert(&choice.id)
+                    || choice.name.trim().is_empty()
+                    || !text(&choice.name, 100)
+                    || choice.ingredients.len() > 50
+                    || choice.steps.len() > 30
+                    || choice.steps.iter().any(|s| !text(s, 3000))
+                {
+                    return Err(ApiError::bad("Invalid recipe choice."));
+                }
+            }
+        }
+        for ingredient in all_recipe_ingredients(recipe) {
             valid_amount(ingredient.quantity, &ingredient.unit)?;
             if !products.contains(&ingredient.product_id)
                 || ingredient
@@ -1448,6 +1598,55 @@ pub fn validate(state: &HouseholdState) -> Result<()> {
     for (day, id) in &state.plan {
         if NaiveDate::parse_from_str(day, "%Y-%m-%d").is_err() || !recipe_ids.contains(id) {
             return Err(ApiError::bad("Invalid meal plan entry."));
+        }
+    }
+    if state.plan_options.len() > 1000 || state.recipe_usage.len() > 4000 {
+        return Err(ApiError::bad("Too many meal settings."));
+    }
+    for (day, options) in &state.plan_options {
+        if NaiveDate::parse_from_str(day, "%Y-%m-%d").is_err() || options.choices.len() > 12 {
+            return Err(ApiError::bad("Invalid meal options."));
+        }
+        let Some(recipe) = recipe(state, &options.recipe_id)
+            .filter(|_| state.plan.get(day) == Some(&options.recipe_id))
+        else {
+            continue;
+        };
+        for (group, choice) in &options.choices {
+            if !choice.is_empty()
+                && !recipe
+                    .option_groups
+                    .iter()
+                    .any(|g| &g.id == group && g.choices.iter().any(|c| &c.id == choice))
+            {
+                return Err(ApiError::bad("Meal option no longer exists."));
+            }
+        }
+        if let Some(source) = &options.leftover_from {
+            let date = NaiveDate::parse_from_str(day, "%Y-%m-%d").expect("validated");
+            let previous = (date - Duration::days(1)).to_string();
+            let source_servings = state
+                .servings
+                .get(source)
+                .copied()
+                .unwrap_or(state.preferences.servings);
+            let leftover_servings = state
+                .servings
+                .get(day)
+                .copied()
+                .unwrap_or(state.preferences.servings);
+            if *source != previous
+                || state.plan.get(source) != Some(&options.recipe_id)
+                || state
+                    .plan_options
+                    .get(source)
+                    .is_some_and(|o| o.leftover_from.is_some())
+                || source_servings + 0.0001 < state.preferences.servings + leftover_servings
+            {
+                return Err(ApiError::bad(
+                    "Leftovers need an extra batch of the same meal on the previous day.",
+                ));
+            }
         }
     }
     for servings in state.servings.values() {
@@ -1604,7 +1803,10 @@ fn consume_meal(
     servings: f64,
     direction: f64,
 ) {
-    for ingredient in &recipe.ingredients {
+    if is_leftover(state, day, recipe) {
+        return;
+    }
+    for ingredient in meal_ingredients(state, day, recipe) {
         let required = normalize(&Amount {
             quantity: ingredient.quantity * servings / recipe.servings,
             unit: ingredient.unit.clone(),
@@ -1783,8 +1985,7 @@ fn reconcile_reservations(state: &mut HouseholdState) {
 }
 
 pub fn recipe_allowed(state: &HouseholdState, recipe: &Recipe) -> bool {
-    let products = recipe
-        .ingredients
+    let products = recipe_ingredients(recipe, None)
         .iter()
         .filter_map(|i| product(state, &i.product_id).ok())
         .collect::<Vec<_>>();
@@ -1812,9 +2013,12 @@ pub fn recipe_allowed(state: &HouseholdState, recipe: &Recipe) -> bool {
         return false;
     }
     if dietary.contains("vegan")
-        && products
-            .iter()
-            .any(|p| matches!(p.category.as_str(), "Milk & eggs" | "Cheese") || p.id == "honey")
+        && products.iter().any(|p| {
+            matches!(
+                p.category.as_str(),
+                "Milk & eggs" | "Cheese" | "Milk" | "Dairy" | "Eggs"
+            ) || p.id == "honey"
+        })
     {
         return false;
     }

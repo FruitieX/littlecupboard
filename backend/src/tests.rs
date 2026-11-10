@@ -1,4 +1,5 @@
 use super::*;
+use crate::model::{Amount, Ingredient, MealOptions, PantryItem};
 use axum::{
     body::Body,
     http::{Method, Request, header},
@@ -1934,6 +1935,26 @@ async fn backup_restore_is_guarded_atomic_and_owner_only() {
 async fn learned_intervals_ignore_restores_and_undone_purchases() {
     let (server, _dir) = server();
     let owner = owner(&server).await;
+    // Isolate historical purchase amounts from the date-dependent starter plan.
+    let state = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await
+    .1;
+    let changes = state["state"]["plan"].as_object().unwrap().iter().map(|(day, recipe)|
+        json!({"collection":"plan","key":day,"field":null,"before":recipe,"after":null})
+    ).collect::<Vec<_>>();
+    operation(
+        &server,
+        &owner,
+        json!({"type":"patch","label":"Isolate purchase fixture","changes":changes}),
+    )
+    .await;
+
     // 2 L, 2 L, then 4 L at a learned 2 L per 8 days: the larger last
     // purchase lasts 16 days, so it is used up by now and due again.
     for days in [32, 24, 16] {
@@ -1955,7 +1976,11 @@ async fn learned_intervals_ignore_restores_and_undone_purchases() {
         conn.execute(
             "UPDATE events SET at=?1 WHERE id=?2",
             rusqlite::params![
-                (chrono::Utc::now() - chrono::Duration::days(days)).to_rfc3339(),
+                (chrono::Utc::now().date_naive() - chrono::Duration::days(days))
+                    .and_hms_opt(12, 0, 0)
+                    .unwrap()
+                    .and_utc()
+                    .to_rfc3339(),
                 id
             ],
         )
@@ -5730,4 +5755,208 @@ async fn recipe_source_urls_are_optional_validated_and_preserved_by_backup() {
     let (status, removed) = operation(&server, &cookie, json!({"type":"patch","label":"Clear source","changes":[{"collection":"recipeBook","key":recipe["id"],"field":"sourceUrl","before":source,"after":null}]})).await;
     assert_eq!(status, StatusCode::OK, "{removed}");
     assert_eq!(removed["state"]["recipeBook"][0], *recipe);
+}
+
+#[test]
+fn meal_options_scale_and_leftovers_never_shop_or_consume_twice() {
+    let mut state = model::fresh_state(true, "UTC".into());
+    let mut recipe = state.recipe_book[0].clone();
+    recipe.id = "test-options".into();
+    recipe.servings = 4.0;
+    recipe.ingredients = vec![Ingredient {
+        product_id: "rice".into(),
+        quantity: 250.0,
+        unit: "g".into(),
+        note: None,
+    }];
+    recipe.option_groups=serde_json::from_value(json!([{"id":"dip","name":"Dip","optional":true,"choices":[{"id":"yogurt","name":"Yoghurt","ingredients":[{"productId":"yogurt","quantity":150,"unit":"g"}],"steps":["Stir the dip."]}]}])).unwrap();
+    state.recipe_book = vec![recipe.clone()];
+    state.plan.insert("2026-11-10".into(), recipe.id.clone());
+    assert!(
+        !domain::outstanding(&state, "2026-11-10")
+            .iter()
+            .any(|i| i.product_id == "yogurt")
+    );
+    state.plan_options.insert(
+        "2026-11-10".into(),
+        MealOptions {
+            recipe_id: recipe.id.clone(),
+            choices: std::collections::BTreeMap::from([("dip".into(), "yogurt".into())]),
+            leftover_from: None,
+        },
+    );
+    state.servings.insert("2026-11-10".into(), 8.0);
+    state.plan.insert("2026-11-11".into(), recipe.id.clone());
+    state.servings.insert("2026-11-11".into(), 4.0);
+    state.plan_options.insert(
+        "2026-11-11".into(),
+        MealOptions {
+            recipe_id: recipe.id.clone(),
+            choices: Default::default(),
+            leftover_from: Some("2026-11-10".into()),
+        },
+    );
+    domain::validate(&state).unwrap();
+    let needed = domain::outstanding(&state, "2026-11-10");
+    assert_eq!(
+        needed
+            .iter()
+            .find(|i| i.product_id == "rice")
+            .unwrap()
+            .quantity,
+        500.0
+    );
+    assert_eq!(
+        needed
+            .iter()
+            .find(|i| i.product_id == "yogurt")
+            .unwrap()
+            .quantity,
+        300.0
+    );
+    assert!(!needed.iter().any(|i| i.day == "2026-11-11"));
+    state.pantry.insert(
+        "yogurt".into(),
+        PantryItem {
+            amounts: vec![Amount {
+                quantity: 600.0,
+                unit: "g".into(),
+            }],
+            confirmed: true,
+            observed_at: "2026-11-10T10:00:00Z".into(),
+            expires_at: None,
+            note: String::new(),
+        },
+    );
+    domain::auto_consume(
+        &mut state,
+        chrono::NaiveDate::from_ymd_opt(2026, 11, 11)
+            .unwrap()
+            .and_hms_opt(16, 0, 0)
+            .unwrap(),
+    );
+    assert_eq!(state.pantry["yogurt"].amounts[0].quantity, 300.0);
+    state
+        .plan_options
+        .get_mut("2026-11-10")
+        .unwrap()
+        .choices
+        .insert("dip".into(), "missing".into());
+    assert!(domain::validate(&state).is_err());
+}
+
+#[tokio::test]
+async fn recipe_usage_counts_real_operations_and_undo_without_counting_retries() {
+    let (server, _dir) = server();
+    let cookie = owner(&server).await;
+    let initial = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await
+    .1;
+    let id = initial["state"]["recipeBook"][0]["id"].as_str().unwrap();
+    let payload = json!({"id":uuid::Uuid::new_v4().to_string(),"operation":{"type":"addIngredients","recipeId":id,"ingredients":[{"productId":"rice","quantity":250,"unit":"g"}],"multiplier":1}});
+    let (status, first, _) = request(
+        &server,
+        Method::POST,
+        "/api/operations",
+        payload.clone(),
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{first}");
+    assert_eq!(first["state"]["recipeUsage"][id]["shopping"], 1);
+    let (_, retry, _) = request(
+        &server,
+        Method::POST,
+        "/api/operations",
+        payload,
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(retry["state"]["recipeUsage"][id]["shopping"], 1);
+    let (status,planned)=operation(&server,&cookie,json!({"type":"patch","label":"Plan lunch","changes":[{"collection":"plan","key":"2099-01-05","field":null,"before":null,"after":id}]})).await;
+    assert_eq!(status, StatusCode::OK, "{planned}");
+    assert_eq!(planned["state"]["recipeUsage"][id]["planned"], 1);
+    let (status, undone) = operation(
+        &server,
+        &cookie,
+        json!({"type":"undo","eventId":planned["eventId"]}),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{undone}");
+    assert_eq!(undone["state"]["recipeUsage"][id]["planned"], 0);
+    let (status, backup, _) = request(
+        &server,
+        Method::GET,
+        "/api/backup",
+        Value::Null,
+        Some(&cookie),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(backup["state"]["recipeUsage"][id]["shopping"], 1);
+}
+
+#[test]
+fn deselecting_a_purchased_optional_component_releases_its_coverage() {
+    let mut state = model::fresh_state(true, "UTC".into());
+    let today = domain::today(&state);
+    let mut recipe = state.recipe_book[0].clone();
+    recipe.ingredients = vec![Ingredient {
+        product_id: "rice".into(),
+        quantity: 250.0,
+        unit: "g".into(),
+        note: None,
+    }];
+    recipe.servings = 4.0;
+    recipe.option_groups=serde_json::from_value(json!([{"id":"dip","name":"Dip","optional":true,"choices":[{"id":"yogurt","name":"Yoghurt","ingredients":[{"productId":"yogurt","quantity":150,"unit":"g"}],"steps":[]}]}])).unwrap();
+    state.recipe_book = vec![recipe.clone()];
+    state.plan.insert(today.clone(), recipe.id.clone());
+    let selected = MealOptions {
+        recipe_id: recipe.id.clone(),
+        choices: std::collections::BTreeMap::from([("dip".into(), "yogurt".into())]),
+        leftover_from: None,
+    };
+    state.plan_options.insert(today.clone(), selected.clone());
+    domain::apply(
+        &mut state,
+        &model::Operation::CheckItem {
+            id: "yogurt".into(),
+            checked: true,
+            expected: None,
+        },
+        &today,
+    )
+    .unwrap();
+    let change = model::Change {
+        collection: "planOptions".into(),
+        key: today.clone(),
+        field: None,
+        before: serde_json::to_value(selected).unwrap(),
+        after: json!({"recipeId":recipe.id,"choices":{"dip":""}}),
+    };
+    domain::apply(
+        &mut state,
+        &model::Operation::Patch {
+            label: "No dip".into(),
+            changes: vec![change],
+        },
+        &today,
+    )
+    .unwrap();
+    assert!(
+        !domain::outstanding(&state, &today)
+            .iter()
+            .any(|i| i.product_id == "yogurt")
+    );
+    assert_eq!(state.pantry["yogurt"].amounts[0].quantity, 150.0);
+    let restored: model::HouseholdState =
+        serde_json::from_value(serde_json::to_value(&state).unwrap()).unwrap();
+    assert_eq!(restored.plan_options, state.plan_options);
+    assert_eq!(restored.recipe_book, state.recipe_book);
 }

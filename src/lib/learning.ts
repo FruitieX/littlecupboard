@@ -1,3 +1,7 @@
+import { discoveryRecipes } from './discovery-recipes'
+import { balancedWeek, plusDay } from './recipe-ranking'
+import { dateKey, householdDate } from './shopping'
+import { recipeIngredients } from './recipe-options'
 import { getProducts } from './catalog'
 import {
   createContext,
@@ -168,18 +172,20 @@ export function recipeScore(
   let score = 0
   const reasons: string[] = []
   const prefs = state.preferences
+  const products = recipeIngredients(recipe)
+    .map((i) => getProducts(state).find((p) => p.id === i.productId))
+    .filter((p): p is Product => !!p)
   const excluded = prefs?.avoid.some(
     (term) =>
       recipe.name.toLowerCase().includes(term.toLowerCase()) ||
-      recipe.ingredients.some((i) =>
-        i.productId.includes(term.toLowerCase().replace(/ /g, '-')),
+      products.some((product) =>
+        [product.id, product.name, ...(product.aliases ?? [])].some((value) =>
+          value.toLowerCase().includes(term.toLowerCase()),
+        ),
       ),
   )
   if (excluded)
     return { score: -1000, reasons: ['Contains an ingredient you avoid'] }
-  const products = recipe.ingredients
-    .map((i) => getProducts(state).find((p) => p.id === i.productId))
-    .filter((p): p is Product => !!p)
   const dietary = prefs?.dietary.map((d) => d.toLowerCase()) ?? []
   const incompatible =
     (dietary.some((d) => ['vegetarian', 'vegan'].includes(d)) &&
@@ -187,7 +193,9 @@ export function recipeScore(
     (dietary.includes('vegan') &&
       products.some(
         (p) =>
-          ['Cheese', 'Milk & eggs'].includes(p.category) || p.id === 'honey',
+          ['Cheese', 'Milk & eggs', 'Milk', 'Eggs', 'Dairy'].includes(
+            p.category,
+          ) || p.id === 'honey',
       )) ||
     (dietary.includes('gluten-free') &&
       products.some(
@@ -200,6 +208,10 @@ export function recipeScore(
       score: -1000,
       reasons: ['Does not match your dietary preferences'],
     }
+  if (recipe.kidApproved) {
+    score += 2
+    reasons.push('Kid-approved')
+  }
   if (state.favoriteRecipeIds.includes(recipe.id)) {
     score += 3
     reasons.push('A family favorite')
@@ -250,54 +262,34 @@ export function suggestWeek(
   state: AppState,
   rotation = 0,
 ): Recipe[] {
-  const ranked = recipes
-    .filter((r) => recipeScore(r, state).score > -999)
-    .sort((a, b) => recipeScore(b, state).score - recipeScore(a, state).score)
-  if (!ranked.length) return []
-  return Array.from(
-    { length: 7 },
-    (_, i) => ranked[(i + rotation) % ranked.length],
-  )
+  const start = dateKey(householdDate(state.preferences?.timeZone))
+  return balancedWeek(
+    recipes,
+    state,
+    Array.from({ length: 7 }, (_, i) => plusDay(start, i)),
+    rotation,
+  ).flatMap((entry) => (entry ? [entry.recipe] : []))
 }
+
 export function discovery(recipes: Recipe[], state: AppState): Recipe | null {
-  const base = [...recipes]
-    .filter((r) => recipeScore(r, state).score > -999)
-    .sort(
-      (a, b) => recipeScore(b, state).score - recipeScore(a, state).score,
-    )[0]
-  if (!base) return null
-  const choices = [
-    { id: 'chickpeas', name: 'chickpea', unit: 'g', quantity: 240 },
-    { id: 'spinach', name: 'spinach', unit: 'g', quantity: 150 },
-    { id: 'lemon', name: 'lemon', unit: 'pc', quantity: 1 },
-  ]
-  const extra = choices.find(
-    (p) =>
-      !base.ingredients.some((i) => i.productId === p.id) &&
-      !state.preferences?.avoid.some((a) => p.id.includes(a.toLowerCase())),
+  const normalized = (name: string) =>
+    name
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[^a-z0-9]+/g, ' ')
+  const candidate = discoveryRecipes.find(
+    (idea) =>
+      !recipes.some(
+        (recipe) =>
+          recipe.id === idea.id ||
+          normalized(recipe.name) === normalized(idea.name) ||
+          (recipe.ingredients.length === idea.ingredients.length &&
+            recipe.ingredients.every((i) =>
+              idea.ingredients.some((x) => x.productId === i.productId),
+            )),
+      ) &&
+      state.suggestionFeedback?.[idea.id]?.status !== 'dismissed' &&
+      recipeScore(idea, state).score > -999,
   )
-  if (!extra) return null
-  const id = `discovery-${base.id}-${extra.id}`
-  if (
-    recipes.some((r) => r.id === id) ||
-    state.suggestionFeedback?.[id]?.status === 'dismissed'
-  )
-    return null
-  return {
-    ...base,
-    id,
-    name: `${base.name} with ${extra.name}`,
-    subtitle: `A small variation on ${base.name}. Taste and adjust the addition for your family.`,
-    image: '/images/recipe-placeholder.svg',
-    tag: 'New variation',
-    tags: [...(base.tags ?? []), 'Variation'],
-    ingredients: [
-      ...base.ingredients,
-      { productId: extra.id, quantity: extra.quantity, unit: extra.unit },
-    ],
-    steps: [
-      ...base.steps,
-      `Add the ${extra.name} to taste: rinse and warm chickpeas, wilt spinach, or finish with lemon juice, as appropriate. Taste before serving.`,
-    ],
-  }
+  return candidate ?? null
 }

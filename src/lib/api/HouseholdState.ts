@@ -2,15 +2,17 @@
 import type { Amount } from "./Amount";
 import type { ConsumptionRate } from "./ConsumptionRate";
 import type { MealFeedback } from "./MealFeedback";
+import type { MealOptions } from "./MealOptions";
 import type { PantryItem } from "./PantryItem";
 import type { Preferences } from "./Preferences";
 import type { Product } from "./Product";
 import type { Recipe } from "./Recipe";
+import type { RecipeUsage } from "./RecipeUsage";
 import type { ShoppingItem } from "./ShoppingItem";
 import type { Store } from "./Store";
 import type { SuggestionFeedback } from "./SuggestionFeedback";
 
-export type HouseholdState = { items: Array<ShoppingItem>, stores: Array<Store>, storeId: string, plan: { [key in string]: string }, purchases: { [key in string]: string }, customProducts: Array<Product>, customRecipes: Array<Recipe>, favoriteRecipeIds: Array<string>, planCoverage: { [key in string]: { [key in string]: Array<Amount> } }, purchasedCoverage: { [key in string]: { [key in string]: Array<Amount> } }, recipeBook: Array<Recipe>, groups: Array<string>, pantry: { [key in string]: PantryItem }, servings: { [key in string]: number }, mealFeedback: { [key in string]: MealFeedback }, suggestionFeedback: { [key in string]: SuggestionFeedback }, preferences: Preferences, productImages: { [key in string]: string }, productGroups: { [key in string]: string }, productDetails: { [key in string]: Product }, archivedProductIds: Array<string>, consumptionRates: { [key in string]: ConsumptionRate }, 
+export type HouseholdState = { items: Array<ShoppingItem>, stores: Array<Store>, storeId: string, plan: { [key in string]: string }, planOptions: { [key in string]: MealOptions }, recipeUsage: { [key in string]: RecipeUsage }, purchases: { [key in string]: string }, customProducts: Array<Product>, customRecipes: Array<Recipe>, favoriteRecipeIds: Array<string>, planCoverage: { [key in string]: { [key in string]: Array<Amount> } }, purchasedCoverage: { [key in string]: { [key in string]: Array<Amount> } }, recipeBook: Array<Recipe>, groups: Array<string>, pantry: { [key in string]: PantryItem }, servings: { [key in string]: number }, mealFeedback: { [key in string]: MealFeedback }, suggestionFeedback: { [key in string]: SuggestionFeedback }, preferences: Preferences, productImages: { [key in string]: string }, productGroups: { [key in string]: string }, productDetails: { [key in string]: Product }, archivedProductIds: Array<string>, consumptionRates: { [key in string]: ConsumptionRate }, 
 /**
  * Optional days an item keeps after buying, e.g. about 7 for milk.
  */
