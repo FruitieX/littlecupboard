@@ -434,3 +434,7 @@ Follow-up: after accidentally pinch-zooming the installed app, the user asked to
 ### Family meal candidate import — 2026-11-10
 
 Added a repeatable recipe patch builder in `scripts/recipe-import/`, using existing catalog IDs, transactional API mutations and stable recipe IDs. It adds nine mild weeknight candidates and enriches the existing spinach pancake recipe with serving notes and a pan-fried variation while preserving the original oven recipe. The lean-mince macaroni casserole is a separate variant. It does not edit the meal plan. Schema limitations (optional ingredients and extended metadata in text) and image-download limitations are documented beside the importer.
+
+### Candidate recipe photos — 2026-11-10
+
+Added a repeatable private-photo attachment script and reviewed Commons photo manifest. It fills only missing images, preserving family-selected photos, recipes and scheduling. Source/author/license metadata stays in the import manifest rather than recipe descriptions, as requested. Photo links are distinguished from actual original recipe URLs; directly supplied recipes have no external recipe source to invent.

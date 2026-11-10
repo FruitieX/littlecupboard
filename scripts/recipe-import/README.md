@@ -25,10 +25,23 @@ added to Dairy (or Ingredients). Inspect a household's catalog for an equivalent
 before using this import elsewhere. Optional ingredients are described in notes
 because the schema has no optional-ingredient flag.
 
-Recipe images must be private `/api/images/…` uploads, not external URLs.
-Wikimedia Commons candidate metadata was reachable during preparation, but image
-downloads returned HTTP 403, so no external photograph or unverified attribution
-is attached by this import. Existing spinach pancake photography is retained.
+Recipe images are private `/api/images/…` uploads. After applying the recipe
+patch, `attach-photos.py API_ORIGIN` reads an authenticated session token from
+stdin, uploads the reviewed Commons thumbnails and commits missing image fields
+in one undoable transaction. Existing images are never replaced. Re-running it
+when all photos exist makes no uploads or mutations. Keep credentials out of
+shell arguments and files.
+
+`photos.json` retains source pages, authors, licenses and visual-match notes.
+These are illustrative photos, not claims that the pictured dishes used the
+saved recipe. Provenance stays with the import data; recipe descriptions stay
+focused on cooking. Actual recipe-source links belong in descriptions when a
+recipe was adapted from a known URL. These candidates were supplied directly,
+so there is no original recipe URL to attach. Photo pages are not recipe sources.
+
+Send the same `LittleCupboard/1.0` User-Agent when requesting both Wikimedia
+metadata and image bytes. Anonymous/default Python image requests returned 403;
+the consistent application header worked for both thumbnails and originals.
 
 Accidental deletion recovery is separate: retrieve the exact recipe from the
 household's deletion event and insert it via the same patch mechanism only when

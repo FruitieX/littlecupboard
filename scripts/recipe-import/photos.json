@@ -1,0 +1,83 @@
+[
+  {
+    "recipeId": "family-meals-oven-salmon",
+    "file": "Salmon with potatoes.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Salmon_with_potatoes.jpg",
+    "author": "SmockingBomb",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "note": "Salmon and potatoes; pictured with a butter topping, omitted from our recipe."
+  },
+  {
+    "recipeId": "family-meals-chicken-tray",
+    "file": "Chicken and vegetables, roasted - Massachusetts.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Chicken_and_vegetables,_roasted_-_Massachusetts.jpg",
+    "author": "Daderot",
+    "license": "CC0",
+    "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "note": "Roasted chicken with potatoes, carrots and additional vegetables."
+  },
+  {
+    "recipeId": "family-meals-salmon-pasta",
+    "file": "Pasta met zalm en rucola.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Pasta_met_zalm_en_rucola.jpg",
+    "author": "Jw2c",
+    "license": "Public domain",
+    "licenseUrl": "",
+    "note": "Salmon and leafy greens with pasta; pictured with rocket rather than spinach."
+  },
+  {
+    "recipeId": "family-meals-macaroni",
+    "file": "Makaronilaatikko.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Makaronilaatikko.jpg",
+    "author": "Suvi Korhonen",
+    "license": "CC BY 2.5",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.5",
+    "note": "Finnish macaroni casserole."
+  },
+  {
+    "recipeId": "family-meals-fish-fingers",
+    "file": "Fish fingers as a convenience food.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Fish_fingers_as_a_convenience_food.jpg",
+    "author": "JIP",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "note": "Fish fingers with mashed potatoes; serve peas alongside."
+  },
+  {
+    "recipeId": "family-meals-wraps",
+    "file": "Chicken wrap (1126876064).jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Chicken_wrap_(1126876064).jpg",
+    "author": "Father.Jack from Coventry, UK",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "note": "Chicken wraps; vegetable selection differs."
+  },
+  {
+    "recipeId": "family-meals-fried-rice",
+    "file": "Egg Fried rice.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Egg_Fried_rice.jpg",
+    "author": "Anna Ekambaram",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "note": "Egg fried rice and vegetables."
+  },
+  {
+    "recipeId": "family-meals-lentil-pasta",
+    "file": "Pasta, Tomato Sauce, Red Lentils & Sprouts (4368525956).jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Pasta,_Tomato_Sauce,_Red_Lentils_%26_Sprouts_(4368525956).jpg",
+    "author": "Katrin Gilger",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "note": "Tomato lentil pasta; pictured with optional sprouts."
+  },
+  {
+    "recipeId": "family-meals-carrot-soup",
+    "file": "Carrot soup.jpg",
+    "source": "https://commons.wikimedia.org/wiki/File:Carrot_soup.jpg",
+    "author": "jules / stone soup",
+    "license": "CC BY 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+    "note": "Carrot soup with bread."
+  }
+]
