@@ -1,3 +1,4 @@
+import { groceryAliases } from './catalog-aliases.ts'
 import { catalogArtwork } from './catalog-artwork.ts'
 
 export const categories = [
@@ -785,21 +786,6 @@ export const productId = (name: string) =>
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
-const groceryAliases: Record<string, string[]> = {
-  'Oat milk': ['kauramaito'],
-  Milk: ['maito'],
-  Bananas: ['banaani'],
-  Apples: ['omena'],
-  Eggs: ['kananmuna'],
-  'Bread rolls': ['sämpylä'],
-  'Rye bread': ['ruisleipä'],
-  Coffee: ['kahvi'],
-  Potatoes: ['peruna'],
-  Carrots: ['porkkana'],
-  'Chicken breast': ['kana'],
-  Rice: ['riisi'],
-  'Toilet paper': ['wc-paperi'],
-}
 export const catalog: Product[] = productGroups
   .flatMap(([category, icon, names]) =>
     names.map((name) => ({

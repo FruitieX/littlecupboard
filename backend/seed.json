@@ -4,7 +4,9 @@
       "id": "avocado",
       "name": "Avocado",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "avokado"
+      ],
       "icon": "🥑",
       "image": "/images/food/1f951.svg"
     },
@@ -12,7 +14,10 @@
       "id": "broccoli",
       "name": "Broccoli",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "parsakaali",
+        "broccoli"
+      ],
       "icon": "🥦",
       "image": "/images/food/1f966.svg"
     },
@@ -20,7 +25,10 @@
       "id": "cucumber",
       "name": "Cucumber",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "kurkku",
+        "gurka"
+      ],
       "icon": "🥒",
       "image": "/images/food/1f952.svg"
     },
@@ -28,7 +36,12 @@
       "id": "cherry-tomatoes",
       "name": "Cherry tomatoes",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "kirsikkatomaatti",
+        "tomaatti",
+        "körsbärstomat",
+        "tomat"
+      ],
       "icon": "🍅",
       "image": "/images/food/1f345.svg"
     },
@@ -37,7 +50,9 @@
       "name": "Carrots",
       "category": "Vegetables",
       "aliases": [
-        "porkkana"
+        "porkkana",
+        "morot",
+        "morötter"
       ],
       "icon": "🥕",
       "image": "/images/food/1f955.svg"
@@ -46,7 +61,10 @@
       "id": "spinach",
       "name": "Spinach",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "pinaatti",
+        "spenat"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/spinach.webp"
     },
@@ -55,7 +73,8 @@
       "name": "Potatoes",
       "category": "Vegetables",
       "aliases": [
-        "peruna"
+        "peruna",
+        "potatis"
       ],
       "icon": "🥔",
       "image": "/images/food/1f954.svg"
@@ -64,7 +83,10 @@
       "id": "sweet-potatoes",
       "name": "Sweet potatoes",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "bataatti",
+        "sötpotatis"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/sweet-potatoes.webp"
     },
@@ -72,7 +94,10 @@
       "id": "red-onion",
       "name": "Red onion",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "punasipuli",
+        "rödlök"
+      ],
       "icon": "🧅",
       "image": "/images/catalog/generated/red-onion.webp"
     },
@@ -80,7 +105,12 @@
       "id": "onion",
       "name": "Onion",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "sipuli",
+        "keltasipuli",
+        "lök",
+        "gul lök"
+      ],
       "icon": "🧅",
       "image": "/images/food/1f9c5.svg"
     },
@@ -88,7 +118,10 @@
       "id": "garlic",
       "name": "Garlic",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "valkosipuli",
+        "vitlök"
+      ],
       "icon": "🧄",
       "image": "/images/food/1f9c4.svg"
     },
@@ -96,7 +129,10 @@
       "id": "bell-pepper",
       "name": "Bell pepper",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "kasvispaprika",
+        "grönsakspaprika"
+      ],
       "icon": "🫑",
       "image": "/images/food/1fad1.svg"
     },
@@ -104,7 +140,11 @@
       "id": "zucchini",
       "name": "Zucchini",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "kesäkurpitsa",
+        "squash",
+        "zucchini"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/zucchini.webp"
     },
@@ -112,7 +152,12 @@
       "id": "mushrooms",
       "name": "Mushrooms",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "sieni",
+        "herkkusieni",
+        "svamp",
+        "champinjoner"
+      ],
       "icon": "🍄",
       "image": "/images/food/1f344.svg"
     },
@@ -120,7 +165,12 @@
       "id": "lettuce",
       "name": "Lettuce",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "salaatti",
+        "jäävuorisalaatti",
+        "sallad",
+        "isbergssallad"
+      ],
       "icon": "🥬",
       "image": "/images/food/1f96c.svg"
     },
@@ -128,7 +178,10 @@
       "id": "cauliflower",
       "name": "Cauliflower",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "kukkakaali",
+        "blomkål"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/cauliflower.webp"
     },
@@ -136,7 +189,11 @@
       "id": "peas",
       "name": "Peas",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "herne",
+        "ärtor",
+        "ärter"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/peas.webp"
     },
@@ -144,7 +201,12 @@
       "id": "cabbage",
       "name": "Cabbage",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "kaali",
+        "valkokaali",
+        "kål",
+        "vitkål"
+      ],
       "icon": "🥬",
       "image": "/images/food/1f96c.svg"
     },
@@ -152,7 +214,11 @@
       "id": "celery",
       "name": "Celery",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "selleri",
+        "varsiselleri",
+        "blekselleri"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/celery.webp"
     },
@@ -160,7 +226,10 @@
       "id": "asparagus",
       "name": "Asparagus",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "parsa",
+        "sparris"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/asparagus.webp"
     },
@@ -168,7 +237,11 @@
       "id": "beetroot",
       "name": "Beetroot",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "punajuuri",
+        "rödbeta",
+        "rödbetor"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/beetroot.webp"
     },
@@ -176,7 +249,10 @@
       "id": "pumpkin",
       "name": "Pumpkin",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "kurpitsa",
+        "pumpa"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/pumpkin.webp"
     },
@@ -185,7 +261,9 @@
       "name": "Bananas",
       "category": "Fruits",
       "aliases": [
-        "banaani"
+        "banaani",
+        "banan",
+        "bananer"
       ],
       "icon": "🍌",
       "image": "/images/food/1f34c.svg"
@@ -195,7 +273,9 @@
       "name": "Apples",
       "category": "Fruits",
       "aliases": [
-        "omena"
+        "omena",
+        "äpple",
+        "äpplen"
       ],
       "icon": "🍎",
       "image": "/images/food/1f34e.svg"
@@ -204,7 +284,10 @@
       "id": "lemon",
       "name": "Lemon",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "sitruuna",
+        "citron"
+      ],
       "icon": "🍋",
       "image": "/images/food/1f34b.svg"
     },
@@ -212,7 +295,10 @@
       "id": "lime",
       "name": "Lime",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "limetti",
+        "lime"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/lime.webp"
     },
@@ -220,7 +306,10 @@
       "id": "oranges",
       "name": "Oranges",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "appelsiini",
+        "apelsin"
+      ],
       "icon": "🍊",
       "image": "/images/food/1f34a.svg"
     },
@@ -228,7 +317,11 @@
       "id": "strawberries",
       "name": "Strawberries",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "mansikka",
+        "jordgubbar",
+        "jordgubbe"
+      ],
       "icon": "🍓",
       "image": "/images/food/1f353.svg"
     },
@@ -236,7 +329,11 @@
       "id": "blueberries",
       "name": "Blueberries",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "mustikka",
+        "pensasmustikka",
+        "blåbär"
+      ],
       "icon": "🫐",
       "image": "/images/food/1fad0.svg"
     },
@@ -244,7 +341,10 @@
       "id": "raspberries",
       "name": "Raspberries",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "vadelma",
+        "hallon"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/raspberries.webp"
     },
@@ -252,7 +352,12 @@
       "id": "grapes",
       "name": "Grapes",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "viinirypäle",
+        "rypäle",
+        "vindruvor",
+        "druvor"
+      ],
       "icon": "🍇",
       "image": "/images/food/1f347.svg"
     },
@@ -260,7 +365,10 @@
       "id": "pears",
       "name": "Pears",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "päärynä",
+        "päron"
+      ],
       "icon": "🥬",
       "image": "/images/food/1f350.svg"
     },
@@ -268,7 +376,9 @@
       "id": "mango",
       "name": "Mango",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "mango"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/mango.webp"
     },
@@ -276,7 +386,10 @@
       "id": "kiwi",
       "name": "Kiwi",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "kiivi",
+        "kiwi"
+      ],
       "icon": "🥬",
       "image": "/images/food/1f95d.svg"
     },
@@ -284,7 +397,10 @@
       "id": "watermelon",
       "name": "Watermelon",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "vesimeloni",
+        "vattenmelon"
+      ],
       "icon": "🥬",
       "image": "/images/food/1f349.svg"
     },
@@ -292,7 +408,11 @@
       "id": "fresh-basil",
       "name": "Fresh basil",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "basilika",
+        "tuore basilika",
+        "färsk basilika"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/basil.webp"
     },
@@ -300,7 +420,9 @@
       "id": "parsley",
       "name": "Parsley",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "persilja"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/parsley.webp"
     },
@@ -308,7 +430,10 @@
       "id": "dill",
       "name": "Dill",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "tilli",
+        "dill"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/dill.webp"
     },
@@ -316,7 +441,10 @@
       "id": "sourdough-bread",
       "name": "Sourdough bread",
       "category": "Bread",
-      "aliases": [],
+      "aliases": [
+        "juurileipä",
+        "surdegsbröd"
+      ],
       "icon": "🍞",
       "image": "/images/food/1f35e.svg"
     },
@@ -325,7 +453,8 @@
       "name": "Rye bread",
       "category": "Bread",
       "aliases": [
-        "ruisleipä"
+        "ruisleipä",
+        "rågbröd"
       ],
       "icon": "🍞",
       "image": "/images/food/1f35e.svg"
@@ -334,7 +463,11 @@
       "id": "toast-bread",
       "name": "Toast bread",
       "category": "Bread",
-      "aliases": [],
+      "aliases": [
+        "paahtoleipä",
+        "rostbröd",
+        "formbröd"
+      ],
       "icon": "🥖",
       "image": "/images/food/1f35e.svg"
     },
@@ -343,7 +476,10 @@
       "name": "Bread rolls",
       "category": "Bread",
       "aliases": [
-        "sämpylä"
+        "sämpylä",
+        "småfranska",
+        "frallor",
+        "bullar"
       ],
       "icon": "🥖",
       "image": "/images/catalog/generated/bread-rolls.webp"
@@ -352,7 +488,10 @@
       "id": "bagels",
       "name": "Bagels",
       "category": "Bread",
-      "aliases": [],
+      "aliases": [
+        "bageli",
+        "bagel"
+      ],
       "icon": "🥖",
       "image": "/images/food/1f96f.svg"
     },
@@ -360,7 +499,11 @@
       "id": "croissants",
       "name": "Croissants",
       "category": "Pastries",
-      "aliases": [],
+      "aliases": [
+        "croissant",
+        "voisarvi",
+        "giffel"
+      ],
       "icon": "🥖",
       "image": "/images/food/1f950.svg"
     },
@@ -368,7 +511,10 @@
       "id": "tortillas",
       "name": "Tortillas",
       "category": "Bread",
-      "aliases": [],
+      "aliases": [
+        "tortilla",
+        "vehnätortilla"
+      ],
       "icon": "🥖",
       "image": "/images/catalog/generated/tortillas.webp"
     },
@@ -376,7 +522,10 @@
       "id": "pita-bread",
       "name": "Pita bread",
       "category": "Bread",
-      "aliases": [],
+      "aliases": [
+        "pitaleipä",
+        "pitabröd"
+      ],
       "icon": "🥖",
       "image": "/images/catalog/generated/pita.webp"
     },
@@ -384,7 +533,12 @@
       "id": "cinnamon-buns",
       "name": "Cinnamon buns",
       "category": "Pastries",
-      "aliases": [],
+      "aliases": [
+        "korvapuusti",
+        "pulla",
+        "kanelbulle",
+        "kanelbullar"
+      ],
       "icon": "🥖",
       "image": "/images/catalog/generated/cinnamon-buns.webp"
     },
@@ -393,7 +547,10 @@
       "name": "Oat milk",
       "category": "Milk & eggs",
       "aliases": [
-        "kauramaito"
+        "kauramaito",
+        "kaurajuoma",
+        "havremjölk",
+        "havredryck"
       ],
       "icon": "🥛",
       "image": "/images/catalog/generated/oat-milk.webp"
@@ -403,7 +560,8 @@
       "name": "Milk",
       "category": "Milk & eggs",
       "aliases": [
-        "maito"
+        "maito",
+        "mjölk"
       ],
       "icon": "🥛",
       "image": "/images/catalog/generated/milk-carton.webp"
@@ -412,7 +570,11 @@
       "id": "greek-yogurt",
       "name": "Greek yogurt",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "kreikkalainen jogurtti",
+        "turkisk yoghurt",
+        "grekisk yoghurt"
+      ],
       "icon": "🥣",
       "image": "/images/catalog/generated/yogurt.webp"
     },
@@ -420,7 +582,10 @@
       "id": "yogurt",
       "name": "Yogurt",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "jogurtti",
+        "yoghurt"
+      ],
       "icon": "🥛",
       "image": "/images/catalog/generated/yogurt.webp"
     },
@@ -429,7 +594,9 @@
       "name": "Eggs",
       "category": "Milk & eggs",
       "aliases": [
-        "kananmuna"
+        "kananmuna",
+        "muna",
+        "ägg"
       ],
       "icon": "🥚",
       "image": "/images/food/1f95a.svg"
@@ -438,7 +605,10 @@
       "id": "butter",
       "name": "Butter",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "voi",
+        "smör"
+      ],
       "icon": "🧈",
       "image": "/images/food/1f9c8.svg"
     },
@@ -446,7 +616,14 @@
       "id": "cream",
       "name": "Cream",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "kerma",
+        "kuohukerma",
+        "ruokakerma",
+        "grädde",
+        "vispgrädde",
+        "matlagningsgrädde"
+      ],
       "icon": "🥛",
       "image": "/images/catalog/generated/cream.webp"
     },
@@ -454,7 +631,11 @@
       "id": "sour-cream",
       "name": "Sour cream",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "smetana",
+        "hapankerma",
+        "gräddfil"
+      ],
       "icon": "🥛",
       "image": "/images/catalog/generated/sour-cream.webp"
     },
@@ -462,7 +643,11 @@
       "id": "cottage-cheese",
       "name": "Cottage cheese",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "raejuusto",
+        "keso",
+        "cottage cheese"
+      ],
       "icon": "🥛",
       "image": "/images/catalog/generated/cottage-cheese.webp"
     },
@@ -470,7 +655,10 @@
       "id": "cheddar",
       "name": "Cheddar",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "cheddarjuusto",
+        "cheddarost"
+      ],
       "icon": "🧀",
       "image": "/images/food/1f9c0.svg"
     },
@@ -478,7 +666,9 @@
       "id": "mozzarella",
       "name": "Mozzarella",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "mozzarella"
+      ],
       "icon": "🧀",
       "image": "/images/catalog/generated/mozzarella.webp"
     },
@@ -486,7 +676,10 @@
       "id": "parmesan",
       "name": "Parmesan",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "parmesaani",
+        "parmesanost"
+      ],
       "icon": "🧀",
       "image": "/images/food/1f9c0.svg"
     },
@@ -494,7 +687,11 @@
       "id": "feta",
       "name": "Feta",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "fetajuusto",
+        "salaattijuusto",
+        "fetaost"
+      ],
       "icon": "🧀",
       "image": "/images/catalog/generated/feta.webp"
     },
@@ -502,7 +699,10 @@
       "id": "cream-cheese",
       "name": "Cream cheese",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "tuorejuusto",
+        "färskost"
+      ],
       "icon": "🥛",
       "image": "/images/catalog/generated/cream-cheese.webp"
     },
@@ -510,7 +710,10 @@
       "id": "salmon",
       "name": "Salmon",
       "category": "Fish",
-      "aliases": [],
+      "aliases": [
+        "lohi",
+        "lax"
+      ],
       "icon": "🐟",
       "image": "/images/catalog/generated/salmon.webp"
     },
@@ -519,7 +722,10 @@
       "name": "Chicken breast",
       "category": "Meat",
       "aliases": [
-        "kana"
+        "kana",
+        "broilerin rintafilee",
+        "kycklingfilé",
+        "kyckling"
       ],
       "icon": "🍗",
       "image": "/images/catalog/generated/chicken.webp"
@@ -528,7 +734,11 @@
       "id": "chicken-thighs",
       "name": "Chicken thighs",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "broilerin reisi",
+        "kanan reisi",
+        "kycklinglår"
+      ],
       "icon": "🐟",
       "image": "/images/catalog/generated/chicken-thighs.webp"
     },
@@ -536,7 +746,12 @@
       "id": "minced-beef",
       "name": "Minced beef",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "jauheliha",
+        "naudan jauheliha",
+        "köttfärs",
+        "nötfärs"
+      ],
       "icon": "🥩",
       "image": "/images/catalog/generated/minced-meat.webp"
     },
@@ -544,7 +759,10 @@
       "id": "minced-turkey",
       "name": "Minced turkey",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "kalkkunan jauheliha",
+        "kalkonfärs"
+      ],
       "icon": "🐟",
       "image": "/images/catalog/generated/minced-meat.webp"
     },
@@ -552,7 +770,10 @@
       "id": "pork-chops",
       "name": "Pork chops",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "porsaankyljys",
+        "fläskkotlett"
+      ],
       "icon": "🐟",
       "image": "/images/catalog/generated/pork-chops.webp"
     },
@@ -560,7 +781,10 @@
       "id": "bacon",
       "name": "Bacon",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "pekoni",
+        "bacon"
+      ],
       "icon": "🥓",
       "image": "/images/food/1f953.svg"
     },
@@ -568,7 +792,11 @@
       "id": "sausages",
       "name": "Sausages",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "makkara",
+        "nakki",
+        "korv"
+      ],
       "icon": "🐟",
       "image": "/images/catalog/generated/sausages.webp"
     },
@@ -576,7 +804,12 @@
       "id": "ham",
       "name": "Ham",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "kinkku",
+        "leikkele",
+        "skinka",
+        "pålägg"
+      ],
       "icon": "🐟",
       "image": "/images/catalog/generated/ham.webp"
     },
@@ -584,7 +817,10 @@
       "id": "tuna",
       "name": "Tuna",
       "category": "Fish",
-      "aliases": [],
+      "aliases": [
+        "tonnikala",
+        "tonfisk"
+      ],
       "icon": "🐟",
       "image": "/images/food/1f41f.svg"
     },
@@ -592,7 +828,10 @@
       "id": "cod",
       "name": "Cod",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "turska",
+        "torsk"
+      ],
       "icon": "🐟",
       "image": "/images/catalog/generated/fish-fillet.webp"
     },
@@ -600,7 +839,11 @@
       "id": "prawns",
       "name": "Prawns",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "katkarapu",
+        "räkor",
+        "räka"
+      ],
       "icon": "🐟",
       "image": "/images/food/1f990.svg"
     },
@@ -608,7 +851,12 @@
       "id": "smoked-salmon",
       "name": "Smoked salmon",
       "category": "Fish",
-      "aliases": [],
+      "aliases": [
+        "savulohi",
+        "kylmäsavulohi",
+        "rökt lax",
+        "gravlax"
+      ],
       "icon": "🐟",
       "image": "/images/catalog/generated/salmon.webp"
     },
@@ -616,7 +864,12 @@
       "id": "pasta",
       "name": "Pasta",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "pasta",
+        "makaroni",
+        "spagetti",
+        "makaroner"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/dry-pasta.webp"
     },
@@ -625,7 +878,8 @@
       "name": "Rice",
       "category": "Grain products",
       "aliases": [
-        "riisi"
+        "riisi",
+        "ris"
       ],
       "icon": "🍚",
       "image": "/images/food/1f35a.svg"
@@ -634,7 +888,10 @@
       "id": "couscous",
       "name": "Couscous",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "couscous",
+        "kuskus"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/grain.webp"
     },
@@ -642,7 +899,10 @@
       "id": "quinoa",
       "name": "Quinoa",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "kvinoa",
+        "quinoa"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/grain.webp"
     },
@@ -650,7 +910,12 @@
       "id": "oats",
       "name": "Oats",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "kaurahiutale",
+        "kaura",
+        "havregryn",
+        "havre"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/oats.webp"
     },
@@ -658,7 +923,12 @@
       "id": "flour",
       "name": "Flour",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "jauho",
+        "vehnäjauho",
+        "mjöl",
+        "vetemjöl"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/flour.webp"
     },
@@ -666,7 +936,10 @@
       "id": "noodles",
       "name": "Noodles",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "nuudeli",
+        "nudlar"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/noodles.webp"
     },
@@ -674,7 +947,9 @@
       "id": "granola",
       "name": "Granola",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "granola"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/granola.webp"
     },
@@ -682,7 +957,12 @@
       "id": "cereal",
       "name": "Cereal",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "aamiaismurot",
+        "murot",
+        "flingor",
+        "frukostflingor"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/cereal.webp"
     },
@@ -690,7 +970,10 @@
       "id": "breadcrumbs",
       "name": "Breadcrumbs",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "korppujauho",
+        "ströbröd"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/breadcrumbs.webp"
     },
@@ -698,7 +981,12 @@
       "id": "barley",
       "name": "Barley",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "ohra",
+        "ohrasuurimo",
+        "korn",
+        "korngryn"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/grain.webp"
     },
@@ -706,7 +994,11 @@
       "id": "semolina",
       "name": "Semolina",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "mannasuurimo",
+        "manna",
+        "mannagryn"
+      ],
       "icon": "🍝",
       "image": "/images/catalog/generated/grain.webp"
     },
@@ -714,7 +1006,10 @@
       "id": "chickpeas",
       "name": "Chickpeas",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "kikherne",
+        "kikärtor"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/chickpeas.webp"
     },
@@ -722,7 +1017,10 @@
       "id": "lentils",
       "name": "Lentils",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "linssi",
+        "linser"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/red-lentils.webp"
     },
@@ -730,7 +1028,10 @@
       "id": "black-beans",
       "name": "Black beans",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "mustapapu",
+        "svarta bönor"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/black-beans.webp"
     },
@@ -738,7 +1039,10 @@
       "id": "kidney-beans",
       "name": "Kidney beans",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "kidneypapu",
+        "kidneybönor"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/kidney-beans.webp"
     },
@@ -746,7 +1050,10 @@
       "id": "chopped-tomatoes",
       "name": "Chopped tomatoes",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "tomaattimurska",
+        "krossade tomater"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/tomatoes-can.webp"
     },
@@ -754,7 +1061,10 @@
       "id": "tomato-paste",
       "name": "Tomato paste",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "tomaattipyree",
+        "tomatpuré"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/tomato-paste.webp"
     },
@@ -762,7 +1072,10 @@
       "id": "coconut-milk",
       "name": "Coconut milk",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "kookosmaito",
+        "kokosmjölk"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/coconut-can.webp"
     },
@@ -770,7 +1083,11 @@
       "id": "vegetable-stock",
       "name": "Vegetable stock",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "kasvisliemi",
+        "kasvisliemikuutio",
+        "grönsaksbuljong"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/stock.webp"
     },
@@ -778,7 +1095,12 @@
       "id": "chicken-stock",
       "name": "Chicken stock",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "kanaliemi",
+        "kanaliemikuutio",
+        "kycklingbuljong",
+        "hönsbuljong"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/stock.webp"
     },
@@ -786,7 +1108,10 @@
       "id": "olive-oil",
       "name": "Olive oil",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "oliiviöljy",
+        "olivolja"
+      ],
       "icon": "🫒",
       "image": "/images/catalog/generated/oil.webp"
     },
@@ -794,7 +1119,11 @@
       "id": "rapeseed-oil",
       "name": "Rapeseed oil",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "rypsiöljy",
+        "rapsiöljy",
+        "rapsolja"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/oil.webp"
     },
@@ -802,7 +1131,11 @@
       "id": "soy-sauce",
       "name": "Soy sauce",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "soijakastike",
+        "sojasås",
+        "soja"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/soy-sauce.webp"
     },
@@ -810,7 +1143,12 @@
       "id": "vinegar",
       "name": "Vinegar",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "etikka",
+        "vättika",
+        "ättika",
+        "vinäger"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/vinegar.webp"
     },
@@ -818,7 +1156,10 @@
       "id": "honey",
       "name": "Honey",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "hunaja",
+        "honung"
+      ],
       "icon": "🍯",
       "image": "/images/food/1f36f.svg"
     },
@@ -826,7 +1167,10 @@
       "id": "sugar",
       "name": "Sugar",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "sokeri",
+        "socker"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/sugar.webp"
     },
@@ -834,7 +1178,10 @@
       "id": "salt",
       "name": "Salt",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "suola",
+        "salt"
+      ],
       "icon": "🫙",
       "image": "/images/food/1f9c2.svg"
     },
@@ -842,7 +1189,12 @@
       "id": "black-pepper",
       "name": "Black pepper",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "mustapippuri",
+        "pippuri",
+        "svartpeppar",
+        "peppar"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/black-pepper.webp"
     },
@@ -850,7 +1202,10 @@
       "id": "paprika",
       "name": "Paprika",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "paprikajauhe",
+        "paprikapulver"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/red-spice.webp"
     },
@@ -858,7 +1213,10 @@
       "id": "cumin",
       "name": "Cumin",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "juustokumina",
+        "spiskummin"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/cumin.webp"
     },
@@ -866,7 +1224,10 @@
       "id": "cinnamon",
       "name": "Cinnamon",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "kaneli",
+        "kanel"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/cinnamon.webp"
     },
@@ -874,7 +1235,10 @@
       "id": "curry-powder",
       "name": "Curry powder",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "curryjauhe",
+        "curry"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/gold-spice.webp"
     },
@@ -882,7 +1246,9 @@
       "id": "oregano",
       "name": "Oregano",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "oregano"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/herb-jar.webp"
     },
@@ -890,7 +1256,10 @@
       "id": "baking-powder",
       "name": "Baking powder",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "leivinjauhe",
+        "bakpulver"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/baking-powder.webp"
     },
@@ -898,7 +1267,10 @@
       "id": "yeast",
       "name": "Yeast",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "hiiva",
+        "jäst"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/yeast.webp"
     },
@@ -906,7 +1278,10 @@
       "id": "peanut-butter",
       "name": "Peanut butter",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "maapähkinävoi",
+        "jordnötssmör"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/peanut-butter.webp"
     },
@@ -914,7 +1289,11 @@
       "id": "jam",
       "name": "Jam",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "hillo",
+        "sylt",
+        "marmelad"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/jam.webp"
     },
@@ -922,7 +1301,9 @@
       "id": "pesto",
       "name": "Pesto",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "pesto"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/pesto.webp"
     },
@@ -930,7 +1311,10 @@
       "id": "mustard",
       "name": "Mustard",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "sinappi",
+        "senap"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/mustard.webp"
     },
@@ -938,7 +1322,10 @@
       "id": "ketchup",
       "name": "Ketchup",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "ketsuppi",
+        "ketchup"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/ketchup.webp"
     },
@@ -946,7 +1333,10 @@
       "id": "mayonnaise",
       "name": "Mayonnaise",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "majoneesi",
+        "majonnäs"
+      ],
       "icon": "🫙",
       "image": "/images/catalog/generated/mayonnaise.webp"
     },
@@ -954,7 +1344,10 @@
       "id": "frozen-peas",
       "name": "Frozen peas",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "pakasteherne",
+        "frysta ärtor"
+      ],
       "icon": "🧊",
       "image": "/images/catalog/generated/peas.webp"
     },
@@ -962,7 +1355,12 @@
       "id": "frozen-berries",
       "name": "Frozen berries",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "pakastemarjat",
+        "marjat",
+        "frysta bär",
+        "bär"
+      ],
       "icon": "🧊",
       "image": "/images/catalog/generated/berries.webp"
     },
@@ -970,7 +1368,11 @@
       "id": "frozen-vegetables",
       "name": "Frozen vegetables",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "pakastevihannekset",
+        "wokkivihannekset",
+        "frysta grönsaker"
+      ],
       "icon": "🧊",
       "image": "/images/catalog/generated/vegetables.webp"
     },
@@ -978,7 +1380,10 @@
       "id": "ice-cream",
       "name": "Ice cream",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "jäätelö",
+        "glass"
+      ],
       "icon": "🧊",
       "image": "/images/food/1f368.svg"
     },
@@ -986,7 +1391,11 @@
       "id": "frozen-pizza",
       "name": "Frozen pizza",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "pakastepizza",
+        "pizza",
+        "fryst pizza"
+      ],
       "icon": "🧊",
       "image": "/images/catalog/generated/frozen-pizza.webp"
     },
@@ -994,7 +1403,10 @@
       "id": "fish-fingers",
       "name": "Fish fingers",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "kalapuikot",
+        "fiskpinnar"
+      ],
       "icon": "🧊",
       "image": "/images/catalog/generated/fish-fingers.webp"
     },
@@ -1002,7 +1414,10 @@
       "id": "frozen-spinach",
       "name": "Frozen spinach",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "pakastepinaatti",
+        "fryst spenat"
+      ],
       "icon": "🧊",
       "image": "/images/catalog/generated/frozen-spinach.webp"
     },
@@ -1010,7 +1425,12 @@
       "id": "ready-made-soup",
       "name": "Ready-made soup",
       "category": "Convenience",
-      "aliases": [],
+      "aliases": [
+        "valmiskeitto",
+        "keitto",
+        "färdig soppa",
+        "soppa"
+      ],
       "icon": "🥡",
       "image": "/images/catalog/generated/soup.webp"
     },
@@ -1018,7 +1438,10 @@
       "id": "dumplings",
       "name": "Dumplings",
       "category": "Convenience",
-      "aliases": [],
+      "aliases": [
+        "nyytit",
+        "dumplings"
+      ],
       "icon": "🥡",
       "image": "/images/catalog/generated/frozen-dumplings.webp"
     },
@@ -1026,7 +1449,9 @@
       "id": "falafel",
       "name": "Falafel",
       "category": "Convenience",
-      "aliases": [],
+      "aliases": [
+        "falafel"
+      ],
       "icon": "🥡",
       "image": "/images/catalog/generated/falafel.webp"
     },
@@ -1034,7 +1459,9 @@
       "id": "tofu",
       "name": "Tofu",
       "category": "Convenience",
-      "aliases": [],
+      "aliases": [
+        "tofu"
+      ],
       "icon": "🥡",
       "image": "/images/catalog/generated/tofu.webp"
     },
@@ -1042,7 +1469,9 @@
       "id": "hummus",
       "name": "Hummus",
       "category": "Convenience",
-      "aliases": [],
+      "aliases": [
+        "hummus"
+      ],
       "icon": "🥡",
       "image": "/images/catalog/generated/hummus.webp"
     },
@@ -1050,7 +1479,11 @@
       "id": "pizza-dough",
       "name": "Pizza dough",
       "category": "Convenience",
-      "aliases": [],
+      "aliases": [
+        "pizzapohja",
+        "pizzataikina",
+        "pizzadeg"
+      ],
       "icon": "🥡",
       "image": "/images/catalog/generated/pizza-dough.webp"
     },
@@ -1058,7 +1491,10 @@
       "id": "ready-made-salad",
       "name": "Ready-made salad",
       "category": "Convenience",
-      "aliases": [],
+      "aliases": [
+        "valmissalaatti",
+        "färdig sallad"
+      ],
       "icon": "🥡",
       "image": "/images/catalog/generated/salad.webp"
     },
@@ -1066,7 +1502,10 @@
       "id": "chocolate",
       "name": "Chocolate",
       "category": "Sweets",
-      "aliases": [],
+      "aliases": [
+        "suklaa",
+        "choklad"
+      ],
       "icon": "🍫",
       "image": "/images/food/1f36b.svg"
     },
@@ -1074,7 +1513,11 @@
       "id": "crisps",
       "name": "Crisps",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "sipsit",
+        "perunalastut",
+        "chips"
+      ],
       "icon": "🍿",
       "image": "/images/catalog/generated/crisps.webp"
     },
@@ -1082,7 +1525,10 @@
       "id": "popcorn",
       "name": "Popcorn",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "popcorn",
+        "paukkumaissi"
+      ],
       "icon": "🍿",
       "image": "/images/food/1f37f.svg"
     },
@@ -1090,7 +1536,12 @@
       "id": "crackers",
       "name": "Crackers",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "keksi",
+        "suolakeksi",
+        "kex",
+        "salta kex"
+      ],
       "icon": "🍿",
       "image": "/images/catalog/generated/crispbread.webp"
     },
@@ -1098,7 +1549,12 @@
       "id": "biscuits",
       "name": "Biscuits",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "keksit",
+        "pikkuleipä",
+        "kakor",
+        "småkakor"
+      ],
       "icon": "🍿",
       "image": "/images/food/1f36a.svg"
     },
@@ -1106,7 +1562,11 @@
       "id": "nuts",
       "name": "Nuts",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "pähkinä",
+        "pähkinät",
+        "nötter"
+      ],
       "icon": "🍿",
       "image": "/images/catalog/generated/nuts.webp"
     },
@@ -1114,7 +1574,12 @@
       "id": "dried-fruit",
       "name": "Dried fruit",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "kuivahedelmä",
+        "rusina",
+        "torkad frukt",
+        "russin"
+      ],
       "icon": "🍿",
       "image": "/images/catalog/generated/dried-fruit.webp"
     },
@@ -1122,7 +1587,11 @@
       "id": "candy",
       "name": "Candy",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "karkki",
+        "makeinen",
+        "godis"
+      ],
       "icon": "🍿",
       "image": "/images/food/1f36c.svg"
     },
@@ -1130,7 +1599,10 @@
       "id": "rice-cakes",
       "name": "Rice cakes",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "riisikakku",
+        "riskakor"
+      ],
       "icon": "🍿",
       "image": "/images/catalog/generated/rice-cakes.webp"
     },
@@ -1138,7 +1610,10 @@
       "id": "protein-bars",
       "name": "Protein bars",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "proteiinipatukka",
+        "proteinbar"
+      ],
       "icon": "🍿",
       "image": "/images/catalog/generated/protein-bar.webp"
     },
@@ -1147,7 +1622,8 @@
       "name": "Coffee",
       "category": "Beverages",
       "aliases": [
-        "kahvi"
+        "kahvi",
+        "kaffe"
       ],
       "icon": "☕",
       "image": "/images/food/2615.svg"
@@ -1156,7 +1632,10 @@
       "id": "tea",
       "name": "Tea",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "tee",
+        "te"
+      ],
       "icon": "☕",
       "image": "/images/catalog/generated/tea.webp"
     },
@@ -1164,7 +1643,12 @@
       "id": "sparkling-water",
       "name": "Sparkling water",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "hiilihapotettu vesi",
+        "kuplavesi",
+        "kolsyrat vatten",
+        "bubbelvatten"
+      ],
       "icon": "☕",
       "image": "/images/catalog/generated/water.webp"
     },
@@ -1172,7 +1656,12 @@
       "id": "juice",
       "name": "Juice",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "mehu",
+        "täysmehu",
+        "juice",
+        "saft"
+      ],
       "icon": "☕",
       "image": "/images/catalog/generated/juice.webp"
     },
@@ -1180,7 +1669,12 @@
       "id": "lemonade",
       "name": "Lemonade",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "limonadi",
+        "limsa",
+        "läsk",
+        "lemonad"
+      ],
       "icon": "☕",
       "image": "/images/catalog/generated/lemonade.webp"
     },
@@ -1188,7 +1682,12 @@
       "id": "hot-chocolate",
       "name": "Hot chocolate",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "kaakao",
+        "kaakaojuoma",
+        "varm choklad",
+        "oboy"
+      ],
       "icon": "☕",
       "image": "/images/food/2615.svg"
     },
@@ -1196,7 +1695,11 @@
       "id": "mineral-water",
       "name": "Mineral water",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "kivennäisvesi",
+        "lähdevesi",
+        "mineralvatten"
+      ],
       "icon": "☕",
       "image": "/images/catalog/generated/water.webp"
     },
@@ -1205,7 +1708,10 @@
       "name": "Toilet paper",
       "category": "Household",
       "aliases": [
-        "wc-paperi"
+        "wc-paperi",
+        "vessapaperi",
+        "toalettpapper",
+        "toapapper"
       ],
       "icon": "🧻",
       "image": "/images/food/1f9fb.svg"
@@ -1214,7 +1720,10 @@
       "id": "kitchen-paper",
       "name": "Kitchen paper",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "talouspaperi",
+        "hushållspapper"
+      ],
       "icon": "🧻",
       "image": "/images/catalog/generated/kitchen-paper.webp"
     },
@@ -1222,7 +1731,11 @@
       "id": "dish-soap",
       "name": "Dish soap",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "astianpesuaine",
+        "tiskiaine",
+        "diskmedel"
+      ],
       "icon": "🧴",
       "image": "/images/food/1f9f4.svg"
     },
@@ -1230,7 +1743,11 @@
       "id": "dishwasher-tablets",
       "name": "Dishwasher tablets",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "konetiskitabletti",
+        "astianpesukonetabletti",
+        "diskmaskinstabletter"
+      ],
       "icon": "🧻",
       "image": "/images/catalog/generated/dishwasher-tablets.webp"
     },
@@ -1238,7 +1755,11 @@
       "id": "laundry-detergent",
       "name": "Laundry detergent",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "pyykinpesuaine",
+        "pesuaine",
+        "tvättmedel"
+      ],
       "icon": "🧻",
       "image": "/images/catalog/generated/laundry-liquid.webp"
     },
@@ -1246,7 +1767,12 @@
       "id": "bin-bags",
       "name": "Bin bags",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "roskapussi",
+        "jätesäkki",
+        "soppåsar",
+        "sopsäckar"
+      ],
       "icon": "🧻",
       "image": "/images/catalog/generated/bin-bags.webp"
     },
@@ -1254,7 +1780,10 @@
       "id": "sponges",
       "name": "Sponges",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "tiskisieni",
+        "disksvamp"
+      ],
       "icon": "🧻",
       "image": "/images/catalog/generated/sponges.webp"
     },
@@ -1262,7 +1791,10 @@
       "id": "baking-paper",
       "name": "Baking paper",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "leivinpaperi",
+        "bakplåtspapper"
+      ],
       "icon": "🧻",
       "image": "/images/catalog/generated/baking-paper.webp"
     },
@@ -1270,7 +1802,12 @@
       "id": "aluminium-foil",
       "name": "Aluminium foil",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "foliopaperi",
+        "alumiinifolio",
+        "folie",
+        "aluminiumfolie"
+      ],
       "icon": "🧻",
       "image": "/images/catalog/generated/foil.webp"
     },
@@ -1278,7 +1815,12 @@
       "id": "cleaning-spray",
       "name": "Cleaning spray",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "puhdistussuihke",
+        "yleispuhdistusaine",
+        "rengöringsspray",
+        "allrengöring"
+      ],
       "icon": "🧻",
       "image": "/images/catalog/generated/cleaning-spray.webp"
     },
@@ -1286,7 +1828,10 @@
       "id": "shampoo",
       "name": "Shampoo",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "shampoo",
+        "schampo"
+      ],
       "icon": "🧴",
       "image": "/images/food/1f9f4.svg"
     },
@@ -1294,7 +1839,10 @@
       "id": "conditioner",
       "name": "Conditioner",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "hoitoaine",
+        "balsam"
+      ],
       "icon": "🧴",
       "image": "/images/food/1f9f4.svg"
     },
@@ -1302,7 +1850,10 @@
       "id": "toothpaste",
       "name": "Toothpaste",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "hammastahna",
+        "tandkräm"
+      ],
       "icon": "🧴",
       "image": "/images/catalog/generated/toothpaste.webp"
     },
@@ -1310,7 +1861,10 @@
       "id": "toothbrush",
       "name": "Toothbrush",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "hammasharja",
+        "tandborste"
+      ],
       "icon": "🧴",
       "image": "/images/catalog/generated/toothbrush.webp"
     },
@@ -1318,7 +1872,12 @@
       "id": "hand-soap",
       "name": "Hand soap",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "käsisaippua",
+        "saippua",
+        "handtvål",
+        "tvål"
+      ],
       "icon": "🧴",
       "image": "/images/catalog/generated/soap.webp"
     },
@@ -1326,7 +1885,11 @@
       "id": "shower-gel",
       "name": "Shower gel",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "suihkusaippua",
+        "duschtvål",
+        "duschgel"
+      ],
       "icon": "🧴",
       "image": "/images/food/1f9f4.svg"
     },
@@ -1334,7 +1897,11 @@
       "id": "deodorant",
       "name": "Deodorant",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "deodorantti",
+        "deo",
+        "deodorant"
+      ],
       "icon": "🧴",
       "image": "/images/catalog/generated/deodorant.webp"
     },
@@ -1342,7 +1909,11 @@
       "id": "sunscreen",
       "name": "Sunscreen",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "aurinkovoide",
+        "solkräm",
+        "solskydd"
+      ],
       "icon": "🧴",
       "image": "/images/catalog/generated/sunscreen.webp"
     },
@@ -1350,7 +1921,10 @@
       "id": "plasters",
       "name": "Plasters",
       "category": "Health",
-      "aliases": [],
+      "aliases": [
+        "laastari",
+        "plåster"
+      ],
       "icon": "🧴",
       "image": "/images/food/1fa79.svg"
     },
@@ -1358,7 +1932,10 @@
       "id": "vitamins",
       "name": "Vitamins",
       "category": "Health",
-      "aliases": [],
+      "aliases": [
+        "vitamiini",
+        "vitaminer"
+      ],
       "icon": "🧴",
       "image": "/images/food/1f48a.svg"
     },
@@ -1366,7 +1943,12 @@
       "id": "tissues",
       "name": "Tissues",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "nenäliina",
+        "pehmopaperi",
+        "näsdukar",
+        "pappersnäsdukar"
+      ],
       "icon": "🧴",
       "image": "/images/catalog/generated/tissues.webp"
     },
@@ -1374,7 +1956,11 @@
       "id": "nappies",
       "name": "Nappies",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "vaippa",
+        "vaipat",
+        "blöjor"
+      ],
       "icon": "🧴",
       "image": "/images/catalog/generated/nappies.webp"
     },
@@ -1382,7 +1968,10 @@
       "id": "cat-food",
       "name": "Cat food",
       "category": "Pet supplies",
-      "aliases": [],
+      "aliases": [
+        "kissanruoka",
+        "kattmat"
+      ],
       "icon": "🐾",
       "image": "/images/catalog/generated/cat-food.webp"
     },
@@ -1390,7 +1979,10 @@
       "id": "dog-food",
       "name": "Dog food",
       "category": "Pet supplies",
-      "aliases": [],
+      "aliases": [
+        "koiranruoka",
+        "hundmat"
+      ],
       "icon": "🐾",
       "image": "/images/catalog/generated/dog-food.webp"
     },
@@ -1398,7 +1990,10 @@
       "id": "cat-litter",
       "name": "Cat litter",
       "category": "Pet supplies",
-      "aliases": [],
+      "aliases": [
+        "kissanhiekka",
+        "kattsand"
+      ],
       "icon": "🐾",
       "image": "/images/catalog/generated/cat-litter.webp"
     },
@@ -1406,7 +2001,11 @@
       "id": "pet-treats",
       "name": "Pet treats",
       "category": "Pet supplies",
-      "aliases": [],
+      "aliases": [
+        "lemmikin herkku",
+        "makupala",
+        "godis till husdjur"
+      ],
       "icon": "🐾",
       "image": "/images/catalog/generated/pet-treats.webp"
     },
@@ -1414,7 +2013,11 @@
       "id": "batteries",
       "name": "Batteries",
       "category": "Home",
-      "aliases": [],
+      "aliases": [
+        "paristo",
+        "akku",
+        "batterier"
+      ],
       "icon": "🪴",
       "image": "/images/food/1f50b.svg"
     },
@@ -1422,7 +2025,12 @@
       "id": "light-bulbs",
       "name": "Light bulbs",
       "category": "Home",
-      "aliases": [],
+      "aliases": [
+        "hehkulamppu",
+        "lamppu",
+        "glödlampa",
+        "lampa"
+      ],
       "icon": "🪴",
       "image": "/images/food/1f4a1.svg"
     },
@@ -1430,7 +2038,11 @@
       "id": "candles",
       "name": "Candles",
       "category": "Home",
-      "aliases": [],
+      "aliases": [
+        "kynttilä",
+        "ljus",
+        "stearinljus"
+      ],
       "icon": "🪴",
       "image": "/images/food/1f56f.svg"
     },
@@ -1438,7 +2050,12 @@
       "id": "potting-soil",
       "name": "Potting soil",
       "category": "Garden",
-      "aliases": [],
+      "aliases": [
+        "multa",
+        "kukkamulta",
+        "planteringsjord",
+        "jord"
+      ],
       "icon": "🪴",
       "image": "/images/catalog/generated/soil.webp"
     },
@@ -1446,7 +2063,12 @@
       "id": "plant-food",
       "name": "Plant food",
       "category": "Garden",
-      "aliases": [],
+      "aliases": [
+        "kasvinravinne",
+        "lannoite",
+        "växtnäring",
+        "gödning"
+      ],
       "icon": "🪴",
       "image": "/images/catalog/generated/plant-food.webp"
     },
@@ -1454,7 +2076,11 @@
       "id": "apricots",
       "name": "Apricots",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "aprikoosi",
+        "aprikos",
+        "aprikoser"
+      ],
       "icon": "🍎",
       "image": "/images/catalog/generated/apricots.webp"
     },
@@ -1462,7 +2088,11 @@
       "id": "peaches",
       "name": "Peaches",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "persikka",
+        "persika",
+        "persikor"
+      ],
       "icon": "🍎",
       "image": "/images/food/1f351.svg"
     },
@@ -1470,7 +2100,10 @@
       "id": "nectarines",
       "name": "Nectarines",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "nektariini",
+        "nektarin"
+      ],
       "icon": "🍎",
       "image": "/images/food/1f351.svg"
     },
@@ -1478,7 +2111,10 @@
       "id": "plums",
       "name": "Plums",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "luumu",
+        "plommon"
+      ],
       "icon": "🍎",
       "image": "/images/catalog/generated/plums.webp"
     },
@@ -1486,7 +2122,9 @@
       "id": "pineapple",
       "name": "Pineapple",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "ananas"
+      ],
       "icon": "🍎",
       "image": "/images/food/1f34d.svg"
     },
@@ -1494,7 +2132,12 @@
       "id": "clementines",
       "name": "Clementines",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "klementiini",
+        "mandariini",
+        "klementin",
+        "mandarin"
+      ],
       "icon": "🍎",
       "image": "/images/food/1f34a.svg"
     },
@@ -1502,7 +2145,10 @@
       "id": "cherries",
       "name": "Cherries",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "kirsikka",
+        "körsbär"
+      ],
       "icon": "🍎",
       "image": "/images/food/1f352.svg"
     },
@@ -1510,7 +2156,11 @@
       "id": "dates",
       "name": "Dates",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "taateli",
+        "dadlar",
+        "dadel"
+      ],
       "icon": "🍎",
       "image": "/images/catalog/generated/dates.webp"
     },
@@ -1518,7 +2168,10 @@
       "id": "figs",
       "name": "Figs",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "viikuna",
+        "fikon"
+      ],
       "icon": "🍎",
       "image": "/images/catalog/generated/figs.webp"
     },
@@ -1526,7 +2179,10 @@
       "id": "pomegranate",
       "name": "Pomegranate",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "granaattiomena",
+        "granatäpple"
+      ],
       "icon": "🍎",
       "image": "/images/catalog/generated/pomegranate.webp"
     },
@@ -1534,7 +2190,10 @@
       "id": "grapefruit",
       "name": "Grapefruit",
       "category": "Fruits",
-      "aliases": [],
+      "aliases": [
+        "greippi",
+        "grapefrukt"
+      ],
       "icon": "🍎",
       "image": "/images/catalog/generated/grapefruit.webp"
     },
@@ -1542,7 +2201,11 @@
       "id": "leeks",
       "name": "Leeks",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "purjo",
+        "purjosipuli",
+        "purjolök"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/leeks.webp"
     },
@@ -1550,7 +2213,10 @@
       "id": "kale",
       "name": "Kale",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "lehtikaali",
+        "grönkål"
+      ],
       "icon": "🥬",
       "image": "/images/food/1f96c.svg"
     },
@@ -1558,7 +2224,10 @@
       "id": "radishes",
       "name": "Radishes",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "retiisi",
+        "rädisor"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/radishes.webp"
     },
@@ -1566,7 +2235,11 @@
       "id": "turnips",
       "name": "Turnips",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "nauris",
+        "rova",
+        "rovor"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/turnips.webp"
     },
@@ -1574,7 +2247,10 @@
       "id": "parsnips",
       "name": "Parsnips",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "palsternakka",
+        "palsternacka"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/parsnips.webp"
     },
@@ -1582,7 +2258,12 @@
       "id": "green-beans",
       "name": "Green beans",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "vihreä papu",
+        "leikkopapu",
+        "haricots verts",
+        "gröna bönor"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/green-beans.webp"
     },
@@ -1590,7 +2271,10 @@
       "id": "aubergine",
       "name": "Aubergine",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "munakoiso",
+        "aubergine"
+      ],
       "icon": "🥬",
       "image": "/images/food/1f346.svg"
     },
@@ -1598,7 +2282,10 @@
       "id": "brussels-sprouts",
       "name": "Brussels sprouts",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "ruusukaali",
+        "brysselkål"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/brussels-sprouts.webp"
     },
@@ -1606,7 +2293,10 @@
       "id": "pak-choi",
       "name": "Pak choi",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "paksoi",
+        "pak choi"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/pak-choi.webp"
     },
@@ -1614,7 +2304,11 @@
       "id": "spring-onions",
       "name": "Spring onions",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "kevätsipuli",
+        "salladslök",
+        "vårlök"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/spring-onions.webp"
     },
@@ -1622,7 +2316,10 @@
       "id": "artichokes",
       "name": "Artichokes",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "artisokka",
+        "kronärtskocka"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/artichokes.webp"
     },
@@ -1630,7 +2327,11 @@
       "id": "chilli-peppers",
       "name": "Chilli peppers",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "chili",
+        "chilipippuri",
+        "chilipeppar"
+      ],
       "icon": "🥬",
       "image": "/images/food/1f336.svg"
     },
@@ -1638,7 +2339,10 @@
       "id": "fennel",
       "name": "Fennel",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "fenkoli",
+        "fänkål"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/fennel.webp"
     },
@@ -1646,7 +2350,10 @@
       "id": "butternut-squash",
       "name": "Butternut squash",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "myskikurpitsa",
+        "butternutpumpa"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/butternut-squash.webp"
     },
@@ -1654,7 +2361,10 @@
       "id": "coriander",
       "name": "Coriander",
       "category": "Vegetables",
-      "aliases": [],
+      "aliases": [
+        "korianteri",
+        "koriander"
+      ],
       "icon": "🥬",
       "image": "/images/catalog/generated/coriander.webp"
     },
@@ -1662,7 +2372,11 @@
       "id": "whole-milk",
       "name": "Whole milk",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "täysmaito",
+        "standardmjölk",
+        "helmjölk"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/milk-carton.webp"
     },
@@ -1670,7 +2384,12 @@
       "id": "skimmed-milk",
       "name": "Skimmed milk",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "rasvaton maito",
+        "kevytmaito",
+        "skummjölk",
+        "lättmjölk"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/milk-carton.webp"
     },
@@ -1678,7 +2397,10 @@
       "id": "lactose-free-milk",
       "name": "Lactose-free milk",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "laktoositon maito",
+        "laktosfri mjölk"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/milk-carton.webp"
     },
@@ -1686,7 +2408,12 @@
       "id": "soy-milk",
       "name": "Soy milk",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "soijajuoma",
+        "soijamaito",
+        "sojadryck",
+        "sojamjölk"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/soy-milk.webp"
     },
@@ -1694,7 +2421,12 @@
       "id": "almond-milk",
       "name": "Almond milk",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "mantelijuoma",
+        "mantelimaito",
+        "mandeldryck",
+        "mandelmjölk"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/almond-milk.webp"
     },
@@ -1702,7 +2434,10 @@
       "id": "coconut-yogurt",
       "name": "Coconut yogurt",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "kookosjogurtti",
+        "kokosyoghurt"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/coconut-yogurt.webp"
     },
@@ -1710,7 +2445,10 @@
       "id": "cr-me-fra-che",
       "name": "Crème fraîche",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "ranskankerma",
+        "crème fraîche"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/sour-cream.webp"
     },
@@ -1718,7 +2456,11 @@
       "id": "quark",
       "name": "Quark",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "rahka",
+        "maitorahka",
+        "kvarg"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/yogurt.webp"
     },
@@ -1726,7 +2468,12 @@
       "id": "kefir",
       "name": "Kefir",
       "category": "Milk & eggs",
-      "aliases": [],
+      "aliases": [
+        "kefiiri",
+        "piimä",
+        "kefir",
+        "filmjölk"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/kefir.webp"
     },
@@ -1734,7 +2481,11 @@
       "id": "halloumi",
       "name": "Halloumi",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "halloumi",
+        "grillijuusto",
+        "grillost"
+      ],
       "icon": "🧀",
       "image": "/images/catalog/generated/feta.webp"
     },
@@ -1742,7 +2493,10 @@
       "id": "gouda",
       "name": "Gouda",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "goudajuusto",
+        "goudaost"
+      ],
       "icon": "🧀",
       "image": "/images/food/1f9c0.svg"
     },
@@ -1750,7 +2504,10 @@
       "id": "brie",
       "name": "Brie",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "briejuusto",
+        "brieost"
+      ],
       "icon": "🧀",
       "image": "/images/catalog/generated/brie.webp"
     },
@@ -1758,7 +2515,11 @@
       "id": "goat-cheese",
       "name": "Goat cheese",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "vuohenjuusto",
+        "chèvre",
+        "getost"
+      ],
       "icon": "🧀",
       "image": "/images/catalog/generated/goat-cheese.webp"
     },
@@ -1766,7 +2527,9 @@
       "id": "ricotta",
       "name": "Ricotta",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "ricotta"
+      ],
       "icon": "🧀",
       "image": "/images/catalog/generated/cottage-cheese.webp"
     },
@@ -1774,7 +2537,10 @@
       "id": "emmental",
       "name": "Emmental",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "emmentaljuusto",
+        "emmentaler"
+      ],
       "icon": "🧀",
       "image": "/images/food/1f9c0.svg"
     },
@@ -1782,7 +2548,12 @@
       "id": "blue-cheese",
       "name": "Blue cheese",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "sinihomejuusto",
+        "aura",
+        "ädelost",
+        "grönmögelost"
+      ],
       "icon": "🧀",
       "image": "/images/catalog/generated/blue-cheese.webp"
     },
@@ -1790,7 +2561,11 @@
       "id": "vegan-cheese",
       "name": "Vegan cheese",
       "category": "Cheese",
-      "aliases": [],
+      "aliases": [
+        "vegaaninen juusto",
+        "vegaanijuusto",
+        "vegansk ost"
+      ],
       "icon": "🧀",
       "image": "/images/food/1f9c0.svg"
     },
@@ -1798,7 +2573,10 @@
       "id": "turkey",
       "name": "Turkey",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "kalkkuna",
+        "kalkon"
+      ],
       "icon": "🥩",
       "image": "/images/catalog/generated/turkey.webp"
     },
@@ -1806,7 +2584,12 @@
       "id": "lamb",
       "name": "Lamb",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "lammas",
+        "karitsa",
+        "lamm",
+        "lammkött"
+      ],
       "icon": "🥩",
       "image": "/images/catalog/generated/lamb.webp"
     },
@@ -1814,7 +2597,12 @@
       "id": "beef-steak",
       "name": "Beef steak",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "pihvi",
+        "naudanpihvi",
+        "biff",
+        "entrecôte"
+      ],
       "icon": "🥩",
       "image": "/images/food/1f969.svg"
     },
@@ -1822,7 +2610,10 @@
       "id": "meatballs",
       "name": "Meatballs",
       "category": "Meat",
-      "aliases": [],
+      "aliases": [
+        "lihapullat",
+        "köttbullar"
+      ],
       "icon": "🥩",
       "image": "/images/catalog/generated/meatballs.webp"
     },
@@ -1830,7 +2621,10 @@
       "id": "tuna-steak",
       "name": "Tuna steak",
       "category": "Fish",
-      "aliases": [],
+      "aliases": [
+        "tonnikalapihvi",
+        "tonfiskbiff"
+      ],
       "icon": "🐟",
       "image": "/images/catalog/generated/tuna.webp"
     },
@@ -1838,7 +2632,12 @@
       "id": "herring",
       "name": "Herring",
       "category": "Fish",
-      "aliases": [],
+      "aliases": [
+        "silli",
+        "silakka",
+        "sill",
+        "strömming"
+      ],
       "icon": "🐟",
       "image": "/images/food/1f41f.svg"
     },
@@ -1846,7 +2645,12 @@
       "id": "mussels",
       "name": "Mussels",
       "category": "Fish",
-      "aliases": [],
+      "aliases": [
+        "simpukka",
+        "sinisimpukka",
+        "musslor",
+        "blåmusslor"
+      ],
       "icon": "🐟",
       "image": "/images/catalog/generated/mussels.webp"
     },
@@ -1854,7 +2658,10 @@
       "id": "red-lentils",
       "name": "Red lentils",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "punainen linssi",
+        "röda linser"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/red-lentils.webp"
     },
@@ -1862,7 +2669,10 @@
       "id": "green-lentils",
       "name": "Green lentils",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "vihreä linssi",
+        "gröna linser"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/green-lentils.webp"
     },
@@ -1870,7 +2680,10 @@
       "id": "white-beans",
       "name": "White beans",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "valkoinen papu",
+        "vita bönor"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/white-beans.webp"
     },
@@ -1878,7 +2691,9 @@
       "id": "tempeh",
       "name": "Tempeh",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "tempeh"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/tempeh.webp"
     },
@@ -1886,7 +2701,10 @@
       "id": "coconut-cream",
       "name": "Coconut cream",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "kookoskerma",
+        "kokosgrädde"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/coconut-can.webp"
     },
@@ -1894,7 +2712,11 @@
       "id": "tahini",
       "name": "Tahini",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "tahini",
+        "seesamitahna",
+        "sesampasta"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/tahini.webp"
     },
@@ -1902,7 +2724,10 @@
       "id": "sesame-oil",
       "name": "Sesame oil",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "seesamiöljy",
+        "sesamolja"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/oil.webp"
     },
@@ -1910,7 +2735,10 @@
       "id": "balsamic-vinegar",
       "name": "Balsamic vinegar",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "balsamietikka",
+        "balsamvinäger"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/balsamic.webp"
     },
@@ -1918,7 +2746,10 @@
       "id": "rice-vinegar",
       "name": "Rice vinegar",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "riisiviinietikka",
+        "risvinäger"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/vinegar.webp"
     },
@@ -1926,7 +2757,11 @@
       "id": "passata",
       "name": "Passata",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "passata",
+        "tomaattisose",
+        "passerade tomater"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/passata.webp"
     },
@@ -1934,7 +2769,9 @@
       "id": "capers",
       "name": "Capers",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "kapris"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/capers.webp"
     },
@@ -1942,7 +2779,10 @@
       "id": "olives",
       "name": "Olives",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "oliivi",
+        "oliver"
+      ],
       "icon": "🛒",
       "image": "/images/food/1fad2.svg"
     },
@@ -1950,7 +2790,11 @@
       "id": "cornflour",
       "name": "Cornflour",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "maissitärkkelys",
+        "maizena",
+        "majsstärkelse"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/cornflour.webp"
     },
@@ -1958,7 +2802,11 @@
       "id": "gelatine",
       "name": "Gelatine",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "liivate",
+        "liivatelehti",
+        "gelatin"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/gelatine.webp"
     },
@@ -1966,7 +2814,12 @@
       "id": "vanilla-extract",
       "name": "Vanilla extract",
       "category": "Ingredients",
-      "aliases": [],
+      "aliases": [
+        "vaniljauute",
+        "vaniljasokeri",
+        "vaniljextrakt",
+        "vaniljsocker"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/vanilla.webp"
     },
@@ -1974,7 +2827,10 @@
       "id": "turmeric",
       "name": "Turmeric",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "kurkuma",
+        "gurkmeja"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/gold-spice.webp"
     },
@@ -1982,7 +2838,9 @@
       "id": "cardamom",
       "name": "Cardamom",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "kardemumma"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/cardamom.webp"
     },
@@ -1990,7 +2848,11 @@
       "id": "nutmeg",
       "name": "Nutmeg",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "muskottipähkinä",
+        "muskotti",
+        "muskotnöt"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/nutmeg.webp"
     },
@@ -1998,7 +2860,10 @@
       "id": "cayenne-pepper",
       "name": "Cayenne pepper",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "cayennepippuri",
+        "cayennepeppar"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/red-spice.webp"
     },
@@ -2006,7 +2871,11 @@
       "id": "chilli-flakes",
       "name": "Chilli flakes",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "chilihiutale",
+        "chiliflakes",
+        "chiliflingor"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/chilli-flakes.webp"
     },
@@ -2014,7 +2883,10 @@
       "id": "coriander-seeds",
       "name": "Coriander seeds",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "korianterinsiemen",
+        "korianderfrön"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/coriander-seeds.webp"
     },
@@ -2022,7 +2894,10 @@
       "id": "dried-basil",
       "name": "Dried basil",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "kuivattu basilika",
+        "torkad basilika"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/herb-jar.webp"
     },
@@ -2030,7 +2905,10 @@
       "id": "rosemary",
       "name": "Rosemary",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "rosmariini",
+        "rosmarin"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/rosemary.webp"
     },
@@ -2038,7 +2916,10 @@
       "id": "thyme",
       "name": "Thyme",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "timjami",
+        "timjan"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/thyme.webp"
     },
@@ -2046,7 +2927,10 @@
       "id": "bay-leaves",
       "name": "Bay leaves",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "laakerinlehti",
+        "lagerblad"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/bay-leaves.webp"
     },
@@ -2054,7 +2938,10 @@
       "id": "allspice",
       "name": "Allspice",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "maustepippuri",
+        "kryddpeppar"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/allspice.webp"
     },
@@ -2062,7 +2949,10 @@
       "id": "star-anise",
       "name": "Star anise",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "tähtianis",
+        "stjärnanis"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/star-anise.webp"
     },
@@ -2070,7 +2960,10 @@
       "id": "smoked-paprika",
       "name": "Smoked paprika",
       "category": "Spices",
-      "aliases": [],
+      "aliases": [
+        "savupaprika",
+        "rökt paprika"
+      ],
       "icon": "🧂",
       "image": "/images/catalog/generated/red-spice.webp"
     },
@@ -2078,7 +2971,9 @@
       "id": "bulgur",
       "name": "Bulgur",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "bulgur"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/grain.webp"
     },
@@ -2086,7 +2981,11 @@
       "id": "polenta",
       "name": "Polenta",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "polenta",
+        "maissijauho",
+        "majsmjöl"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/grain.webp"
     },
@@ -2094,7 +2993,10 @@
       "id": "buckwheat",
       "name": "Buckwheat",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "tattari",
+        "bovete"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/grain.webp"
     },
@@ -2102,7 +3004,10 @@
       "id": "wholegrain-pasta",
       "name": "Wholegrain pasta",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "täysjyväpasta",
+        "fullkornspasta"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/dry-pasta.webp"
     },
@@ -2110,7 +3015,10 @@
       "id": "rice-noodles",
       "name": "Rice noodles",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "riisinuudeli",
+        "risnudlar"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/noodles.webp"
     },
@@ -2118,7 +3026,10 @@
       "id": "lasagne-sheets",
       "name": "Lasagne sheets",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "lasagnelevy",
+        "lasagneplattor"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/lasagne.webp"
     },
@@ -2126,7 +3037,10 @@
       "id": "rye-flour",
       "name": "Rye flour",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "ruisjauho",
+        "rågmjöl"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/flour.webp"
     },
@@ -2134,7 +3048,10 @@
       "id": "muesli",
       "name": "Muesli",
       "category": "Grain products",
-      "aliases": [],
+      "aliases": [
+        "mysli",
+        "müsli"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/granola.webp"
     },
@@ -2142,7 +3059,11 @@
       "id": "pretzels",
       "name": "Pretzels",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "pretzel",
+        "rinkeli",
+        "kringlor"
+      ],
       "icon": "🛒",
       "image": "/images/food/1f968.svg"
     },
@@ -2150,7 +3071,10 @@
       "id": "trail-mix",
       "name": "Trail mix",
       "category": "Snacks",
-      "aliases": [],
+      "aliases": [
+        "pähkinäsekoitus",
+        "studentblandning"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/nuts.webp"
     },
@@ -2158,7 +3082,12 @@
       "id": "gummy-sweets",
       "name": "Gummy sweets",
       "category": "Sweets",
-      "aliases": [],
+      "aliases": [
+        "viinikumi",
+        "hedelmäkarkki",
+        "vingummi",
+        "gelégodis"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/gummy-sweets.webp"
     },
@@ -2166,7 +3095,12 @@
       "id": "liquorice",
       "name": "Liquorice",
       "category": "Sweets",
-      "aliases": [],
+      "aliases": [
+        "lakritsi",
+        "salmiakki",
+        "lakrits",
+        "saltlakrits"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/liquorice.webp"
     },
@@ -2174,7 +3108,10 @@
       "id": "marshmallows",
       "name": "Marshmallows",
       "category": "Sweets",
-      "aliases": [],
+      "aliases": [
+        "vaahtokarkki",
+        "marshmallows"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/marshmallows.webp"
     },
@@ -2182,7 +3119,10 @@
       "id": "dark-chocolate",
       "name": "Dark chocolate",
       "category": "Sweets",
-      "aliases": [],
+      "aliases": [
+        "tumma suklaa",
+        "mörk choklad"
+      ],
       "icon": "🛒",
       "image": "/images/food/1f36b.svg"
     },
@@ -2190,7 +3130,11 @@
       "id": "wafer-biscuits",
       "name": "Wafer biscuits",
       "category": "Sweets",
-      "aliases": [],
+      "aliases": [
+        "vohvelikeksi",
+        "rån",
+        "rånkex"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/wafer.webp"
     },
@@ -2198,7 +3142,11 @@
       "id": "apple-juice",
       "name": "Apple juice",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "omenamehu",
+        "äppeljuice",
+        "äpplejuice"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/apple-juice.webp"
     },
@@ -2206,7 +3154,10 @@
       "id": "orange-juice",
       "name": "Orange juice",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "appelsiinimehu",
+        "apelsinjuice"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/juice.webp"
     },
@@ -2214,7 +3165,10 @@
       "id": "herbal-tea",
       "name": "Herbal tea",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "yrttitee",
+        "örtte"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/tea.webp"
     },
@@ -2222,7 +3176,10 @@
       "id": "black-tea",
       "name": "Black tea",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "musta tee",
+        "svart te"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/tea.webp"
     },
@@ -2230,7 +3187,10 @@
       "id": "green-tea",
       "name": "Green tea",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "vihreä tee",
+        "grönt te"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/green-tea.webp"
     },
@@ -2238,7 +3198,11 @@
       "id": "cocoa-powder",
       "name": "Cocoa powder",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "kaakaojauhe",
+        "kakao",
+        "kakaopulver"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/cocoa.webp"
     },
@@ -2246,7 +3210,10 @@
       "id": "alcohol-free-beer",
       "name": "Alcohol-free beer",
       "category": "Beverages",
-      "aliases": [],
+      "aliases": [
+        "alkoholiton olut",
+        "alkoholfri öl"
+      ],
       "icon": "🛒",
       "image": "/images/food/1f37a.svg"
     },
@@ -2254,7 +3221,10 @@
       "id": "laundry-powder",
       "name": "Laundry powder",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "pyykinpesujauhe",
+        "tvättpulver"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/laundry-powder.webp"
     },
@@ -2262,7 +3232,10 @@
       "id": "fabric-softener",
       "name": "Fabric softener",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "huuhteluaine",
+        "sköljmedel"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/laundry-liquid.webp"
     },
@@ -2270,7 +3243,10 @@
       "id": "dishwasher-salt",
       "name": "Dishwasher salt",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "astianpesukoneen suola",
+        "diskmaskinssalt"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/laundry-powder.webp"
     },
@@ -2278,7 +3254,11 @@
       "id": "rinse-aid",
       "name": "Rinse aid",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "huuhtelukirkaste",
+        "kirkaste",
+        "spolglans"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/rinse-aid.webp"
     },
@@ -2286,7 +3266,11 @@
       "id": "floor-cleaner",
       "name": "Floor cleaner",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "lattianpesuaine",
+        "golvrengöring",
+        "golvmedel"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/floor-cleaner.webp"
     },
@@ -2294,7 +3278,11 @@
       "id": "toilet-cleaner",
       "name": "Toilet cleaner",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "wc-puhdistusaine",
+        "wc-rent",
+        "toalettrengöring"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/toilet-cleaner.webp"
     },
@@ -2302,7 +3290,12 @@
       "id": "glass-cleaner",
       "name": "Glass cleaner",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "lasinpesuaine",
+        "ikkunanpesuaine",
+        "fönsterputs",
+        "glasrengöring"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/cleaning-spray.webp"
     },
@@ -2310,7 +3303,12 @@
       "id": "rubber-gloves",
       "name": "Rubber gloves",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "kumihanskat",
+        "taloushanskat",
+        "gummihandskar",
+        "diskhandskar"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/rubber-gloves.webp"
     },
@@ -2318,7 +3316,12 @@
       "id": "bin-liners",
       "name": "Bin liners",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "roskapussi",
+        "biojätepussi",
+        "soppåsar",
+        "påsar"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/bin-bags.webp"
     },
@@ -2326,7 +3329,12 @@
       "id": "microfibre-cloths",
       "name": "Microfibre cloths",
       "category": "Household",
-      "aliases": [],
+      "aliases": [
+        "mikrokuituliina",
+        "siivousliina",
+        "mikrofiberduk",
+        "trasa"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/cloths.webp"
     },
@@ -2334,7 +3342,12 @@
       "id": "lip-balm",
       "name": "Lip balm",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "huulirasva",
+        "huulivoide",
+        "cerat",
+        "läppbalsam"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/lip-balm.webp"
     },
@@ -2342,7 +3355,10 @@
       "id": "hand-cream",
       "name": "Hand cream",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "käsivoide",
+        "handkräm"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/hand-cream.webp"
     },
@@ -2350,7 +3366,11 @@
       "id": "body-lotion",
       "name": "Body lotion",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "vartalovoide",
+        "bodylotion",
+        "hudkräm"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/lotion.webp"
     },
@@ -2358,7 +3378,11 @@
       "id": "face-wash",
       "name": "Face wash",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "kasvojenpesuaine",
+        "ansiktstvätt",
+        "ansiktsrengöring"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/face-wash.webp"
     },
@@ -2366,7 +3390,12 @@
       "id": "razors",
       "name": "Razors",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "partaterä",
+        "partahöylä",
+        "rakblad",
+        "rakhyvel"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/razors.webp"
     },
@@ -2374,7 +3403,10 @@
       "id": "shaving-foam",
       "name": "Shaving foam",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "partavaahto",
+        "raklödder"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/shaving-foam.webp"
     },
@@ -2382,7 +3414,10 @@
       "id": "cotton-pads",
       "name": "Cotton pads",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "vanulappu",
+        "bomullsrondeller"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/cotton-pads.webp"
     },
@@ -2390,7 +3425,12 @@
       "id": "sanitary-pads",
       "name": "Sanitary pads",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "terveysside",
+        "side",
+        "dambinda",
+        "binda"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/sanitary-pads.webp"
     },
@@ -2398,7 +3438,10 @@
       "id": "tampons",
       "name": "Tampons",
       "category": "Care",
-      "aliases": [],
+      "aliases": [
+        "tamponi",
+        "tamponger"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/tampons.webp"
     },
@@ -2406,7 +3449,12 @@
       "id": "pain-relief",
       "name": "Pain relief",
       "category": "Health",
-      "aliases": [],
+      "aliases": [
+        "särkylääke",
+        "kipulääke",
+        "smärtstillande",
+        "värktabletter"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/pain-relief.webp"
     },
@@ -2414,7 +3462,12 @@
       "id": "thermometer",
       "name": "Thermometer",
       "category": "Health",
-      "aliases": [],
+      "aliases": [
+        "kuumemittari",
+        "lämpömittari",
+        "termometer",
+        "febertermometer"
+      ],
       "icon": "🛒",
       "image": "/images/food/1f321.svg"
     },
@@ -2422,7 +3475,12 @@
       "id": "first-aid-tape",
       "name": "First aid tape",
       "category": "Health",
-      "aliases": [],
+      "aliases": [
+        "urheiluteippi",
+        "kirurginen teippi",
+        "sporttejp",
+        "kirurgtejp"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/first-aid-tape.webp"
     },
@@ -2430,7 +3488,12 @@
       "id": "disinfectant",
       "name": "Disinfectant",
       "category": "Health",
-      "aliases": [],
+      "aliases": [
+        "desinfiointiaine",
+        "käsidesi",
+        "desinfektionsmedel",
+        "handsprit"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/disinfectant.webp"
     },
@@ -2438,7 +3501,10 @@
       "id": "cough-drops",
       "name": "Cough drops",
       "category": "Health",
-      "aliases": [],
+      "aliases": [
+        "kurkkupastilli",
+        "halstabletter"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/cough-drops.webp"
     },
@@ -2446,7 +3512,10 @@
       "id": "contact-lens-solution",
       "name": "Contact lens solution",
       "category": "Health",
-      "aliases": [],
+      "aliases": [
+        "piilolinssineste",
+        "linsvätska"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/contact-solution.webp"
     },
@@ -2454,7 +3523,11 @@
       "id": "dog-treats",
       "name": "Dog treats",
       "category": "Pet supplies",
-      "aliases": [],
+      "aliases": [
+        "koiran herkku",
+        "koiran makupala",
+        "hundgodis"
+      ],
       "icon": "🐾",
       "image": "/images/catalog/generated/pet-treats.webp"
     },
@@ -2462,7 +3535,11 @@
       "id": "cat-treats",
       "name": "Cat treats",
       "category": "Pet supplies",
-      "aliases": [],
+      "aliases": [
+        "kissan herkku",
+        "kissan makupala",
+        "kattgodis"
+      ],
       "icon": "🐾",
       "image": "/images/catalog/generated/cat-treats.webp"
     },
@@ -2470,7 +3547,12 @@
       "id": "bird-seed",
       "name": "Bird seed",
       "category": "Pet supplies",
-      "aliases": [],
+      "aliases": [
+        "linnunsiemen",
+        "lintujen ruoka",
+        "fågelfrö",
+        "fågelmat"
+      ],
       "icon": "🐾",
       "image": "/images/catalog/generated/bird-seed.webp"
     },
@@ -2478,7 +3560,10 @@
       "id": "rabbit-food",
       "name": "Rabbit food",
       "category": "Pet supplies",
-      "aliases": [],
+      "aliases": [
+        "kaninruoka",
+        "kaninmat"
+      ],
       "icon": "🐾",
       "image": "/images/catalog/generated/rabbit-food.webp"
     },
@@ -2486,7 +3571,11 @@
       "id": "pet-shampoo",
       "name": "Pet shampoo",
       "category": "Pet supplies",
-      "aliases": [],
+      "aliases": [
+        "lemmikkishampoo",
+        "koirashampoo",
+        "hundschampo"
+      ],
       "icon": "🐾",
       "image": "/images/catalog/generated/pet-shampoo.webp"
     },
@@ -2494,7 +3583,10 @@
       "id": "matches",
       "name": "Matches",
       "category": "Home",
-      "aliases": [],
+      "aliases": [
+        "tulitikut",
+        "tändstickor"
+      ],
       "icon": "🪴",
       "image": "/images/catalog/generated/matches.webp"
     },
@@ -2502,7 +3594,10 @@
       "id": "led-bulbs",
       "name": "LED bulbs",
       "category": "Home",
-      "aliases": [],
+      "aliases": [
+        "led-lamppu",
+        "led-lampa"
+      ],
       "icon": "🪴",
       "image": "/images/food/1f4a1.svg"
     },
@@ -2510,7 +3605,11 @@
       "id": "storage-boxes",
       "name": "Storage boxes",
       "category": "Home",
-      "aliases": [],
+      "aliases": [
+        "säilytyslaatikko",
+        "förvaringslåda",
+        "förvaringsbox"
+      ],
       "icon": "🪴",
       "image": "/images/catalog/generated/storage-boxes.webp"
     },
@@ -2518,7 +3617,10 @@
       "id": "kitchen-towels",
       "name": "Kitchen towels",
       "category": "Home",
-      "aliases": [],
+      "aliases": [
+        "keittiöpyyhe",
+        "kökshandduk"
+      ],
       "icon": "🪴",
       "image": "/images/catalog/generated/cloths.webp"
     },
@@ -2526,7 +3628,12 @@
       "id": "seeds",
       "name": "Seeds",
       "category": "Garden",
-      "aliases": [],
+      "aliases": [
+        "siemen",
+        "siemenet",
+        "fröer",
+        "frön"
+      ],
       "icon": "🪴",
       "image": "/images/catalog/generated/seeds.webp"
     },
@@ -2534,7 +3641,10 @@
       "id": "compost",
       "name": "Compost",
       "category": "Garden",
-      "aliases": [],
+      "aliases": [
+        "komposti",
+        "kompost"
+      ],
       "icon": "🪴",
       "image": "/images/catalog/generated/soil.webp"
     },
@@ -2542,7 +3652,10 @@
       "id": "garden-gloves",
       "name": "Garden gloves",
       "category": "Garden",
-      "aliases": [],
+      "aliases": [
+        "puutarhahanskat",
+        "trädgårdshandskar"
+      ],
       "icon": "🪴",
       "image": "/images/catalog/generated/garden-gloves.webp"
     },
@@ -2550,7 +3663,12 @@
       "id": "plant-pots",
       "name": "Plant pots",
       "category": "Garden",
-      "aliases": [],
+      "aliases": [
+        "kukkaruukku",
+        "ruukku",
+        "kruka",
+        "blomkruka"
+      ],
       "icon": "🪴",
       "image": "/images/catalog/generated/plant-pots.webp"
     },
@@ -2558,7 +3676,10 @@
       "id": "baguette",
       "name": "Baguette",
       "category": "Bread",
-      "aliases": [],
+      "aliases": [
+        "patonki",
+        "baguette"
+      ],
       "icon": "🥖",
       "image": "/images/food/1f956.svg"
     },
@@ -2566,7 +3687,11 @@
       "id": "flatbread",
       "name": "Flatbread",
       "category": "Bread",
-      "aliases": [],
+      "aliases": [
+        "rieska",
+        "tunnbröd",
+        "flatbröd"
+      ],
       "icon": "🥖",
       "image": "/images/catalog/generated/tortillas.webp"
     },
@@ -2574,7 +3699,11 @@
       "id": "crispbread",
       "name": "Crispbread",
       "category": "Bread",
-      "aliases": [],
+      "aliases": [
+        "näkkileipä",
+        "hapankorppu",
+        "knäckebröd"
+      ],
       "icon": "🥖",
       "image": "/images/catalog/generated/crispbread.webp"
     },
@@ -2582,7 +3711,10 @@
       "id": "wholegrain-bread",
       "name": "Wholegrain bread",
       "category": "Bread",
-      "aliases": [],
+      "aliases": [
+        "täysjyväleipä",
+        "fullkornsbröd"
+      ],
       "icon": "🥖",
       "image": "/images/food/1f35e.svg"
     },
@@ -2590,7 +3722,10 @@
       "id": "gluten-free-bread",
       "name": "Gluten-free bread",
       "category": "Bread",
-      "aliases": [],
+      "aliases": [
+        "gluteeniton leipä",
+        "glutenfritt bröd"
+      ],
       "icon": "🥖",
       "image": "/images/food/1f35e.svg"
     },
@@ -2598,7 +3733,10 @@
       "id": "muffins",
       "name": "Muffins",
       "category": "Pastries",
-      "aliases": [],
+      "aliases": [
+        "muffinssi",
+        "muffins"
+      ],
       "icon": "🥐",
       "image": "/images/catalog/generated/muffins.webp"
     },
@@ -2606,7 +3744,12 @@
       "id": "doughnuts",
       "name": "Doughnuts",
       "category": "Pastries",
-      "aliases": [],
+      "aliases": [
+        "munkki",
+        "donitsi",
+        "munk",
+        "munkar"
+      ],
       "icon": "🥐",
       "image": "/images/food/1f369.svg"
     },
@@ -2614,7 +3757,10 @@
       "id": "scones",
       "name": "Scones",
       "category": "Pastries",
-      "aliases": [],
+      "aliases": [
+        "skonssi",
+        "scones"
+      ],
       "icon": "🥐",
       "image": "/images/catalog/generated/scones.webp"
     },
@@ -2622,7 +3768,10 @@
       "id": "puff-pastry",
       "name": "Puff pastry",
       "category": "Pastries",
-      "aliases": [],
+      "aliases": [
+        "voitaikina",
+        "smördeg"
+      ],
       "icon": "🥐",
       "image": "/images/catalog/generated/pastry.webp"
     },
@@ -2630,7 +3779,10 @@
       "id": "shortcrust-pastry",
       "name": "Shortcrust pastry",
       "category": "Pastries",
-      "aliases": [],
+      "aliases": [
+        "murotaikina",
+        "mördeg"
+      ],
       "icon": "🥐",
       "image": "/images/catalog/generated/pastry.webp"
     },
@@ -2638,7 +3790,10 @@
       "id": "frozen-mango",
       "name": "Frozen mango",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "pakastemango",
+        "fryst mango"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/mango.webp"
     },
@@ -2646,7 +3801,12 @@
       "id": "frozen-chips",
       "name": "Frozen chips",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "ranskalaiset",
+        "pakasteranskalaiset",
+        "pommes frites",
+        "pommes"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/frozen-chips.webp"
     },
@@ -2654,7 +3814,10 @@
       "id": "frozen-dumplings",
       "name": "Frozen dumplings",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "pakastenyytit",
+        "frysta dumplings"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/frozen-dumplings.webp"
     },
@@ -2662,7 +3825,12 @@
       "id": "ice-lollies",
       "name": "Ice lollies",
       "category": "Frozen",
-      "aliases": [],
+      "aliases": [
+        "mehujää",
+        "jäätelöpuikko",
+        "isglass",
+        "glasspinne"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/ice-lollies.webp"
     },
@@ -2670,7 +3838,12 @@
       "id": "sandwiches",
       "name": "Sandwiches",
       "category": "Convenience",
-      "aliases": [],
+      "aliases": [
+        "voileipä",
+        "kolmioleipä",
+        "smörgås",
+        "macka"
+      ],
       "icon": "🛒",
       "image": "/images/food/1f96a.svg"
     },
@@ -2678,7 +3851,10 @@
       "id": "instant-noodles",
       "name": "Instant noodles",
       "category": "Convenience",
-      "aliases": [],
+      "aliases": [
+        "pikanuudeli",
+        "snabbnudlar"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/instant-noodles.webp"
     },
@@ -2686,7 +3862,12 @@
       "id": "vegetable-burgers",
       "name": "Vegetable burgers",
       "category": "Convenience",
-      "aliases": [],
+      "aliases": [
+        "kasvispihvi",
+        "kasvispurilainen",
+        "grönsaksbiff",
+        "vegoburgare"
+      ],
       "icon": "🛒",
       "image": "/images/catalog/generated/vegetable-burger.webp"
     }
